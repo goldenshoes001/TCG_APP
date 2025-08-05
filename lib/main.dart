@@ -29,13 +29,7 @@ class _MainAppState extends State<MainApp> {
 
   @override
   Widget build(BuildContext context) {
-    List<Widget> widgetListe = [
-      Home(),
-      Search(),
-      Profile(),
-      Meta(),
-
-    ];
+    List<Widget> widgetListe = [Home(), Search(), Profile(), Meta()];
     List<NavigationDestination> iconList = [
       NavigationDestination(icon: Icon(Icons.home), label: "home"),
       NavigationDestination(icon: Icon(Icons.search), label: "search"),
@@ -44,15 +38,14 @@ class _MainAppState extends State<MainApp> {
         icon: Icon(Icons.local_fire_department),
         label: "Meta",
       ),
-
     ];
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
         appBar: Barwidget(barColor: Appdata.barColor),
         body: Container(
-          height: double.infinity,
-          color: Appdata.bodyBackground,
+          height: MediaQuery.of(context).size.height - 120,
+          color: Appdata.bodyColor,
           child: Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -65,17 +58,14 @@ class _MainAppState extends State<MainApp> {
           currentIndex: _selectedIndex,
           valueChanged: _onItemTapped,
           navigationItems: iconList,
-          selectedIconColor: Appdata.selectedItemColor,
-          selectedLabelColor: Appdata.selectedItemColor,
+          selectedIconColor: Appdata.textColor,
+          selectedLabelColor: Appdata.textColor,
           selectedIconSize: Appdata.sizeSelectedIcons,
           selectedLabelSize: Appdata.sizeLabels,
           unselectedLabelSize: Appdata.sizeLabels,
           unselectedIconSize: Appdata.sizeIcons,
-          unselectedIconColor: Appdata.buttomBarElemente,
-          unselectedLabelColor: Appdata.buttomBarLabel,
-
-          backgroundColor: Appdata.barColor,
-          indicatorColor: Appdata.indicatorColor,
+          unselectedIconColor: Appdata.textColor,
+          unselectedLabelColor: Appdata.textColor,
         ),
       ),
     );

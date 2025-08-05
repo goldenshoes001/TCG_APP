@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:tcg_app/class/appdata.dart';
+import 'package:tcg_app/class/bottombar_element.dart';
 
 class Bottombar extends StatelessWidget {
   final int currentIndex;
@@ -12,89 +14,70 @@ class Bottombar extends StatelessWidget {
   final double selectedLabelSize;
   final Color unselectedLabelColor;
   final double unselectedLabelSize;
-  final Color indicatorColor;
-  final Color backgroundColor;
-  final Color surfaceTintColor;
-  final double elevation;
-  final Color shadowColor;
-
 
   const Bottombar({
     super.key,
     required this.currentIndex,
     required this.valueChanged,
     required this.navigationItems,
-    this.selectedIconColor = Colors.white,
+    this.selectedIconColor = Appdata.barColor,
     this.selectedIconSize = 25,
-    this.selectedLabelColor = Colors.white,
+    this.selectedLabelColor = Appdata.textColor,
     this.selectedLabelSize = 14,
     this.unselectedIconColor = Colors.white,
     this.unselectedIconSize = 18,
     this.unselectedLabelColor = Colors.white,
     this.unselectedLabelSize = 14,
-    this.indicatorColor = Colors.transparent,
-    this.backgroundColor = Colors.transparent,
-    this.elevation = 0,
-    this.shadowColor = Colors.transparent,
-    this.surfaceTintColor = Colors.transparent,
   });
-
-  
-  IconThemeData get iconThemeSelectedData =>
-      IconThemeData(color: selectedIconColor, size: selectedIconSize);
-
-  IconThemeData get iconThemeUnSelectedData =>
-      IconThemeData(color: unselectedIconColor, size: unselectedIconSize);
-
-  TextStyle get textSelected => TextStyle(
-    color: selectedLabelColor,
-    fontFamily: "Arial",
-    fontSize: selectedLabelSize,
-  );
-
-  TextStyle get textUnSelected => TextStyle(
-    color: unselectedLabelColor,
-    fontFamily: "Arial",
-    fontSize: unselectedLabelSize,
-  );
-
-  TextStyle _getLabelTextStyle(Set<WidgetState> states) {
-    if (states.contains(WidgetState.selected)) {
-      return textSelected;
-    }
-    return textUnSelected;
-  }
-
-  IconThemeData _getIconThemeData(Set<WidgetState> states) {
-    if (states.contains(WidgetState.selected)) {
-      return iconThemeSelectedData;
-    }
-    return iconThemeUnSelectedData;
-  }
 
   @override
   Widget build(BuildContext context) {
-    return Theme(
-      data: Theme.of(context).copyWith(
-        navigationBarTheme: NavigationBarThemeData(
-          // Hier die Funktionen verwenden
-          labelTextStyle: WidgetStateProperty.resolveWith<TextStyle>(
-            _getLabelTextStyle,
-          ),
-          iconTheme: WidgetStateProperty.resolveWith<IconThemeData>(
-            _getIconThemeData,
-          ),
+    return Container(
+      color: Appdata.barColor,
+      child: Container(
+        width: double.infinity,
+        height: 80,
+        color: Appdata.barColor, // Die Farbe Ihrer Bottom Bar
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: List.generate(navigationItems.length, (index) {
+            final bool isSelected = index == currentIndex;
+
+            return Expanded(
+              child: InkWell(
+                onTap: () {
+                  valueChanged(index);
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: isSelected ? Colors.lightBlue : Colors.transparent,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(10),
+                      topRight: Radius.circular(10),
+                      bottomLeft: Radius.circular(5),
+                      bottomRight: Radius.circular(5),
+                    ), // Optional: Runde Ecken
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 5.0),
+                    child: BottombarElement(
+                      icon: navigationItems[index].icon,
+                      label: navigationItems[index].label,
+                      isSelected: isSelected,
+                      selectedIconColor: selectedIconColor,
+                      unselectedIconColor: unselectedIconColor,
+                      unselectedIconSize: unselectedIconSize,
+                      selectedLabelColor: selectedLabelColor,
+                      selectedLabelSize: selectedLabelSize,
+                      unselectedLabelColor: unselectedLabelColor,
+                      unselectedLabelSize: unselectedLabelSize,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
         ),
-      ),
-      child: NavigationBar(
-        selectedIndex: currentIndex,
-        onDestinationSelected: valueChanged,
-        destinations: navigationItems,
-        indicatorColor: indicatorColor,
-        backgroundColor: backgroundColor,
-        surfaceTintColor: surfaceTintColor,
-        elevation: elevation,
-        shadowColor: shadowColor,
       ),
     );
   }
