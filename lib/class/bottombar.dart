@@ -17,9 +17,11 @@ class Bottombar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final bottomBarTheme = theme.navigationBarTheme;
     return Container(
-      color: barColor,
       child: Container(
+        color: bottomBarTheme.backgroundColor ,
         width: double.infinity,
         height: MediaQuery.of(context).size.height * 0.125,
 

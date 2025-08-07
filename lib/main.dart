@@ -7,6 +7,8 @@ import 'package:tcg_app/class/profile.dart';
 import 'package:tcg_app/class/search.dart';
 import 'package:tcg_app/class/meta.dart';
 import 'package:tcg_app/theme/general_theme.dart';
+import 'package:tcg_app/theme/light_theme.dart';
+import 'package:tcg_app/theme/dark_theme.dart';
 
 void main() {
   runApp(MainApp());
@@ -42,8 +44,10 @@ class _MainAppState extends State<MainApp> {
     ];
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: generalTheme(),
-      
+      theme: lightTheme,
+      darkTheme: darkTheme,
+      themeMode: ThemeMode.dark,
+
       home: Scaffold(
         appBar: Barwidget(
           title: "Cardbase",
