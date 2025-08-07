@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/appbar.dart';
-import 'package:tcg_app/class/appdata.dart';
+
 import 'package:tcg_app/class/bottombar.dart';
 import 'package:tcg_app/class/home.dart';
 import 'package:tcg_app/class/profile.dart';
 import 'package:tcg_app/class/search.dart';
 import 'package:tcg_app/class/meta.dart';
+import 'package:tcg_app/theme/general_theme.dart';
 
 void main() {
   runApp(MainApp());
@@ -41,11 +42,16 @@ class _MainAppState extends State<MainApp> {
     ];
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      theme: generalTheme(),
+      
       home: Scaffold(
-        appBar: Barwidget(barColor: Appdata.barColor),
+        appBar: Barwidget(
+          title: "Cardbase",
+          titleFlow: MainAxisAlignment.start,
+        ),
         body: Container(
           height: MediaQuery.of(context).size.height - 120,
-          color: Appdata.bodyColor,
+
           child: Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -58,14 +64,6 @@ class _MainAppState extends State<MainApp> {
           currentIndex: _selectedIndex,
           valueChanged: _onItemTapped,
           navigationItems: iconList,
-          selectedIconColor: Appdata.textColor,
-          selectedLabelColor: Appdata.textColor,
-          selectedIconSize: Appdata.sizeSelectedIcons,
-          selectedLabelSize: Appdata.sizeLabels,
-          unselectedLabelSize: Appdata.sizeLabels,
-          unselectedIconSize: Appdata.sizeIcons,
-          unselectedIconColor: Appdata.textColor,
-          unselectedLabelColor: Appdata.textColor,
         ),
       ),
     );

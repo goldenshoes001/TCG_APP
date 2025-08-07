@@ -3,6 +3,7 @@ description: "A new Flutter project."
 publish_to: 'none'
 version: 0.1.0
 
+
 environment:
   sdk: ^3.8.1
 
@@ -10,12 +11,31 @@ dependencies:
   flutter:
     sdk: flutter
 
+
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: "^0.13.1"
+  flutter_native_splash: ^2.4.6
 
 flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/icon/
+
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/appicon.png"
+
+flutter_native_splash:
+ color: "#000000"
+ image: assets/splash/splash.png
+ android_12:
+   image: assets/splash/splash.png
+   color: "#000000"
+   icon_background_color: "#000000"
