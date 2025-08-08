@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 class BottombarElement extends StatelessWidget {
   const BottombarElement({
     super.key,
-
     required this.icon,
     required this.label,
     this.isSelected = false,
@@ -16,19 +15,20 @@ class BottombarElement extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final BottombarElementTheme = theme.navigationBarTheme;
-    // Auswahl der richtigen Farben und Größen basierend auf dem isSelected-Status
+    final navBarTheme = theme.navigationBarTheme;
+
+    // Den TextStyle aus dem NavigationBarTheme holen
+    final textStyle = navBarTheme.labelTextStyle!.resolve({});
+    final iconstyle = navBarTheme.iconTheme!.resolve({})!;
 
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Column(
-        mainAxisAlignment:
-            MainAxisAlignment.start, // Zentriert die Elemente vertikal
-
+        mainAxisAlignment: MainAxisAlignment.start,
         children: [
-          icon,
-          const SizedBox(height: 4),
-          Text(label, style: TextStyle()),
+          IconTheme(data: iconstyle, child: icon),
+          SizedBox(height: 4),
+          Text(label, style: textStyle), // Jetzt ist textStyle definiert
         ],
       ),
     );

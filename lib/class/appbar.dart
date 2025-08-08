@@ -3,19 +3,19 @@ import 'package:tcg_app/theme/sizing.dart';
 
 class Barwidget extends StatelessWidget implements PreferredSizeWidget {
   final MainAxisAlignment titleFlow;
-
   final String title;
 
   const Barwidget({
     super.key,
     this.titleFlow = MainAxisAlignment.center,
-
     this.title = "",
   });
+
   @override
   Widget build(BuildContext context) {
     return AppBar(
       centerTitle: false,
+      // toolbarHeight wird automatisch aus dem Theme genommen!
       title: Row(
         mainAxisAlignment: titleFlow,
         children: [
@@ -33,5 +33,10 @@ class Barwidget extends StatelessWidget implements PreferredSizeWidget {
   }
 
   @override
-  Size get preferredSize => Size.fromHeight(appbarSize);
+  Size get preferredSize {
+    // Diese Methode wird für das Scaffold Layout verwendet
+    return Size.fromHeight(
+      kToolbarHeight,
+    ); // Standard, wird von Theme überschrieben
+  }
 }

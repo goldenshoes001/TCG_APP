@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-
 import 'package:tcg_app/class/bottombar_element.dart';
-import 'package:tcg_app/theme/colors.dart';
 
 class Bottombar extends StatelessWidget {
   final int currentIndex;
@@ -18,45 +16,52 @@ class Bottombar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final bottomBarTheme = theme.navigationBarTheme;
+    final navBarTheme = theme.navigationBarTheme;
+
+    // Farben und Eigenschaften aus dem NavigationBarTheme holen
+    final backgroundColor = navBarTheme.backgroundColor;
+    final containerHeight = navBarTheme.height;
+   
+
     return Container(
-      child: Container(
-        color: bottomBarTheme.backgroundColor ,
-        width: double.infinity,
-        height: MediaQuery.of(context).size.height * 0.125,
+      color: backgroundColor,
+      width: double.infinity,
+      height: containerHeight,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: List.generate(navigationItems.length, (index) {
+          final bool isSelected = index == currentIndex;
 
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: List.generate(navigationItems.length, (index) {
-            final bool isSelected = index == currentIndex;
-
-            return Expanded(
-              child: InkWell(
-                onTap: () {
-                  valueChanged(index);
-                },
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(10),
-                      topRight: Radius.circular(10),
-                      bottomLeft: Radius.circular(5),
-                      bottomRight: Radius.circular(5),
-                    ), // Optional: Runde Ecken
+          return Expanded(
+            child: InkWell(
+              onTap: () {
+                valueChanged(index);
+              },
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? navBarTheme.indicatorColor ?? Colors.lightBlue
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(10),
+                    topRight: Radius.circular(10),
+                    bottomLeft: Radius.circular(5),
+                    bottomRight: Radius.circular(5),
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 5.0),
-                    child: BottombarElement(
-                      icon: navigationItems[index].icon,
-                      label: navigationItems[index].label,
-                      isSelected: isSelected,
-                    ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 5.0),
+                  child: BottombarElement(
+                    icon: navigationItems[index].icon,
+
+                    label: navigationItems[index].label,
+                    isSelected: isSelected,
                   ),
                 ),
               ),
-            );
-          }),
-        ),
+            ),
+          );
+        }),
       ),
     );
   }

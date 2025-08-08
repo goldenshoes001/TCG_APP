@@ -6,7 +6,7 @@ import 'package:tcg_app/class/home.dart';
 import 'package:tcg_app/class/profile.dart';
 import 'package:tcg_app/class/search.dart';
 import 'package:tcg_app/class/meta.dart';
-import 'package:tcg_app/theme/general_theme.dart';
+
 import 'package:tcg_app/theme/light_theme.dart';
 import 'package:tcg_app/theme/dark_theme.dart';
 
@@ -44,16 +44,16 @@ class _MainAppState extends State<MainApp> {
     ];
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: lightTheme,
-      darkTheme: darkTheme,
-      themeMode: ThemeMode.dark,
+      theme: lightTheme(context),
+      darkTheme: darkTheme(context),
+      themeMode: ThemeMode.system,
 
       home: Scaffold(
         appBar: Barwidget(
           title: "Cardbase",
           titleFlow: MainAxisAlignment.start,
         ),
-        body: Container(
+        body: SizedBox(
           height: MediaQuery.of(context).size.height - 120,
 
           child: Center(
