@@ -58,7 +58,7 @@ class _MainAppState extends State<MainApp> {
             titleFlow: MainAxisAlignment.start,
           ),
         ),
-        body: Column(children: [widgetListe[_selectedIndex]]),
+        body: widgetListe[_selectedIndex],
 
         bottomNavigationBar: Bottombar(
           currentIndex: _selectedIndex,

@@ -23,8 +23,8 @@ class Showcardarray extends StatelessWidget {
             },
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: crossAxisCount,
-              mainAxisSpacing: 8.0,
-              crossAxisSpacing: 8.0,
+              mainAxisSpacing: 0.0,
+              crossAxisSpacing: 0.0,
               childAspectRatio: 0.7,
             ),
           ),
