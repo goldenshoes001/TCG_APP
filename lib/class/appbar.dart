@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tcg_app/theme/sizing.dart';
 
-class Barwidget extends StatelessWidget implements PreferredSizeWidget {
+class Barwidget extends StatelessWidget {
   final MainAxisAlignment titleFlow;
   final String title;
 
@@ -19,9 +19,13 @@ class Barwidget extends StatelessWidget implements PreferredSizeWidget {
       title: Row(
         mainAxisAlignment: titleFlow,
         children: [
-          Image(
-            image: AssetImage("assets/icon/appicon.png"),
-            height: appbarIconSize,
+          ClipRRect(
+            child: Image.asset(
+              'assets/icon/appicon.png',
+
+              height: 15,
+              fit: BoxFit.cover,
+            ),
           ),
           SizedBox(
             width: MediaQuery.of(context).size.width * widthSizedBoxAppBar,
@@ -30,13 +34,5 @@ class Barwidget extends StatelessWidget implements PreferredSizeWidget {
         ],
       ),
     );
-  }
-
-  @override
-  Size get preferredSize {
-    // Diese Methode wird für das Scaffold Layout verwendet
-    return Size.fromHeight(
-      kToolbarHeight,
-    ); // Standard, wird von Theme überschrieben
   }
 }

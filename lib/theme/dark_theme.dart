@@ -5,19 +5,19 @@ import 'package:tcg_app/theme/sizing.dart';
 import "package:tcg_app/theme/textstyle.dart";
 
 ThemeData darkTheme(BuildContext context) => generalTheme().copyWith(
-  scaffoldBackgroundColor: barColor,
+  scaffoldBackgroundColor: bodyColor,
   appBarTheme: AppBarTheme(
-    backgroundColor: bodyColor,
+    backgroundColor: barColor,
     titleTextStyle: TextStyle(
       color: textBar,
       fontSize: appbarTextSize,
       fontWeight: fontWeightAppbar,
     ),
-    toolbarHeight: MediaQuery.sizeOf(context).height * 0.08,
+    toolbarHeight: MediaQuery.sizeOf(context).height,
   ),
   navigationBarTheme: NavigationBarThemeData(
     backgroundColor: barColor,
-    height: MediaQuery.sizeOf(context).height * 0.12,
+    height: MediaQuery.sizeOf(context).height * bottombarSize,
 
     // Icons immer gleich
     iconTheme: WidgetStateProperty.all(
@@ -39,6 +39,21 @@ ThemeData darkTheme(BuildContext context) => generalTheme().copyWith(
   ),
 
   textTheme: generalTheme().textTheme.copyWith(
+    bodyLarge: generalTheme().textTheme.bodyLarge!.copyWith(
+      color: colorBodyLarge,
+    ),
     bodyMedium: generalTheme().textTheme.bodyMedium!.copyWith(color: textColor),
+    bodySmall: generalTheme().textTheme.bodySmall!.copyWith(
+      color: colorBodySmall,
+    ),
+    headlineLarge: generalTheme().textTheme.headlineLarge!.copyWith(color: colorHeadlineLarge),
+
+     headlineMedium: generalTheme().textTheme.headlineMedium!.copyWith(
+      color: colorHeadlineLarge,
+    ),
+     headlineSmall: generalTheme().textTheme.headlineSmall!.copyWith(
+      color: colorHeadlineSmall,
+    ),
+
   ),
 );

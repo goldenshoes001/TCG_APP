@@ -1,1 +1,1 @@
-const double differenceBetweenImageText = 80;
+const double differenceBetweenImageText = 10;

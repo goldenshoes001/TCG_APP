@@ -9,6 +9,7 @@ import 'package:tcg_app/class/meta.dart';
 
 import 'package:tcg_app/theme/light_theme.dart';
 import 'package:tcg_app/theme/dark_theme.dart';
+import 'package:tcg_app/theme/sizing.dart';
 
 void main() {
   runApp(MainApp());
@@ -49,21 +50,16 @@ class _MainAppState extends State<MainApp> {
       themeMode: ThemeMode.system,
 
       home: Scaffold(
-        appBar: Barwidget(
-          title: "Cardbase",
-          titleFlow: MainAxisAlignment.start,
-        ),
-        body: SizedBox(
-          height: MediaQuery.of(context).size.height - 120,
-
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [widgetListe[_selectedIndex]],
-            ),
+        appBar: PreferredSize(
+          preferredSize:
+              Size.fromHeight(MediaQuery.of(context).size.height) / appbarSize,
+          child: Barwidget(
+            title: "Cardbase",
+            titleFlow: MainAxisAlignment.start,
           ),
         ),
+        body: Column(children: [widgetListe[_selectedIndex]]),
+
         bottomNavigationBar: Bottombar(
           currentIndex: _selectedIndex,
           valueChanged: _onItemTapped,

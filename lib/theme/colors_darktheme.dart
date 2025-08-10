@@ -11,3 +11,10 @@ Color iconColor = Colors.white;
 Color selectedIconColor = Colors.lightBlue;
 Color unselectedIconColor = Colors.transparent;
 Color labelcolor = Colors.white;
+
+Color colorHeadlineLarge = Colors.black;
+Color colorHeadlineMedium = Colors.black;
+Color colorHeadlineSmall = Colors.black;
+Color colorBodyLarge = Colors.grey;
+Color bodyMediumColor = const Color.fromARGB(255, 129, 129, 129);
+Color colorBodySmall = Colors.grey;

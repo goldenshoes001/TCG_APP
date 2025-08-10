@@ -1,21 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:tcg_app/class/lists.dart';
+
+import 'package:tcg_app/class/common/show_card_array.dart';
 
 class Home extends StatelessWidget {
   const Home({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text("Willkommen bei \n Cardbase", textAlign: TextAlign.center),
-        SizedBox(height: MediaQuery.of(context).size.height * 0.05),
-        Image.asset(
-          'assets/icon/appicon.png',
-          height: MediaQuery.of(context).size.height * 0.38,
-        ),
-        SizedBox(height: MediaQuery.of(context).size.height * 0.05),
-        Text("Ihrer TCG App des Vertrauens"),
-      ],
-    );
+    return Showcardarray(cards: cards);
   }
 }

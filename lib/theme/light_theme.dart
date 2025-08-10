@@ -17,7 +17,7 @@ ThemeData lightTheme(BuildContext context) => generalTheme().copyWith(
   ),
   navigationBarTheme: NavigationBarThemeData(
     backgroundColor: barColor,
-    height: MediaQuery.sizeOf(context).height * 0.12,
+    height: MediaQuery.sizeOf(context).height * bottombarSize,
 
     // Icons immer gleich
     iconTheme: WidgetStateProperty.all(
@@ -38,6 +38,24 @@ ThemeData lightTheme(BuildContext context) => generalTheme().copyWith(
     ),
   ),
   textTheme: generalTheme().textTheme.copyWith(
-    bodyMedium: generalTheme().textTheme.bodyMedium!.copyWith(color: textColor),
+    bodyLarge: generalTheme().textTheme.bodyLarge!.copyWith(
+      color: colorBodyLarge,
+    ),
+    bodyMedium: generalTheme().textTheme.bodyMedium!.copyWith(
+      color: bodyMediumColor,
+    ),
+    bodySmall: generalTheme().textTheme.bodySmall!.copyWith(
+      color: colorBodySmall,
+    ),
+    headlineLarge: generalTheme().textTheme.headlineLarge!.copyWith(
+      color: colorHeadlineLarge,
+    ),
+
+    headlineMedium: generalTheme().textTheme.headlineMedium!.copyWith(
+      color: colorHeadlineMedium,
+    ),
+    headlineSmall: generalTheme().textTheme.headlineSmall!.copyWith(
+      color: colorHeadlineSmall,
+    ),
   ),
 );
