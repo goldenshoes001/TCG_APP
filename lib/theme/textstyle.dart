@@ -8,7 +8,7 @@ const double fontSizeBodyMedium = 14;
 const double fontSizeBodySmall = 12;
 const double fontSizeBodyLarge = 16;
 const double fontSizeHeadlineLarge = 24;
-const double fontSizeheadlineMedium = 20;
+const double fontSizeHeadlineMedium = 20;
 const double fontSizeHeadlineSmall = 18;
 
 const double appbarTextSize = 15;

@@ -26,20 +26,14 @@ ThemeData generalTheme() {
 
       headlineMedium: TextStyle(
         fontFamily: fontFamily,
-        fontSize: fontSizeheadlineMedium,
+        fontSize: fontSizeHeadlineMedium,
       ),
 
       headlineSmall: TextStyle(
         fontFamily: fontFamily,
         fontSize: fontSizeHeadlineSmall,
       ),
-      labelLarge: TextStyle(),
-      labelMedium: TextStyle(),
-      labelSmall: TextStyle(),
 
-      titleLarge: TextStyle(),
-      titleMedium: TextStyle(),
-      titleSmall: TextStyle(),
     ),
   );
 }

@@ -8,7 +8,7 @@ class Showcardarray extends StatelessWidget {
   const Showcardarray({
     super.key,
     required this.cards,
-    this.crossAxisCount = 1,
+    this.crossAxisCount = 3,
   });
 
   @override
@@ -22,10 +22,12 @@ class Showcardarray extends StatelessWidget {
               return cards[index];
             },
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: crossAxisCount,
+              crossAxisCount: crossAxisCount > 3 ? 1 : crossAxisCount,
               mainAxisSpacing: 0.0,
               crossAxisSpacing: 0.0,
-              childAspectRatio: 0.7,
+              childAspectRatio: crossAxisCount > 2
+                  ? MediaQuery.of(context).size.width / 400
+                  : MediaQuery.of(context).size.width / 109,
             ),
           ),
         ),
