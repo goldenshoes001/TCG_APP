@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:tcg_app/theme/colors_lighttheme.dart';
 
 class DeckCard extends StatelessWidget {
-  const DeckCard({super.key, required this.texts, this.rating = "5/5"});
+  DeckCard({super.key, required this.texts, this.rating = "5/5"});
 
   final List<String> texts;
   final String rating;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context).textTheme;
+    final textTheme = Theme.of(context).textTheme;
+    final theme = Theme.of(context);
 
     return Card(
-      color: cardColor,
+      color: theme.cardColor,
 
       child: Padding(
         padding: const EdgeInsets.all(12.0),
@@ -32,7 +32,9 @@ class DeckCard extends StatelessWidget {
                       padding: EdgeInsets.only(bottom: 4.0),
                       child: Text(
                         text,
-                        style: index == 1 ? theme.bodyMedium : theme.bodyLarge,
+                        style: index == 1
+                            ? textTheme.bodyMedium
+                            : textTheme.bodyLarge,
                         overflow: TextOverflow.ellipsis,
                       ),
                     );
@@ -49,7 +51,7 @@ class DeckCard extends StatelessWidget {
                 Flexible(
                   child: Text(
                     rating,
-                    style: theme.bodySmall,
+                    style: textTheme.bodySmall,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),

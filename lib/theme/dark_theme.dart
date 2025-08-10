@@ -5,6 +5,7 @@ import 'package:tcg_app/theme/sizing.dart';
 import "package:tcg_app/theme/textstyle.dart";
 
 ThemeData darkTheme(BuildContext context) => generalTheme(context).copyWith(
+  cardColor: cardColor,
   scaffoldBackgroundColor: bodyColor,
   appBarTheme: AppBarTheme(
     backgroundColor: barColor,
@@ -44,7 +45,7 @@ ThemeData darkTheme(BuildContext context) => generalTheme(context).copyWith(
     ).textTheme.bodyLarge!.copyWith(color: colorBodyLarge),
     bodyMedium: generalTheme(
       context,
-    ).textTheme.bodyMedium!.copyWith(color: textColor),
+    ).textTheme.bodyMedium!.copyWith(color: bodyMediumColor),
     bodySmall: generalTheme(
       context,
     ).textTheme.bodySmall!.copyWith(color: colorBodySmall),

@@ -8,8 +8,14 @@ class Home extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Showcardarray(cards: decks, crossAxisCount: decks.length),
+    return ListView(
+      children: [
+        SizedBox(height: 40),
+        Showcardarray(cards: decks, crossAxisCount: decks.length),
+        SizedBox(height: 40),
+        Showcardarray(cards: cards, crossAxisCount: 1),
+        SizedBox(height: 40),
+      ],
     );
   }
 }

@@ -13,40 +13,39 @@ class Showcardarray extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final safeColumns = crossAxisCount > cards.length
-        ? 1
-        : crossAxisCount.clamp(crossAxisCount, cards.length);
-
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal, // Horizontal scrollen
-      child: SizedBox(
-        width: _calculateTotalWidth(
-          context,
-          safeColumns,
-        ), // Gesamtbreite berechnen
-        child: GridView.builder(
-          shrinkWrap: true,
-          // GridView scrollt nicht
-          itemCount: cards.length,
-          itemBuilder: (context, index) {
-            return cards[index];
-          },
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: safeColumns,
-            mainAxisSpacing: 8.0,
-            crossAxisSpacing: 8.0,
-            childAspectRatio: crossAxisCount == 1 ? 3.0 : 2.0,
-          ),
+    // Vertikal: nur die äußere ListView scrollt
+    if (crossAxisCount == 1) {
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(), // wichtig
+        itemCount: cards.length,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 1,
+          mainAxisSpacing: 8.0,
+          crossAxisSpacing: 8.0,
+          childAspectRatio: 4.0,
         ),
+        itemBuilder: (context, index) => cards[index],
+      );
+    }
+
+    const double cardWidth = 500;
+    final double cardHeight = cardWidth / 5.0;
+
+    return SizedBox(
+      height: cardHeight + 8.0 + 8.0,
+      child: GridView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: cards.length,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 1, // eine Zeile
+          mainAxisSpacing: 2.0,
+          crossAxisSpacing: 2.0,
+          childAspectRatio: 0.8,
+        ),
+        itemBuilder: (context, index) =>
+            SizedBox(width: cardWidth, child: cards[index]),
       ),
     );
-  }
-
-  double _calculateTotalWidth(BuildContext context, int columns) {
-    double screenWidth = MediaQuery.of(context).size.width;
-    double cardWidth;
-    crossAxisCount == 1 ? cardWidth = screenWidth : cardWidth = 350;
-
-    return (cardWidth) * columns;
   }
 }
