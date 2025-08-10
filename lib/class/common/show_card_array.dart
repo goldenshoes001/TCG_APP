@@ -8,32 +8,45 @@ class Showcardarray extends StatelessWidget {
   const Showcardarray({
     super.key,
     required this.cards,
-    this.crossAxisCount = 10,
+    required this.crossAxisCount,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GridView.builder(
-      padding: EdgeInsets.all(10),
-      // Entferne Column und Expanded
-      itemCount: cards.length,
-      itemBuilder: (context, index) {
-        return cards[index];
-      },
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: crossAxisCount > 10 ? 1 : crossAxisCount,
-        mainAxisSpacing: 10.0,
-        crossAxisSpacing: 10.0,
-        childAspectRatio: _calculateSafeAspectRatio(context, crossAxisCount),
+    final safeColumns = crossAxisCount > cards.length
+        ? 1
+        : crossAxisCount.clamp(crossAxisCount, cards.length);
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal, // Horizontal scrollen
+      child: SizedBox(
+        width: _calculateTotalWidth(
+          context,
+          safeColumns,
+        ), // Gesamtbreite berechnen
+        child: GridView.builder(
+          shrinkWrap: true,
+          // GridView scrollt nicht
+          itemCount: cards.length,
+          itemBuilder: (context, index) {
+            return cards[index];
+          },
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: safeColumns,
+            mainAxisSpacing: 8.0,
+            crossAxisSpacing: 8.0,
+            childAspectRatio: crossAxisCount == 1 ? 3.0 : 2.0,
+          ),
+        ),
       ),
     );
   }
 
-  double _calculateSafeAspectRatio(BuildContext context, int crossAxisCount) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final padding = 10.0;
-    final spacing = 10.0 * (crossAxisCount - 1);
-    final cardWidth = (screenWidth - padding - spacing) / crossAxisCount;
-    return (cardWidth / 140).clamp(1.5, 5.0);
+  double _calculateTotalWidth(BuildContext context, int columns) {
+    double screenWidth = MediaQuery.of(context).size.width;
+    double cardWidth;
+    crossAxisCount == 1 ? cardWidth = screenWidth : cardWidth = 350;
+
+    return (cardWidth) * columns;
   }
 }

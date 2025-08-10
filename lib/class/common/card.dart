@@ -11,40 +11,52 @@ class DeckCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context).textTheme;
 
-    return SizedBox(
-      width: double.infinity,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Card(
-            color: cardColor,
-            child: Padding(
-              padding: const EdgeInsets.all(20),
+    return Card(
+      color: cardColor,
+
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // Texte mit Platzbegrenzung
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   ...texts.asMap().entries.map((entry) {
                     int index = entry.key;
                     String text = entry.value;
-                    return Text(
-                      text,
-                      style: index == 1 ? theme.bodyMedium : theme.bodyLarge,
+                    return Padding(
+                      padding: EdgeInsets.only(bottom: 4.0),
+                      child: Text(
+                        text,
+                        style: index == 1 ? theme.bodyMedium : theme.bodyLarge,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     );
                   }),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      const Icon(Icons.star, color: Colors.yellow),
-                      const SizedBox(width: 5),
-                      Text(rating),
-                    ],
-                  ),
                 ],
               ),
             ),
-          ),
-        ],
+            // Rating am unteren Ende
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.star, color: Colors.yellow, size: 16),
+                SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    rating,
+                    style: theme.bodySmall,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

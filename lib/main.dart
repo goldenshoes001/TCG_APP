@@ -54,7 +54,7 @@ class _MainAppState extends State<MainApp> {
       debugShowCheckedModeBanner: false,
       theme: lightTheme(context),
       darkTheme: darkTheme(context),
-      themeMode: ThemeMode.system,
+      themeMode: ThemeMode.light,
 
       home: Scaffold(
         appBar: PreferredSize(
