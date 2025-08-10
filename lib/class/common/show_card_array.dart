@@ -14,6 +14,7 @@ class Showcardarray extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GridView.builder(
+      padding: EdgeInsets.all(10),
       // Entferne Column und Expanded
       itemCount: cards.length,
       itemBuilder: (context, index) {
@@ -21,12 +22,18 @@ class Showcardarray extends StatelessWidget {
       },
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: crossAxisCount > 10 ? 1 : crossAxisCount,
-        mainAxisSpacing: 0.0,
-        crossAxisSpacing: 0.0,
-        childAspectRatio: crossAxisCount > 10
-            ? MediaQuery.of(context).size.width / 130
-            : MediaQuery.of(context).size.width / 509,
+        mainAxisSpacing: 10.0,
+        crossAxisSpacing: 10.0,
+        childAspectRatio: _calculateSafeAspectRatio(context, crossAxisCount),
       ),
     );
+  }
+
+  double _calculateSafeAspectRatio(BuildContext context, int crossAxisCount) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final padding = 10.0;
+    final spacing = 10.0 * (crossAxisCount - 1);
+    final cardWidth = (screenWidth - padding - spacing) / crossAxisCount;
+    return (cardWidth / 140).clamp(1.5, 5.0);
   }
 }

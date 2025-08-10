@@ -24,16 +24,14 @@ class DeckCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ...texts.asMap().entries.map(
-                    (entry) {
-                      int index = entry.key;
-                      String text = entry.value;
-                      return Text(
-                        text,
-                        style: index == 1 ? theme.bodyMedium : theme.bodyLarge,
-                      );
-                    },
-                  ).toList(), // Hier fehlte .toList() und die schließende Klammer
+                  ...texts.asMap().entries.map((entry) {
+                    int index = entry.key;
+                    String text = entry.value;
+                    return Text(
+                      text,
+                      style: index == 1 ? theme.bodyMedium : theme.bodyLarge,
+                    );
+                  }),
                   const SizedBox(height: 10),
                   Row(
                     children: [
