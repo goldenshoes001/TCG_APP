@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sizer/sizer.dart';
 import 'package:tcg_app/class/appbar.dart';
 
 import 'package:tcg_app/class/bottombar.dart';
@@ -12,7 +13,13 @@ import 'package:tcg_app/theme/dark_theme.dart';
 import 'package:tcg_app/theme/sizing.dart';
 
 void main() {
-  runApp(MainApp());
+  runApp(
+    Sizer(
+      builder: (context, orientation, deviceType) {
+        return MainApp();
+      },
+    ),
+  );
 }
 
 // ignore: must_be_immutable

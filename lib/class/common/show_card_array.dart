@@ -8,30 +8,25 @@ class Showcardarray extends StatelessWidget {
   const Showcardarray({
     super.key,
     required this.cards,
-    this.crossAxisCount = 3,
+    this.crossAxisCount = 10,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Expanded(
-          child: GridView.builder(
-            itemCount: cards.length,
-            itemBuilder: (context, index) {
-              return cards[index];
-            },
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: crossAxisCount > 3 ? 1 : crossAxisCount,
-              mainAxisSpacing: 0.0,
-              crossAxisSpacing: 0.0,
-              childAspectRatio: crossAxisCount > 2
-                  ? MediaQuery.of(context).size.width / 400
-                  : MediaQuery.of(context).size.width / 109,
-            ),
-          ),
-        ),
-      ],
+    return GridView.builder(
+      // Entferne Column und Expanded
+      itemCount: cards.length,
+      itemBuilder: (context, index) {
+        return cards[index];
+      },
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount > 10 ? 1 : crossAxisCount,
+        mainAxisSpacing: 0.0,
+        crossAxisSpacing: 0.0,
+        childAspectRatio: crossAxisCount > 10
+            ? MediaQuery.of(context).size.width / 130
+            : MediaQuery.of(context).size.width / 509,
+      ),
     );
   }
 }

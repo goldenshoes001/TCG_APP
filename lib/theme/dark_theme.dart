@@ -4,7 +4,7 @@ import 'package:tcg_app/theme/colors_darktheme.dart';
 import 'package:tcg_app/theme/sizing.dart';
 import "package:tcg_app/theme/textstyle.dart";
 
-ThemeData darkTheme(BuildContext context) => generalTheme().copyWith(
+ThemeData darkTheme(BuildContext context) => generalTheme(context).copyWith(
   scaffoldBackgroundColor: bodyColor,
   appBarTheme: AppBarTheme(
     backgroundColor: barColor,
@@ -38,22 +38,25 @@ ThemeData darkTheme(BuildContext context) => generalTheme().copyWith(
     ),
   ),
 
-  textTheme: generalTheme().textTheme.copyWith(
-    bodyLarge: generalTheme().textTheme.bodyLarge!.copyWith(
-      color: colorBodyLarge,
-    ),
-    bodyMedium: generalTheme().textTheme.bodyMedium!.copyWith(color: textColor),
-    bodySmall: generalTheme().textTheme.bodySmall!.copyWith(
-      color: colorBodySmall,
-    ),
-    headlineLarge: generalTheme().textTheme.headlineLarge!.copyWith(color: colorHeadlineLarge),
+  textTheme: generalTheme(context).textTheme.copyWith(
+    bodyLarge: generalTheme(
+      context,
+    ).textTheme.bodyLarge!.copyWith(color: colorBodyLarge),
+    bodyMedium: generalTheme(
+      context,
+    ).textTheme.bodyMedium!.copyWith(color: textColor),
+    bodySmall: generalTheme(
+      context,
+    ).textTheme.bodySmall!.copyWith(color: colorBodySmall),
+    headlineLarge: generalTheme(
+      context,
+    ).textTheme.headlineLarge!.copyWith(color: colorHeadlineLarge),
 
-     headlineMedium: generalTheme().textTheme.headlineMedium!.copyWith(
-      color: colorHeadlineLarge,
-    ),
-     headlineSmall: generalTheme().textTheme.headlineSmall!.copyWith(
-      color: colorHeadlineSmall,
-    ),
-
+    headlineMedium: generalTheme(
+      context,
+    ).textTheme.headlineMedium!.copyWith(color: colorHeadlineLarge),
+    headlineSmall: generalTheme(
+      context,
+    ).textTheme.headlineSmall!.copyWith(color: colorHeadlineSmall),
   ),
 );
