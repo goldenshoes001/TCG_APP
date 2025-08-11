@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/common/card.dart';
 import 'package:tcg_app/class/common/lists.dart';
-import 'package:tcg_app/class/common/show_card_array.dart';
+
+import 'package:tcg_app/class/common/show_card_array_horizontal.dart';
 
 class Home extends StatelessWidget {
   const Home({super.key});
@@ -12,7 +13,7 @@ class Home extends StatelessWidget {
     final List<List<DeckCard>> listCards = [decks, cards, decks, cards, decks];
 
     // Die passenden crossAxisCount-Werte in einer parallelen Liste
-    final List<int> crossAxisCounts = [1, 2, 3, 4, 5];
+    final List<int> crossAxisCounts = [7, 2, 3, 4, 5];
     final List<String> texts = [
       "beliebte Community Decks",
       "beliebte Community Karten",
@@ -36,7 +37,7 @@ class Home extends StatelessWidget {
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
             SizedBox(height: 20),
-            Showcardarray(
+            ShowcardarrayHorizontal(
               cards: listCards[index],
               crossAxisCount: crossAxisCounts[index],
             ),

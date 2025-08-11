@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/common/card.dart';
 
-class Showcardarray extends StatelessWidget {
+class ShowcardarrayVertical extends StatelessWidget {
   final List<DeckCard> cards;
   final int crossAxisCount;
 
-  const Showcardarray({
+  const ShowcardarrayVertical({
     super.key,
     required this.cards,
     required this.crossAxisCount,

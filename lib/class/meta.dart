@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/common/card.dart';
 import 'package:tcg_app/class/common/lists.dart';
-import 'package:tcg_app/class/common/show_card_array.dart';
+import 'package:tcg_app/class/common/show_card_array_vertical.dart';
 
 class Meta extends StatelessWidget {
   const Meta({super.key});
@@ -33,7 +33,7 @@ class Meta extends StatelessWidget {
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
             SizedBox(height: 20),
-            Showcardarray(
+            ShowcardarrayVertical(
               cards: listCards[index],
               crossAxisCount: crossAxisCounts[index],
             ),
