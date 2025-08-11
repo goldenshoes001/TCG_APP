@@ -60,10 +60,7 @@ class _MainAppState extends State<MainApp> {
         appBar: PreferredSize(
           preferredSize:
               Size.fromHeight(MediaQuery.of(context).size.height) / appbarSize,
-          child: Barwidget(
-            title: "Cardbase",
-            titleFlow: MainAxisAlignment.start,
-          ),
+          child: Barwidget(title: "test", titleFlow: MainAxisAlignment.start),
         ),
         body: widgetListe[_selectedIndex],
 
