@@ -12,10 +12,13 @@ Color selectedIconColor = Colors.lightBlue;
 Color unselectedIconColor = Colors.transparent;
 Color labelcolor = Colors.white;
 
-Color colorHeadlineLarge = Colors.black;
-Color colorHeadlineMedium = Colors.black;
-Color colorHeadlineSmall = Colors.black;
+Color colorHeadlineLarge = Colors.white;
+Color colorHeadlineMedium = Colors.white;
+Color colorHeadlineSmall = Colors.white;
 Color colorBodyLarge = Colors.white;
 Color bodyMediumColor = Colors.white;
 Color colorBodySmall = Colors.white;
-Color cardColor = Color(0xFF1F2937).withAlpha(200);
+Color cardColor = Color(0xFF1F2937);
+Color containerColor = Color(0xFF1F2937);
+Color inputField = Colors.white;
+Color errorColor = Colors.red;

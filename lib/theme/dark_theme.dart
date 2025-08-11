@@ -4,9 +4,53 @@ import 'package:tcg_app/theme/colors_darktheme.dart';
 import 'package:tcg_app/theme/sizing.dart';
 import "package:tcg_app/theme/textstyle.dart";
 
+extension MyDarkThemeDataExtension on ThemeData {
+  Color get darkColorOfContainer => containerColor;
+}
+
 ThemeData darkTheme(BuildContext context) => generalTheme(context).copyWith(
+  brightness: Brightness.dark,
   cardColor: cardColor,
   scaffoldBackgroundColor: bodyColor,
+
+  outlinedButtonTheme: OutlinedButtonThemeData(
+    style: OutlinedButton.styleFrom(
+      foregroundColor: labelcolor,
+      backgroundColor: cardColor,
+      side: BorderSide(color: cardColor, width: 2),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      textStyle: Theme.of(context).textTheme.bodyLarge,
+    ),
+  ),
+  inputDecorationTheme: InputDecorationTheme(
+    filled: true,
+    fillColor: cardColor,
+    hintStyle: TextStyle(color: inputField),
+    prefixIconColor: inputField,
+    suffixIconColor: inputField,
+    hoverColor: inputField,
+
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(borderRadius),
+      borderSide: BorderSide(color: inputField),
+    ),
+
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(borderRadius),
+      borderSide: BorderSide(color: inputField, width: 2.0),
+    ),
+
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(borderRadius),
+      borderSide: BorderSide(color: cardColor),
+    ),
+
+    errorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(borderRadius),
+      borderSide: BorderSide(color: errorColor),
+    ),
+  ),
   appBarTheme: AppBarTheme(
     backgroundColor: barColor,
     titleTextStyle: TextStyle(

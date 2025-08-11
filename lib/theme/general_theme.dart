@@ -31,6 +31,7 @@ ThemeData generalTheme(BuildContext context) {
       headlineMedium: TextStyle(
         fontFamily: fontFamily,
         fontSize: fontSizeHeadlineMedium.sp,
+        fontWeight: FontWeight.bold,
       ),
 
       headlineSmall: TextStyle(

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class DeckCard extends StatelessWidget {
-  DeckCard({super.key, required this.texts, this.rating = "5/5"});
+  const DeckCard({super.key, required this.texts, this.rating = "5/5"});
 
   final List<String> texts;
   final String rating;
