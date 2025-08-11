@@ -8,10 +8,8 @@ class Meta extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Die Listen der Karten
     final List<List<DeckCard>> listCards = [decks, cards, decks, cards, decks];
 
-    // Die passenden crossAxisCount-Werte in einer parallelen Liste
     final List<int> crossAxisCounts = [1, 2, 3, 4, 5];
     final List<String> texts = ["Turnier Decks", "Turnier Karten"];
 

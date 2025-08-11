@@ -17,7 +17,6 @@ class BottombarElement extends StatelessWidget {
     final theme = Theme.of(context);
     final navBarTheme = theme.navigationBarTheme;
 
-    // Den TextStyle aus dem NavigationBarTheme holen
     final textStyle = navBarTheme.labelTextStyle!.resolve({});
     final iconstyle = navBarTheme.iconTheme!.resolve({})!;
 
@@ -28,7 +27,7 @@ class BottombarElement extends StatelessWidget {
         children: [
           IconTheme(data: iconstyle, child: icon),
           SizedBox(height: 4),
-          Text(label, style: textStyle), // Jetzt ist textStyle definiert
+          Text(label, style: textStyle),
         ],
       ),
     );

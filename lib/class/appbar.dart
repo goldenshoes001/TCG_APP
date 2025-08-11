@@ -15,7 +15,7 @@ class Barwidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppBar(
       centerTitle: false,
-      // toolbarHeight wird automatisch aus dem Theme genommen!
+
       title: Row(
         mainAxisAlignment: titleFlow,
         children: [

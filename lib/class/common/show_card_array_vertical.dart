@@ -13,7 +13,6 @@ class ShowcardarrayVertical extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Vertikal: nur die äußere ListView scrollt
     if (crossAxisCount == 1 || crossAxisCount > 4) {
       return GridView.builder(
         shrinkWrap: true,
@@ -29,14 +28,13 @@ class ShowcardarrayVertical extends StatelessWidget {
       );
     }
 
-    // Horizontal: Korrektur für die Anzeige der Karten
     return SizedBox(
-      height: 200, // Eine feste Höhe für die horizontal scrollbare Liste
+      height: MediaQuery.of(context).size.width,
       child: GridView.builder(
-        scrollDirection: Axis.vertical, // Scrollrichtung ist horizontal
+        scrollDirection: Axis.vertical,
         itemCount: cards.length,
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: crossAxisCount, // Anzahl der Reihen
+          crossAxisCount: crossAxisCount,
           mainAxisSpacing: 2.0,
           crossAxisSpacing: 2.0,
           childAspectRatio: switch (crossAxisCount) {
@@ -44,7 +42,7 @@ class ShowcardarrayVertical extends StatelessWidget {
             3 => 1.3,
             4 => 1,
 
-            _ => 1, // Standardwert, um Fehler zu vermeiden
+            _ => 1,
           },
         ),
         itemBuilder: (context, index) => cards[index],

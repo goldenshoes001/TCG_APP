@@ -7,7 +7,6 @@ class Profile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      // <--- Scaffold hinzufügen
       body: Padding(
         padding: EdgeInsets.all(MediaQuery.of(context).size.height / 120),
 

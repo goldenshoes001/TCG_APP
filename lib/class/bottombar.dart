@@ -18,10 +18,8 @@ class Bottombar extends StatelessWidget {
     final theme = Theme.of(context);
     final navBarTheme = theme.navigationBarTheme;
 
-    // Farben und Eigenschaften aus dem NavigationBarTheme holen
     final backgroundColor = navBarTheme.backgroundColor;
     final containerHeight = navBarTheme.height;
-   
 
     return Container(
       color: backgroundColor,

@@ -20,7 +20,7 @@ class DeckCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // Texte mit Platzbegrenzung
+    
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -42,7 +42,7 @@ class DeckCard extends StatelessWidget {
                 ],
               ),
             ),
-            // Rating am unteren Ende
+        
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
