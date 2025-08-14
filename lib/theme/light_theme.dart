@@ -64,18 +64,13 @@ ThemeData lightTheme(BuildContext context) => generalTheme(context).copyWith(
     backgroundColor: barColor,
     height: MediaQuery.sizeOf(context).height * bottombarSize,
 
-    // Icons immer gleich
     iconTheme: WidgetStateProperty.all(
-      IconThemeData(
-        color: iconColor, // Immer die gleiche Farbe
-        size: sizeIcons,
-      ),
+      IconThemeData(color: iconColor, size: sizeIcons),
     ),
 
-    // Labels auch immer gleich
     labelTextStyle: WidgetStateProperty.all(
       TextStyle(
-        color: labelcolor, // Immer die gleiche Farbe
+        color: labelcolor,
         fontFamily: fontFamily,
         fontSize: sizeLabels,
         fontWeight: FontWeight.normal,

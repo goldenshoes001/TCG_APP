@@ -23,7 +23,7 @@ class Search extends StatelessWidget {
                 prefixIcon: Icon(Icons.search),
               ),
             ),
-            SizedBox(height: MediaQuery.of(context).size.height / 50),
+            SizedBox(height: MediaQuery.of(context).size.height / 55),
             Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(10),

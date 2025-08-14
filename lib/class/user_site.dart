@@ -1,37 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:sizer/sizer.dart';
 import 'package:tcg_app/class/common/appbar.dart';
-
 import 'package:tcg_app/class/common/bottombar.dart';
-import 'package:tcg_app/class/home.dart';
 import 'package:tcg_app/class/lists.dart';
-import 'package:tcg_app/class/profile.dart';
-import 'package:tcg_app/class/search.dart';
-import 'package:tcg_app/class/meta.dart';
-
-import 'package:tcg_app/theme/light_theme.dart';
 import 'package:tcg_app/theme/dark_theme.dart';
+import 'package:tcg_app/theme/light_theme.dart';
 import 'package:tcg_app/theme/sizing.dart';
 
-void main() {
-  runApp(
-    Sizer(
-      builder: (context, orientation, deviceType) {
-        return MainApp();
-      },
-    ),
-  );
-}
+class UserSite extends StatefulWidget {
+  UserSite({super.key, required this.username});
 
-// ignore: must_be_immutable
-class MainApp extends StatefulWidget {
-  const MainApp({super.key});
+  String username;
 
   @override
-  State<MainApp> createState() => _MainAppState();
+  State<UserSite> createState() => UsersiteState();
 }
 
-class _MainAppState extends State<MainApp> {
+class UsersiteState extends State<UserSite> {
   int _selectedIndex = 0;
   void _onItemTapped(int index) {
     setState(() {
@@ -41,8 +25,6 @@ class _MainAppState extends State<MainApp> {
 
   @override
   Widget build(BuildContext context) {
-
-  
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: lightTheme(context),
@@ -55,10 +37,12 @@ class _MainAppState extends State<MainApp> {
               Size.fromHeight(MediaQuery.of(context).size.height) / appbarSize,
           child: Barwidget(
             title: "Cardbase",
-            titleFlow: MainAxisAlignment.start,
+            titleFlow: MainAxisAlignment.center,
           ),
         ),
-        body: widgetListe[_selectedIndex],
+        body: Text(
+          "${widget.username}  willkommen auf deiner persönlichen Seite Seite",
+        ),
 
         bottomNavigationBar: Bottombar(
           currentIndex: _selectedIndex,

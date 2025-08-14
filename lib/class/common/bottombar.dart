@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:tcg_app/class/bottombar_element.dart';
+import 'package:tcg_app/class/common/bottombar_element.dart';
 
 class Bottombar extends StatelessWidget {
   final int currentIndex;
