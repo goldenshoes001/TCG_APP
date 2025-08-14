@@ -1,22 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/common/appbar.dart';
 import 'package:tcg_app/class/common/bottombar.dart';
-import 'package:tcg_app/class/lists.dart';
-import 'package:tcg_app/theme/dark_theme.dart';
-import 'package:tcg_app/theme/light_theme.dart';
+import 'package:tcg_app/class/common/lists.dart';
+import 'package:tcg_app/class/common/user_profile_side.dart';
+
 import 'package:tcg_app/theme/sizing.dart';
 
 class UserSite extends StatefulWidget {
-  UserSite({super.key, required this.username});
-
-  String username;
-
+  const UserSite({super.key, required this.username});
+  final String username;
   @override
-  State<UserSite> createState() => UsersiteState();
+  State<UserSite> createState() => _UsersiteState();
 }
 
-class UsersiteState extends State<UserSite> {
-  int _selectedIndex = 0;
+class _UsersiteState extends State<UserSite> {
+  int _selectedIndex = 4;
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -25,30 +23,27 @@ class UsersiteState extends State<UserSite> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: lightTheme(context),
-      darkTheme: darkTheme(context),
-      themeMode: ThemeMode.system,
+    Widget bodyContent;
+    if (_selectedIndex == 4) {
+      bodyContent = UserProfileSide(username: widget.username);
+    } else {
+      bodyContent = widgetListe[_selectedIndex];
+    }
 
-      home: Scaffold(
-        appBar: PreferredSize(
-          preferredSize:
-              Size.fromHeight(MediaQuery.of(context).size.height) / appbarSize,
-          child: Barwidget(
-            title: "Cardbase",
-            titleFlow: MainAxisAlignment.center,
-          ),
+    return Scaffold(
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(
+          MediaQuery.of(context).size.height / appbarSize,
         ),
-        body: Text(
-          "${widget.username}  willkommen auf deiner persönlichen Seite Seite",
-        ),
+        child: Barwidget(title: "Cardbase", titleFlow: MainAxisAlignment.start),
+      ),
 
-        bottomNavigationBar: Bottombar(
-          currentIndex: _selectedIndex,
-          valueChanged: _onItemTapped,
-          navigationItems: iconList,
-        ),
+      body: bodyContent,
+
+      bottomNavigationBar: Bottombar(
+        currentIndex: _selectedIndex,
+        valueChanged: _onItemTapped,
+        navigationItems: iconList,
       ),
     );
   }

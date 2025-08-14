@@ -59,6 +59,7 @@ ThemeData lightTheme(BuildContext context) => generalTheme(context).copyWith(
       fontWeight: fontWeightAppbar,
     ),
     toolbarHeight: MediaQuery.sizeOf(context).height * 0.08,
+    iconTheme: IconThemeData(color: Colors.white),
   ),
   navigationBarTheme: NavigationBarThemeData(
     backgroundColor: barColor,

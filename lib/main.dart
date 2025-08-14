@@ -3,11 +3,7 @@ import 'package:sizer/sizer.dart';
 import 'package:tcg_app/class/common/appbar.dart';
 
 import 'package:tcg_app/class/common/bottombar.dart';
-import 'package:tcg_app/class/home.dart';
-import 'package:tcg_app/class/lists.dart';
-import 'package:tcg_app/class/profile.dart';
-import 'package:tcg_app/class/search.dart';
-import 'package:tcg_app/class/meta.dart';
+import 'package:tcg_app/class/common/lists.dart';
 
 import 'package:tcg_app/theme/light_theme.dart';
 import 'package:tcg_app/theme/dark_theme.dart';
@@ -41,8 +37,6 @@ class _MainAppState extends State<MainApp> {
 
   @override
   Widget build(BuildContext context) {
-
-  
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: lightTheme(context),

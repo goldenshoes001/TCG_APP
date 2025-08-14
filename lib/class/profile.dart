@@ -10,7 +10,8 @@ class Profile extends StatefulWidget {
 
 class _ProfileState extends State<Profile> {
   bool isPasswordVisible = false;
-  bool _errorState = false;
+  bool errorStatePassword = false;
+  bool errorStateUsername = false;
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -21,15 +22,26 @@ class _ProfileState extends State<Profile> {
     void showUserInput() {
       String username = userNameController.text;
       String password = passwordController.text;
+      String checkUsername = "test";
+      String checkPassword = "test";
       print("username: $username , password: $password");
 
-      if (username == "test" && password == "test") {
+      if (username == checkUsername && password == checkPassword) {
         Navigator.of(context).push(
           MaterialPageRoute(builder: (context) => UserSite(username: username)),
         );
       } else {
         setState(() {
-          _errorState = true;
+          if (username != checkUsername && password == checkPassword) {
+            errorStateUsername = true;
+            errorStatePassword = false;
+          } else if (password != checkPassword && username == checkUsername) {
+            errorStatePassword = true;
+            errorStateUsername = false;
+          } else {
+            errorStatePassword = true;
+            errorStateUsername = true;
+          }
         });
       }
     }
@@ -50,7 +62,7 @@ class _ProfileState extends State<Profile> {
               controller: userNameController,
 
               decoration: InputDecoration(
-                errorText: _errorState ? "wrong username" : null,
+                errorText: errorStateUsername ? "wrong username" : null,
                 hintText: "Username",
                 prefixIcon: Icon(Icons.person_rounded),
               ),
@@ -64,7 +76,7 @@ class _ProfileState extends State<Profile> {
               decoration: InputDecoration(
                 hintText: "Password",
                 prefixIcon: Icon(Icons.key_sharp),
-                errorText: _errorState ? "wrong password" : null,
+                errorText: errorStatePassword ? "wrong password" : null,
                 suffixIcon: IconButton(
                   icon: Icon(
                     isPasswordVisible

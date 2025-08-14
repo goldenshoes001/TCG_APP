@@ -1,5 +1,12 @@
 import 'dart:math';
 import 'package:tcg_app/class/common/card.dart';
+import 'package:flutter/material.dart';
+import 'package:tcg_app/class/common/user_profile_side.dart';
+import 'package:tcg_app/class/home.dart';
+import 'package:tcg_app/class/meta.dart';
+import 'package:tcg_app/class/profile.dart';
+import 'package:tcg_app/class/search.dart';
+import 'package:tcg_app/class/user_site.dart';
 
 final _rng = Random();
 
@@ -25,3 +32,18 @@ List<DeckCard> cards = List.generate(100, (index) {
     rating: '$rating/5',
   );
 });
+
+List<NavigationDestination> iconList = [
+  NavigationDestination(icon: Icon(Icons.home), label: "home"),
+  NavigationDestination(icon: Icon(Icons.search), label: "search"),
+  NavigationDestination(icon: Icon(Icons.person), label: "profile"),
+  NavigationDestination(icon: Icon(Icons.local_fire_department), label: "Meta"),
+];
+List<Widget> widgetListe = [Home(), Search(), Profile(), Meta()];
+List<Widget> widgetListeWithUserProfilSide = [
+  Home(),
+  Search(),
+  Profile(),
+  Meta(),
+  UserProfileSide(),
+];
