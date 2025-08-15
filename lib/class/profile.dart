@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tcg_app/class/common/password_field.dart';
 import 'package:tcg_app/class/user_site.dart';
 
 class Profile extends StatefulWidget {
@@ -69,28 +70,7 @@ class _ProfileState extends State<Profile> {
             ),
 
             SizedBox(height: 20),
-            TextField(
-              controller: passwordController,
-              obscureText: !isPasswordVisible,
-
-              decoration: InputDecoration(
-                hintText: "Password",
-                prefixIcon: Icon(Icons.key_sharp),
-                errorText: errorStatePassword ? "wrong password" : null,
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    isPasswordVisible
-                        ? Icons.visibility_off
-                        : Icons.visibility_sharp,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      isPasswordVisible = !isPasswordVisible;
-                    });
-                  },
-                ),
-              ),
-            ),
+            PasswordInputField(controller: passwordController),
             SizedBox(height: 10),
             Row(
               children: [
