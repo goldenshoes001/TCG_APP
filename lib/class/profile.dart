@@ -128,7 +128,7 @@ class _ProfileState extends State<Profile> {
     final v = value?.trim() ?? "";
     final regex = RegExp(r'^[a-zA-Z0-9_]{3,20}$');
     if (v.isEmpty) {
-      return "Bitte einen Benutzernamen eingeben.";
+      return "pls write a Username.";
     } else if (!regex.hasMatch(v)) {
       return "The Username is written by : \n -only letters or numbers \n -at least 3 charackters \n -max 20 letters .";
     } else {
@@ -141,9 +141,9 @@ class _ProfileState extends State<Profile> {
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
 
     if (v.isEmpty) {
-      return "Bitte eine E-Mail-Adresse eingeben.";
+      return "pls write in an email";
     } else if (!emailRegex.hasMatch(v)) {
-      return "Bitte geben Sie eine gültige E-Mail-Adresse ein.";
+      return "pls writein an accurate email";
     } else {
       return null;
     }
