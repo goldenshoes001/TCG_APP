@@ -23,7 +23,7 @@ class _ProfileState extends State<Profile> {
     void showUserInput() {
       String username = userNameController.text;
       String password = passwordController.text;
-      String checkUsername = "test";
+      String checkUsername = "admin";
       String checkPassword = "test";
       print("username: $username , password: $password");
 
@@ -33,15 +33,15 @@ class _ProfileState extends State<Profile> {
         );
       } else {
         setState(() {
-          if (username != checkUsername && password == checkPassword) {
+          if (username == checkUsername && password != checkPassword) {
+            errorStateUsername = false;
+            errorStatePassword = true;
+          } else if (username != checkUsername && password == checkPassword) {
             errorStateUsername = true;
             errorStatePassword = false;
-          } else if (password != checkPassword && username == checkUsername) {
-            errorStatePassword = true;
-            errorStateUsername = false;
           } else {
-            errorStatePassword = true;
             errorStateUsername = true;
+            errorStatePassword = true;
           }
         });
       }
@@ -70,7 +70,10 @@ class _ProfileState extends State<Profile> {
             ),
 
             SizedBox(height: 20),
-            PasswordInputField(controller: passwordController),
+            PasswordInputField(
+              controller: passwordController,
+              errorstate: errorStatePassword,
+            ),
             SizedBox(height: 10),
             Row(
               children: [
