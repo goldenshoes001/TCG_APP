@@ -17,10 +17,12 @@ class _PasswordInputFieldState extends State<PasswordInputField> {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    return TextFormField(
       controller: widget.controller,
+      validator: validatePassword,
       obscureText: !isPasswordVisible,
       decoration: InputDecoration(
+        labelText: "Password",
         hintText: "Password",
         prefixIcon: const Icon(Icons.key_sharp),
         errorText: widget.errorstate ? "wrong password" : null,
@@ -38,4 +40,18 @@ class _PasswordInputFieldState extends State<PasswordInputField> {
       ),
     );
   }
+}
+
+String? validatePassword(String? value) {
+  final v = value?.trim() ?? "";
+  final regex = RegExp(
+    r'^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*()_+\-=\[\]{}|;:,.<>?])[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{}|;:,.<>?]{8,}$',
+  );
+
+  if (v.isEmpty || v == "")
+    return "pls write a password";
+  else if (!regex.hasMatch(v))
+    return "pls write a password in the right format \nat least 3 and max 20 charackters \nat least one special charackter and one big letter";
+  else
+    return null;
 }
