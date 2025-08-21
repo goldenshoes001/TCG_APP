@@ -22,8 +22,8 @@ class _ProfileState extends State<Profile> {
   void showUserInput() {
     String username = userNameController.text;
     String password = passwordController.text;
-    String checkUsername = "Sebastian93!";
-    String checkPassword = "IchbineineDose!";
+    String checkUsername = "Sebastian93";
+    String checkPassword = "Ichbineinedose!";
     print("username: $username , password: $password");
 
     if (username == checkUsername && password == checkPassword) {
@@ -35,12 +35,18 @@ class _ProfileState extends State<Profile> {
         if (username == checkUsername && password != checkPassword) {
           errorStateUsername = false;
           errorStatePassword = true;
-        } else if (username != checkUsername && password == checkPassword) {
+        }
+        if (username != checkUsername && password == checkPassword) {
           errorStateUsername = true;
           errorStatePassword = false;
-        } else {
+        }
+        if (username != checkUsername && password != checkPassword) {
           errorStateUsername = true;
           errorStatePassword = true;
+        }
+        if (username == checkUsername && password == checkPassword) {
+          errorStatePassword = false;
+          errorStateUsername = false;
         }
       });
     }

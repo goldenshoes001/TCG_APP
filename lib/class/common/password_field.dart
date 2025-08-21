@@ -51,7 +51,7 @@ String? validatePassword(String? value) {
   if (v.isEmpty || v == "")
     return "pls write a password";
   else if (!regex.hasMatch(v))
-    return "pls write a password in the right format \nat least 3 and max 20 charackters \nat least one special charackter and one big letter";
+    return "pls write a password in the right format \nat least 8 and max 20 charackters \nat least one special charackter and one big letter";
   else
     return null;
 }
