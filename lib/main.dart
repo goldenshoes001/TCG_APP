@@ -1,27 +1,26 @@
 import 'package:flutter/material.dart';
-import 'package:sizer/sizer.dart';
 import 'package:tcg_app/class/common/appbar.dart';
-
 import 'package:tcg_app/class/common/bottombar.dart';
 import 'package:tcg_app/class/common/lists.dart';
-
+import 'package:tcg_app/class/savedata.dart';
 import 'package:tcg_app/theme/light_theme.dart';
 import 'package:tcg_app/theme/dark_theme.dart';
 import 'package:tcg_app/theme/sizing.dart';
 
-void main() {
-  runApp(
-    Sizer(
-      builder: (context, orientation, deviceType) {
-        return MainApp();
-      },
-    ),
-  );
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  SaveData data = SaveData();
+  await data.initPreferences();
+  bool? darkMode = await data.loadBool("darkMode");
+
+  runApp(MainApp(data: data, darkMode: darkMode ?? true));
 }
 
-// ignore: must_be_immutable
 class MainApp extends StatefulWidget {
-  const MainApp({super.key});
+  final SaveData data;
+  bool darkMode;
+
+  MainApp({super.key, required this.data, required this.darkMode});
 
   @override
   State<MainApp> createState() => _MainAppState();
@@ -29,10 +28,16 @@ class MainApp extends StatefulWidget {
 
 class _MainAppState extends State<MainApp> {
   int _selectedIndex = 0;
+
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
+  }
+
+  @override
+  void initState() {
+    super.initState();
   }
 
   @override
@@ -41,24 +46,49 @@ class _MainAppState extends State<MainApp> {
       debugShowCheckedModeBanner: false,
       theme: lightTheme(context),
       darkTheme: darkTheme(context),
-      themeMode: ThemeMode.system,
+      themeMode: widget.darkMode ? ThemeMode.dark : ThemeMode.light,
+      home: MainScreen(
+        data: widget.data,
+        selectedIndex: _selectedIndex,
+        onItemTapped: _onItemTapped,
+        darkMode: widget.darkMode,
+      ),
+    );
+  }
+}
 
-      home: Scaffold(
-        appBar: PreferredSize(
-          preferredSize:
-              Size.fromHeight(MediaQuery.of(context).size.height) / appbarSize,
-          child: Barwidget(
-            title: "Cardbase",
-            titleFlow: MainAxisAlignment.start,
-          ),
-        ),
-        body: widgetListe[_selectedIndex],
+class MainScreen extends StatelessWidget {
+  final SaveData data;
+  final int selectedIndex;
+  final Function(int) onItemTapped;
+  bool darkMode;
 
-        bottomNavigationBar: Bottombar(
-          currentIndex: _selectedIndex,
-          valueChanged: _onItemTapped,
-          navigationItems: iconList,
+  MainScreen({
+    super.key,
+    required this.data,
+    required this.selectedIndex,
+    required this.onItemTapped,
+    required this.darkMode,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(
+          MediaQuery.of(context).size.height / appbarSize,
         ),
+        child: Barwidget(
+          title: "Cardbase",
+          titleFlow: MainAxisAlignment.start,
+          darkMode: darkMode,
+        ),
+      ),
+      body: widgetListe[selectedIndex],
+      bottomNavigationBar: Bottombar(
+        currentIndex: selectedIndex,
+        valueChanged: onItemTapped,
+        navigationItems: iconList,
       ),
     );
   }

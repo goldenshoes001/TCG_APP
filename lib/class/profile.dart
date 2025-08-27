@@ -23,31 +23,22 @@ class _ProfileState extends State<Profile> {
     String username = userNameController.text;
     String password = passwordController.text;
     String checkUsername = "Sebastian93";
-    String checkPassword = "Ichbineinedose!";
+    String checkPassword = "Thermaltake14!";
     print("username: $username , password: $password");
-
     if (username == checkUsername && password == checkPassword) {
+      // Erfolgreicher Login
+      setState(() {
+        errorStateUsername = false; // Zurücksetzen falls vorher gesetzt
+        errorStatePassword = false;
+      });
       Navigator.of(context).push(
         MaterialPageRoute(builder: (context) => UserSite(username: username)),
       );
     } else {
+      // Fehlgeschlagener Login - setze entsprechende Fehler
       setState(() {
-        if (username == checkUsername && password != checkPassword) {
-          errorStateUsername = false;
-          errorStatePassword = true;
-        }
-        if (username != checkUsername && password == checkPassword) {
-          errorStateUsername = true;
-          errorStatePassword = false;
-        }
-        if (username != checkUsername && password != checkPassword) {
-          errorStateUsername = true;
-          errorStatePassword = true;
-        }
-        if (username == checkUsername && password == checkPassword) {
-          errorStatePassword = false;
-          errorStateUsername = false;
-        }
+        errorStateUsername = (username != checkUsername);
+        errorStatePassword = (password != checkPassword);
       });
     }
   }
@@ -56,76 +47,74 @@ class _ProfileState extends State<Profile> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      body: Padding(
-        padding: EdgeInsets.all(MediaQuery.of(context).size.height / 120),
-        child: Column(
-          children: [
-            Text(
-              "User Login",
-              style: Theme.of(context).textTheme.headlineLarge,
-            ),
-            Icon(Icons.person, color: theme.cardColor, size: 250),
-            Expanded(
-              child: Form(
-                key: _formKey,
-                child: ListView(
-                  children: [
-                    TextFormField(
-                      controller: userNameController,
-                      validator: (value) {
-                        return validateUserName(value);
+    return Padding(
+      padding: EdgeInsets.all(MediaQuery.of(context).size.height / 120),
+      child: Column(
+        children: [
+          Text("User Login", style: Theme.of(context).textTheme.headlineLarge),
+          Icon(Icons.person, color: theme.cardColor, size: 250),
+          Expanded(
+            child: Form(
+              key: _formKey,
+              child: ListView(
+                children: [
+                  TextFormField(
+                    controller: userNameController,
+                    validator: (value) {
+                      return validateUserName(value);
+                    },
+                    decoration: InputDecoration(
+                      errorText: errorStateUsername
+                          ? "username incorrect"
+                          : null,
+                      labelText: "Username",
+                      hintText: "Username",
+                      prefixIcon: Icon(Icons.person_rounded),
+                    ),
+                  ),
+                  SizedBox(height: 10),
+                  PasswordInputField(
+                    controller: passwordController,
+                    errorstate: errorStatePassword,
+                  ),
+                  SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Text("forget Password"),
+                      SizedBox(width: MediaQuery.of(context).size.width / 2),
+                      Text("Registration"),
+                    ],
+                  ),
+                  SizedBox(height: 10),
+                  TextFormField(
+                    controller: emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (value) {
+                      return validateEmail(value);
+                    },
+                    decoration: InputDecoration(
+                      labelText: "E-Mail",
+                      hintText: "E-Mail",
+                      prefixIcon: Icon(Icons.email),
+                    ),
+                  ),
+                  SizedBox(height: 20),
+                  SizedBox(
+                    width: MediaQuery.of(context).size.width * 0.65,
+                    child: OutlinedButton(
+                      onPressed: () {
+                        if (_formKey.currentState!.validate()) {
+                          showUserInput();
+                        }
                       },
-                      decoration: InputDecoration(
-                        labelText: "Username",
-                        hintText: "Username",
-                        prefixIcon: Icon(Icons.person_rounded),
-                      ),
+                      child: Text("login"),
                     ),
-                    SizedBox(height: 10),
-                    PasswordInputField(
-                      controller: passwordController,
-                      errorstate: errorStatePassword,
-                    ),
-                    SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Text("forget Password"),
-                        SizedBox(width: MediaQuery.of(context).size.width / 2),
-                        Text("Registration"),
-                      ],
-                    ),
-                    SizedBox(height: 10),
-                    TextFormField(
-                      controller: emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      validator: (value) {
-                        return validateEmail(value);
-                      },
-                      decoration: InputDecoration(
-                        labelText: "E-Mail",
-                        hintText: "E-Mail",
-                        prefixIcon: Icon(Icons.email),
-                      ),
-                    ),
-                    SizedBox(height: 20),
-                    SizedBox(
-                      width: MediaQuery.of(context).size.width * 0.65,
-                      child: OutlinedButton(
-                        onPressed: () {
-                          if (_formKey.currentState!.validate()) {
-                            showUserInput();
-                          }
-                        },
-                        child: Text("login"),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

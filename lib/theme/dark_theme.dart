@@ -58,7 +58,7 @@ ThemeData darkTheme(BuildContext context) => generalTheme(context).copyWith(
       fontSize: appbarTextSize,
       fontWeight: fontWeightAppbar,
     ),
-    toolbarHeight: MediaQuery.sizeOf(context).height,
+    toolbarHeight: MediaQuery.sizeOf(context).height * appbarSize,
     iconTheme: IconThemeData(color: Colors.white),
   ),
   navigationBarTheme: NavigationBarThemeData(
