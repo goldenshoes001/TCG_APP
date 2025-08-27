@@ -8,35 +8,29 @@ ThemeData generalTheme(BuildContext context) {
   return ThemeData(
     textTheme: TextTheme(
       bodyMedium: TextStyle(
-        fontSize: fontSizeBodyMedium.sp,
+        fontSize: fontSizeBodyMedium,
         fontFamily: fontFamily,
       ),
 
-      bodyLarge: TextStyle(
-        fontSize: fontSizeBodyLarge.sp,
-        fontFamily: fontFamily,
-      ),
+      bodyLarge: TextStyle(fontSize: fontSizeBodyLarge, fontFamily: fontFamily),
 
-      bodySmall: TextStyle(
-        fontSize: fontSizeBodySmall.sp,
-        fontFamily: fontFamily,
-      ),
+      bodySmall: TextStyle(fontSize: fontSizeBodySmall, fontFamily: fontFamily),
 
       headlineLarge: TextStyle(
-        fontSize: fontSizeHeadlineLarge.sp,
+        fontSize: fontSizeHeadlineLarge,
         fontWeight: FontWeight.w600,
         color: textBar,
       ),
 
       headlineMedium: TextStyle(
         fontFamily: fontFamily,
-        fontSize: fontSizeHeadlineMedium.sp,
+        fontSize: fontSizeHeadlineMedium,
         fontWeight: FontWeight.bold,
       ),
 
       headlineSmall: TextStyle(
         fontFamily: fontFamily,
-        fontSize: fontSizeHeadlineSmall.sp,
+        fontSize: fontSizeHeadlineSmall,
       ),
     ),
   );
