@@ -2,16 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:tcg_app/class/savedata.dart';
 import 'package:tcg_app/theme/sizing.dart';
 
+// Barwidget ist jetzt ein StatelessWidget
 class Barwidget extends StatefulWidget {
   final MainAxisAlignment titleFlow;
   final String title;
-  bool darkMode;
+  final Function(bool) onThemeChanged; // Die Callback-Funktion
 
-  Barwidget({
+  const Barwidget({
     super.key,
     this.titleFlow = MainAxisAlignment.center,
     this.title = "",
-    required this.darkMode,
+
+    required this.onThemeChanged,
   });
 
   @override
@@ -19,21 +21,46 @@ class Barwidget extends StatefulWidget {
 }
 
 class _BarwidgetState extends State<Barwidget> {
-  SaveData data = SaveData();
+  bool mode = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _initializeTheme();
+  }
+
+  Future<void> _initializeTheme() async {
+    await getThemeMode();
+    setState(() {}); // UI nach dem Laden aktualisieren
+  }
+
+  Future<void> getThemeMode() async {
+    SaveData data = SaveData();
+    bool? loadedMode = await data.loadBool("darkMode");
+    mode = loadedMode ?? false;
+  }
+
+  Future<void> saveThemeMode() async {
+    SaveData data = SaveData();
+
+    data.saveBool("darkMode", mode);
+  }
+
   @override
   Widget build(BuildContext context) {
     return AppBar(
       centerTitle: false,
       actions: [
-        Icon(widget.darkMode ? Icons.light_mode : Icons.dark_mode),
+        Icon(mode ? Icons.light_mode : Icons.dark_mode),
         Switch(
-          value: widget.darkMode,
+          value: mode,
           onChanged: (newValue) {
             setState(() {
-              widget.darkMode = newValue;
+              mode = newValue;
+              saveThemeMode();
             });
-
-            data.saveBool("darkMode", newValue);
+            widget.onThemeChanged(newValue);
           },
         ),
       ],
@@ -43,7 +70,6 @@ class _BarwidgetState extends State<Barwidget> {
           ClipRRect(
             child: Image.asset(
               'assets/icon/appicon.png',
-
               height: 15,
               fit: BoxFit.cover,
             ),

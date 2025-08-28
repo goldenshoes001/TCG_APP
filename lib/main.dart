@@ -7,51 +7,82 @@ import 'package:tcg_app/theme/light_theme.dart';
 import 'package:tcg_app/theme/dark_theme.dart';
 import 'package:tcg_app/theme/sizing.dart';
 
+// Importieren Sie die Seiten, die Sie in der Navigation verwenden
+import 'package:tcg_app/class/home.dart';
+import 'package:tcg_app/class/search.dart';
+import 'package:tcg_app/class/profile.dart';
+import 'package:tcg_app/class/meta.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  SaveData data = SaveData();
+  final data = SaveData();
   await data.initPreferences();
-  bool? darkMode = await data.loadBool("darkMode");
-
-  runApp(MainApp(data: data, darkMode: darkMode ?? true));
+  runApp(const MainApp());
 }
 
 class MainApp extends StatefulWidget {
-  final SaveData data;
-  bool darkMode;
-
-  MainApp({super.key, required this.data, required this.darkMode});
+  const MainApp({super.key});
 
   @override
   State<MainApp> createState() => _MainAppState();
 }
 
 class _MainAppState extends State<MainApp> {
-  int _selectedIndex = 0;
+  final SaveData data = SaveData();
+  bool isDarkMode = false;
 
+  String name = "";
+  int _selectedIndex = 0;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _loadData();
+  }
+
+  // Methode, um die Daten asynchron zu laden
+  Future<void> _loadData() async {
+    final loadedMode = await data.loadBool("darkMode");
+    setState(() {
+      isDarkMode = loadedMode ?? false;
+      _isLoading = false;
+    });
+  }
+
+  // Callback-Methode für die Bottom-Navigation-Bar
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
   }
 
-  @override
-  void initState() {
-    super.initState();
+  // Callback-Methode, die den Zustand von isDarkMode ändert
+  void _toggleDarkMode(bool newValue) {
+    setState(() {
+      isDarkMode = newValue;
+    });
+    data.saveBool("darkMode", newValue);
   }
 
   @override
   Widget build(BuildContext context) {
+    // Zeige einen Ladeindikator, während die Daten geladen werden
+    if (_isLoading) {
+      return const CircularProgressIndicator();
+    }
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: lightTheme(context),
       darkTheme: darkTheme(context),
-      themeMode: widget.darkMode ? ThemeMode.dark : ThemeMode.light,
+      themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
       home: MainScreen(
-        data: widget.data,
+        data: data,
         selectedIndex: _selectedIndex,
         onItemTapped: _onItemTapped,
-        darkMode: widget.darkMode,
+        onThemeChanged: _toggleDarkMode,
       ),
     );
   }
@@ -61,18 +92,35 @@ class MainScreen extends StatelessWidget {
   final SaveData data;
   final int selectedIndex;
   final Function(int) onItemTapped;
-  bool darkMode;
 
-  MainScreen({
+  final Function(bool) onThemeChanged;
+
+  const MainScreen({
     super.key,
     required this.data,
     required this.selectedIndex,
     required this.onItemTapped,
-    required this.darkMode,
+
+    required this.onThemeChanged,
   });
 
   @override
   Widget build(BuildContext context) {
+    // Die Liste der Widgets wird direkt in der build-Methode erstellt,
+    // um Zugriff auf die Zustandsvariablen zu haben.
+    final List<Widget> pages = [
+      const Home(),
+      const Search(),
+      Profile(
+        data: data,
+        selectedIndex: selectedIndex,
+        onItemTapped: onItemTapped,
+
+        onThemeChanged: onThemeChanged,
+      ),
+      const Meta(),
+    ];
+
     return Scaffold(
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(
@@ -81,10 +129,11 @@ class MainScreen extends StatelessWidget {
         child: Barwidget(
           title: "Cardbase",
           titleFlow: MainAxisAlignment.start,
-          darkMode: darkMode,
+
+          onThemeChanged: onThemeChanged,
         ),
       ),
-      body: widgetListe[selectedIndex],
+      body: pages[selectedIndex],
       bottomNavigationBar: Bottombar(
         currentIndex: selectedIndex,
         valueChanged: onItemTapped,

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:sizer/sizer.dart';
 
 import 'colors_darktheme.dart';
 import 'textstyle.dart';

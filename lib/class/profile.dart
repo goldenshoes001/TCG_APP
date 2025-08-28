@@ -1,45 +1,67 @@
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/common/password_field.dart';
-import 'package:tcg_app/class/user_site.dart';
+import 'package:tcg_app/class/common/user_profile_side.dart';
+import 'package:tcg_app/class/savedata.dart';
 
 class Profile extends StatefulWidget {
-  const Profile({super.key});
+  final SaveData data;
+  final Function(int) onItemTapped;
+  final Function(bool) onThemeChanged;
+
+  final int selectedIndex;
+
+  const Profile({
+    super.key,
+    required this.data,
+    required this.onItemTapped,
+    required this.onThemeChanged,
+ 
+    required this.selectedIndex,
+  });
 
   @override
   State<Profile> createState() => _ProfileState();
 }
 
 class _ProfileState extends State<Profile> {
-  bool isPasswordVisible = false;
-  bool errorStatePassword = false;
-  bool errorStateUsername = false;
   final _formKey = GlobalKey<FormState>();
 
-  final passwordController = TextEditingController();
-  final userNameController = TextEditingController();
-  final emailController = TextEditingController();
+  var passwordController = TextEditingController();
+  var userNameController = TextEditingController();
 
-  void showUserInput() {
-    String username = userNameController.text;
-    String password = passwordController.text;
-    String checkUsername = "Sebastian93";
-    String checkPassword = "Thermaltake14!";
-    print("username: $username , password: $password");
-    if (username == checkUsername && password == checkPassword) {
-      // Erfolgreicher Login
-      setState(() {
-        errorStateUsername = false; // Zurücksetzen falls vorher gesetzt
-        errorStatePassword = false;
-      });
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (context) => UserSite(username: username)),
-      );
-    } else {
-      // Fehlgeschlagener Login - setze entsprechende Fehler
-      setState(() {
-        errorStateUsername = (username != checkUsername);
-        errorStatePassword = (password != checkPassword);
-      });
+  // The login and navigation logic is now handled in the onPressed callback.
+  void handleLogin() {
+    if (_formKey.currentState!.validate()) {
+      String checkUsername = "Sebastian93";
+      String checkPassword = "Thermaltake14!";
+
+      String username = userNameController.text.trim();
+      String password = passwordController.text.trim();
+
+      if (username == checkUsername && password == checkPassword) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => UserProfileScreen(
+              data: widget.data,
+              selectedIndex: widget.selectedIndex,
+              onItemTapped: widget.onItemTapped,
+           
+              onThemeChanged: widget.onThemeChanged,
+              username: username,
+            ),
+          ),
+        );
+        passwordController.text = "";
+        userNameController.text = "";
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Benutzername oder Passwort ist falsch."),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -61,53 +83,42 @@ class _ProfileState extends State<Profile> {
                   TextFormField(
                     controller: userNameController,
                     validator: (value) {
-                      return validateUserName(value);
+                      final v = value?.trim() ?? "";
+                      final regex = RegExp(r'^[a-zA-Z0-9_]{3,20}$');
+                      if (v.isEmpty) {
+                        return "Bitte einen Benutzernamen eingeben.";
+                      } else if (!regex.hasMatch(v)) {
+                        return "Benutzername ungültig:\n- Nur Buchstaben, Zahlen oder Unterstrich\n- 3 bis 20 Zeichen.";
+                      } else {
+                        return null;
+                      }
                     },
-                    decoration: InputDecoration(
-                      errorText: errorStateUsername
-                          ? "username incorrect"
-                          : null,
-                      labelText: "Username",
-                      hintText: "Username",
+                    decoration: const InputDecoration(
+                      labelText: "Benutzername",
+                      hintText: "Benutzername",
                       prefixIcon: Icon(Icons.person_rounded),
                     ),
                   ),
-                  SizedBox(height: 10),
+                  const SizedBox(height: 10),
                   PasswordInputField(
                     controller: passwordController,
-                    errorstate: errorStatePassword,
+
+                    errorstate: false,
                   ),
-                  SizedBox(height: 10),
-                  Row(
+                  const SizedBox(height: 10),
+                  const Row(
                     children: [
-                      Text("forget Password"),
-                      SizedBox(width: MediaQuery.of(context).size.width / 2),
-                      Text("Registration"),
+                      Text("Passwort vergessen?"),
+                      Spacer(),
+                      Text("Registrieren"),
                     ],
                   ),
-                  SizedBox(height: 10),
-                  TextFormField(
-                    controller: emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (value) {
-                      return validateEmail(value);
-                    },
-                    decoration: InputDecoration(
-                      labelText: "E-Mail",
-                      hintText: "E-Mail",
-                      prefixIcon: Icon(Icons.email),
-                    ),
-                  ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
                   SizedBox(
                     width: MediaQuery.of(context).size.width * 0.65,
                     child: OutlinedButton(
-                      onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          showUserInput();
-                        }
-                      },
-                      child: Text("login"),
+                      onPressed: handleLogin,
+                      child: const Text("Anmelden"),
                     ),
                   ),
                 ],
@@ -118,31 +129,4 @@ class _ProfileState extends State<Profile> {
       ),
     );
   }
-
-  String? validateUserName(String? value) {
-    final v = value?.trim() ?? "";
-    final regex = RegExp(r'^[a-zA-Z0-9_]{3,20}$');
-    if (v.isEmpty) {
-      return "pls write a Username.";
-    } else if (!regex.hasMatch(v)) {
-      return "The Username is written by : \n -only letters or numbers \n -at least 3 charackters \n -max 20 letters .";
-    } else {
-      return null;
-    }
-  }
-
-  String? validateEmail(String? value) {
-    final v = value?.trim() ?? "";
-    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-
-    if (v.isEmpty) {
-      return "pls write in an email";
-    } else if (!emailRegex.hasMatch(v)) {
-      return "pls writein an accurate email";
-    } else {
-      return null;
-    }
-  }
 }
-
-// Der Code für PasswordInputField und die anderen Klassen muss auch vorhanden sein.

@@ -48,9 +48,9 @@ String? validatePassword(String? value) {
     r'^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*()_+\-=\[\]{}|;:,.<>?])[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{}|;:,.<>?]{8,}$',
   );
 
-  if (v.isEmpty || v == "")
+  if (v.isEmpty || v == "") {
     return "pls write a password";
-  else if (!regex.hasMatch(v))
+  } else if (!regex.hasMatch(v))
     return "pls write a password in the right format \n - 8 - 20 charackters \n - min one special charackter\n - min one big letter \n - min one number";
   else
     return null;
