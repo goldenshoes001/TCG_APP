@@ -2,17 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:tcg_app/class/savedata.dart';
 import 'package:tcg_app/theme/sizing.dart';
 
-// Barwidget ist jetzt ein StatelessWidget
 class Barwidget extends StatefulWidget {
   final MainAxisAlignment titleFlow;
   final String title;
-  final Function(bool) onThemeChanged; // Die Callback-Funktion
+  final Function(bool) onThemeChanged;
 
   const Barwidget({
     super.key,
     this.titleFlow = MainAxisAlignment.center,
     this.title = "",
-
     required this.onThemeChanged,
   });
 
@@ -21,46 +19,52 @@ class Barwidget extends StatefulWidget {
 }
 
 class _BarwidgetState extends State<Barwidget> {
-  bool mode = false;
+  // `mode` is now nullable. It will be `null` until the data is loaded.
+  bool? mode;
 
   @override
   void initState() {
     super.initState();
-
-    _initializeTheme();
+    // Start the asynchronous loading process.
+    _loadThemeMode();
   }
 
-  Future<void> _initializeTheme() async {
-    await getThemeMode();
-    setState(() {}); // UI nach dem Laden aktualisieren
+  Future<void> _loadThemeMode() async {
+    final loadedMode = await SaveData().loadBool("darkMode");
+    setState(() {
+      // Update the state with the loaded value.
+      mode = loadedMode ?? false;
+    });
   }
 
-  Future<void> getThemeMode() async {
-    SaveData data = SaveData();
-    bool? loadedMode = await data.loadBool("darkMode");
-    mode = loadedMode ?? false;
-  }
-
-  Future<void> saveThemeMode() async {
-    SaveData data = SaveData();
-
-    data.saveBool("darkMode", mode);
+  Future<void> saveThemeMode(bool newValue) async {
+    await SaveData().saveBool("darkMode", newValue);
   }
 
   @override
   Widget build(BuildContext context) {
+    // Check if the mode is still null (data is not yet loaded).
+    if (mode == null) {
+      return AppBar(
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+      );
+    }
+
     return AppBar(
       centerTitle: false,
       actions: [
-        Icon(mode ? Icons.light_mode : Icons.dark_mode),
-        Switch(
-          value: mode,
-          onChanged: (newValue) {
+        IconButton(
+          icon: mode!
+              ? const Icon(Icons.light_mode)
+              : const Icon(Icons.dark_mode),
+          onPressed: () {
             setState(() {
-              mode = newValue;
-              saveThemeMode();
+              // Schalte den Wert von 'mode' um
+              mode = !mode!;
             });
-            widget.onThemeChanged(newValue);
+            // Rufe die Funktionen mit dem umgeschalteten Wert auf
+            saveThemeMode(mode!);
+            widget.onThemeChanged(mode!);
           },
         ),
       ],

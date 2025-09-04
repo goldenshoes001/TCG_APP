@@ -17,8 +17,13 @@ class BottombarElement extends StatelessWidget {
     final theme = Theme.of(context);
     final navBarTheme = theme.navigationBarTheme;
 
-    final textStyle = navBarTheme.labelTextStyle!.resolve({});
-    final iconstyle = navBarTheme.iconTheme!.resolve({})!;
+    // Verwende den ?? Operator, um einen Standardwert bereitzustellen, falls null
+    final textStyle =
+        navBarTheme.labelTextStyle?.resolve({}) ??
+        TextStyle(color: Colors.white);
+    final iconstyle =
+        navBarTheme.iconTheme?.resolve({}) ??
+        IconThemeData(color: Colors.white);
 
     return Padding(
       padding: const EdgeInsets.all(8.0),
