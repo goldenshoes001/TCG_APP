@@ -53,7 +53,7 @@ class MockDatabaseRepository implements DatabaseRepository {
     ),
 
     Monstercard(
-      imagePath: "tcg_app/assets/images/maliss/White Rabbit.jpg",
+      imagePath: "assets/images/maliss/White Rabbit.jpg",
       archetype: "maliss",
       idNumber: i++,
       name: "Maliss <P> White Rabbit",
@@ -69,7 +69,7 @@ class MockDatabaseRepository implements DatabaseRepository {
           "You take no damage from battles involving \"Maliss\" Link Monsters that point to this card. You can only use each of the following effects of \"Maliss White Rabbit\" once per turn. If this card is Normal or Special Summoned: You can Set 1 \"Maliss\" Trap from your Deck with a different name than the cards in your GY. If this card is banished: You can pay 300 LP; Special Summon it, also you cannot Special Summon from the Extra Deck for the rest of this turn, except Link Monsters.",
     ),
     Monstercard(
-      imagePath: "assets/images/maliss/Märzhase.jpg",
+      imagePath: "assets/images/maliss/Maerzhase.jpg",
       archetype: "maliss",
       idNumber: i++,
       name: "Maliss <P> March Hare",
@@ -85,7 +85,7 @@ class MockDatabaseRepository implements DatabaseRepository {
           "Your opponent cannot target \"Maliss\" Link Monsters that point to this card with card effects. You can only use each of the following effects of \"Maliss March Hare\" once per turn. During the Main Phase, if this card is in your hand (Quick Effect): You can banish 1 other \"Maliss\" card from your hand or GY, and if you do, Special Summon this card. If this card is banished: You can pay 300 LP, then target 1 of your banished \"Maliss\" monsters; add it to your hand.",
     ),
     Monstercard(
-      imagePath: "tcg_app/assets/images/Cyberse/Wizzard.jpg",
+      imagePath: "assets/images/Cyberse/Wizzard.jpg",
       archetype: "cyberse",
       idNumber: i++,
       name: "Wizard @Ignister",
@@ -237,7 +237,7 @@ class MockDatabaseRepository implements DatabaseRepository {
       spellcardType: 'normal-spell',
     ),
     Zauberkarte(
-      imagePath: "tcg_app/assets/images/staples/sagrophag.jpg",
+      imagePath: "assets/images/staples/sagrophag.jpg",
       archetype: "staple",
       idNumber: i++,
       name: "Gold Sarcophagus",
@@ -248,7 +248,7 @@ class MockDatabaseRepository implements DatabaseRepository {
       spellcardType: 'normal-spell',
     ),
     Zauberkarte(
-      imagePath: "tcg_app/assets/images/staples/teraforming.jpg",
+      imagePath: "assets/images/staples/teraforming.jpg",
       archetype: "staple",
       idNumber: i++,
       name: "Terraforming",
@@ -277,22 +277,22 @@ class MockDatabaseRepository implements DatabaseRepository {
       fallenTyp: 'normal-trap',
     ),
     Fallenkarte(
-      imagePath: "tcg_app/assets/images/maliss/gwc.jpg",
+      imagePath: "assets/images/maliss/gwc.jpg",
       archetype: "maliss",
       idNumber: i++,
       name: "Maliss GWC-06t",
-      cardType: "fallenkarte",
+      cardType: "trap",
       fallenTyp: 'normal-trap',
       text:
           'You can activate this card the turn it was Set, by banishing 1 face-up "Maliss" monster you control. Special Summon 1 of your "Maliss" monsters that is banished or in your GY, then if you control a "Maliss" Link Monster, you can gain LP equal to the original ATK of that Special Summoned monster. You can only activate 1 "Maliss GWC-06" per turn.'
           '',
     ),
     Fallenkarte(
-      imagePath: "tcg_app/assets/images/maliss/mtp.jpg",
+      imagePath: "assets/images/maliss/mtp.jpg",
       archetype: "maliss",
       idNumber: i++,
       name: "Maliss MTP-07",
-      cardType: "fallenkarte",
+      cardType: "trap",
       text:
           '''You can activate this card the turn it was Set, by banishing 1 face-up "Maliss" monster you control. Add 1 "Maliss" monster from your Deck to your hand, then if you control a "Maliss" Link Monster, you can banish 1 card on the field. You can only activate 1 "Maliss MTP-07" per turn''',
       fallenTyp: "normal-trap",
@@ -301,7 +301,7 @@ class MockDatabaseRepository implements DatabaseRepository {
       imagePath: "assets/images/maliss/tp.jpg",
       idNumber: i++,
       name: "Maliss TP-11",
-      cardType: "fallenkarte",
+      cardType: "trap",
       fallenTyp: "normal-trap",
       text: '''
           You can activate this card the turn it was Set, by banishing 1 face-up "Maliss" monster you control. Special Summon 1 "Maliss" monster from your Deck, or if your opponent controls 3 or more cards, you can Special Summon 1 "Maliss" Link Monster from your Extra Deck instead. For the rest of this turn, that Summoned monster cannot attack and neither player can activate its effects. You can only activate 1 "Maliss TP-11" per turn.
@@ -356,7 +356,7 @@ While this card points to a monster, the original ATK and DEF of all Effect Mons
 If this card is Special Summoned: You can target up to 3 cards in any GY(s); banish them. During your Main Phase: You can Set 1 "Maliss" Trap from your Deck or GY. If this card is banished: You can pay 900 LP; Special Summon it, then you can draw 1 card. You can only use each effect of "Maliss White Binder" once per turn.''',
     ),
     Monstercard(
-      imagePath: "assets/images/Extra Deck/Link/wickkid.jpg",
+      imagePath: "assets/images/ExtraDeck/Link/wickkid.jpg",
       archetype: "cyberse",
       idNumber: i++,
       name: "Cyberse Wicckid",
@@ -371,7 +371,7 @@ If this card is Special Summoned: You can target up to 3 cards in any GY(s); ban
 This Link Summoned card cannot be destroyed by battle or card effects. Cyberse monsters this card points to cannot be destroyed by card effects. If a monster(s) is Special Summoned to a zone(s) this card points to while you control this monster (except during the Damage Step): You can banish 1 Cyberse monster from your GY; add 1 Cyberse Tuner from your Deck to your hand. You can only use this effect of "Cyberse Wicckid" once per turn.''',
     ),
     Monstercard(
-      imagePath: "assets/images/Extra Deck/Link/link disciple.jpg",
+      imagePath: "assets/images/ExtraDeck/Link/link disciple.jpg",
       archetype: "",
       idNumber: i++,
       name: "Link Disciple",
@@ -386,7 +386,7 @@ This Link Summoned card cannot be destroyed by battle or card effects. Cyberse m
 You can Tribute 1 monster this card points to; draw 1 card, then place 1 card from your hand on the bottom of the Deck. You can only use this effect of "Link Disciple" once per turn.''',
     ),
     Monstercard(
-      imagePath: "",
+      imagePath: "assets/images/ExtraDeck/Link/splash mage.jpg",
       archetype: "",
       idNumber: i++,
       name: "Splash Mage",
@@ -401,7 +401,7 @@ You can Tribute 1 monster this card points to; draw 1 card, then place 1 card fr
 You can target 1 Cyberse monster in your GY; Special Summon it in Defense Position, but negate its effects, also you cannot Special Summon monsters for the rest of this turn, except Cyberse monsters. You can only use this effect of "Splash Mage" once per turn''',
     ),
     Monstercard(
-      imagePath: "assets/images/Extra Deck/Link/firewall dragon.jpg",
+      imagePath: "assets/images/ExtraDeck/Link/firewall dragon.jpg",
       archetype: "",
       idNumber: i++,
       name: "Firewall Dragon",
@@ -416,10 +416,10 @@ You can target 1 Cyberse monster in your GY; Special Summon it in Defense Positi
 Once while face-up on the field (Quick Effect): You can target monsters on the field and/or GY up to the number of monsters co-linked to this card; return them to the hand. If a monster this card points to is destroyed by battle or sent to the GY: You can Special Summon 1 Cyberse monster from your hand. You can only use each effect of "Firewall Dragon" once per turn.''',
     ),
     Monstercard(
-      imagePath: "assets/images/Extra Deck/Link/link spider.jpg",
+      imagePath: "assets/images/ExtraDeck/Link/link spider.jpg",
       archetype: "",
       idNumber: i++,
-      name: "assets/images/Extra Deck/Link/link spider.jpg",
+      name: "link spider",
       cardType: "Monster",
       attribute: "earth",
       type: "cyberse",
@@ -432,7 +432,7 @@ Once while face-up on the field (Quick Effect): You can target monsters on the f
     ),
 
     Monstercard(
-      imagePath: "assets/images/Extra Deck/Link/almiraj.jpg",
+      imagePath: "assets/images/ExtraDeck/Link/almiraj.jpg",
       archetype: "Salamangreat",
       idNumber: i++,
       name: "Salamangreat Almiraj",
@@ -448,7 +448,7 @@ Once while face-up on the field (Quick Effect): You can target monsters on the f
     ),
 
     Monstercard(
-      imagePath: "assets/images/Extra Deck/Link/linguriboh.jpg",
+      imagePath: "assets/images/ExtraDeck/Link/linguriboh.jpg",
       archetype: "",
       idNumber: i++,
       name: "Linguriboh",
@@ -463,7 +463,7 @@ Once while face-up on the field (Quick Effect): You can target monsters on the f
 When your opponent activates a Trap Card (Quick Effect): You can Tribute this card; negate that card's effect, and if you do, banish it. If this card is in your GY (Quick Effect): You can Tribute 1 "@Ignister" monster that was Summoned from the Extra Deck; Special Summon this card. You can only use each effect of "Linguriboh" once per turn.''',
     ),
     Monstercard(
-      imagePath: "assets/images/Extra Deck/Link/allied code talker.jpg",
+      imagePath: "assets/images/ExtraDeck/Link/allied code talker.jpg",
       archetype: "@Ignister",
       idNumber: i++,
       name: "Allied Code Talker @Ignister",
@@ -479,7 +479,7 @@ If this card is Link Summoned: You can Special Summon as many Cyberse monsters w
     ),
 
     Monstercard(
-      imagePath: "assets/images/Extra Deck/Link/code talker.jpg",
+      imagePath: "assets/images/ExtraDeck/Link/code talker.jpg",
       archetype: "code talker",
       idNumber: i++,
       name: "Accesscode Talker",
@@ -494,7 +494,7 @@ If this card is Link Summoned: You can Special Summon as many Cyberse monsters w
 Your opponent cannot activate cards or effects in response to this card's effect activations. If this card is Link Summoned: You can target 1 Link Monster that was used as material for its Link Summon; this card gains ATK equal to that monster's Link Rating x 1000. You can banish 1 Link Monster from your field or GY; destroy 1 card your opponent controls, also for the rest of this turn, you cannot banish monsters with that same Attribute to activate this effect of "Accesscode Talker".''',
     ),
     Monstercard(
-      imagePath: "assets/images/Extra Deck/Link/ip.jpg",
+      imagePath: "assets/images/ExtraDeck/Link/ip.jpg",
       archetype: "",
       idNumber: i++,
       name: "I:P Masquerena",
@@ -510,7 +510,7 @@ During your opponent's Main Phase, you can (Quick Effect): Immediately after thi
     ),
 
     Monstercard(
-      imagePath: "assets/images/Extra Deck/Link/s-p.jpg",
+      imagePath: "assets/images/ExtraDeck/Link/s-p.jpg",
       archetype: "",
       idNumber: i++,
       name: "S:P Little Knight",
@@ -525,7 +525,7 @@ During your opponent's Main Phase, you can (Quick Effect): Immediately after thi
 If this card is Link Summoned using a Fusion, Synchro, Xyz, or Link Monster as material: You can target 1 card on the field or in either GY; banish it, also your monsters cannot attack directly this turn. When your opponent activates a card or effect (Quick Effect): You can target 2 face-up monsters on the field, including a monster you control; banish both until the End Phase. You can only use each effect of "S:P Little Knight" once per turn.''',
     ),
     Monstercard(
-      imagePath: "assets/images/Extra Deck/Link/haggard Lizardose.jpg",
+      imagePath: "assets/images/ExtraDeck/Link/haggard Lizardose.jpg",
       archetype: "",
       idNumber: i++,
       name: "Haggard Lizardose",

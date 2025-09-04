@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tcg_app/class/DatabaseRepo/mock_database.dart';
 import 'package:tcg_app/class/common/appbar.dart';
 import 'package:tcg_app/class/common/bottombar.dart';
 import 'package:tcg_app/class/common/lists.dart';
@@ -90,6 +91,8 @@ class MainScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    MockDatabaseRepository db = MockDatabaseRepository();
+    final List kartenliste = db.getAllYugiohKarten();
     final List<Widget> pages = [
       const Home(),
       const Search(),
@@ -113,7 +116,19 @@ class MainScreen extends StatelessWidget {
           onThemeChanged: onThemeChanged,
         ),
       ),
-      body: pages[selectedIndex],
+      body: ListView.builder(
+        itemCount: kartenliste.length, // Anzahl der Elemente
+        itemBuilder: (context, index) {
+          final karte = kartenliste[index];
+          return ListTile(
+            title: Text(karte.name),
+            leading: Image.asset(
+              karte.imagePath,
+            ), // Beispiel: Zeigt das Bild der Karte
+            // Weitere Widgets oder Infos hier
+          );
+        },
+      ),
       bottomNavigationBar: Bottombar(
         currentIndex: selectedIndex,
         valueChanged: onItemTapped,
