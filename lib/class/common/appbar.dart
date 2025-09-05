@@ -19,21 +19,22 @@ class Barwidget extends StatefulWidget {
 }
 
 class _BarwidgetState extends State<Barwidget> {
-  // `mode` is now nullable. It will be `null` until the data is loaded.
+  // `mode` ist nicht mehr notwendig.
   bool? mode;
 
+  // Der Ladevorgang wird beibehalten, um den Zustand der App zu speichern.
   @override
   void initState() {
     super.initState();
-    // Start the asynchronous loading process.
     _loadThemeMode();
   }
 
   Future<void> _loadThemeMode() async {
     final loadedMode = await SaveData().loadBool("darkMode");
     setState(() {
-      // Update the state with the loaded value.
-      mode = loadedMode ?? false;
+      // isDarkMode wird hier gesetzt, aber das Icon wird direkt
+      // über den Theme-Kontext gesteuert.
+      mode = loadedMode;
     });
   }
 
@@ -43,28 +44,26 @@ class _BarwidgetState extends State<Barwidget> {
 
   @override
   Widget build(BuildContext context) {
-    // Check if the mode is still null (data is not yet loaded).
-    if (mode == null) {
-      return AppBar(
-        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-      );
-    }
+    // Der Code mit `mode == null` ist ebenfalls nicht mehr notwendig,
+    // da wir den `context` direkt nutzen.
+
+    // Rufe die Helligkeit des aktuellen Themes ab.
+    final currentBrightness = Theme.of(context).brightness;
+    final isDarkMode = currentBrightness == Brightness.dark;
 
     return AppBar(
       centerTitle: false,
       actions: [
         IconButton(
-          icon: mode!
+          // Basierend auf der Helligkeit des Themes das Icon wählen
+          icon: isDarkMode
               ? const Icon(Icons.light_mode)
               : const Icon(Icons.dark_mode),
           onPressed: () {
-            setState(() {
-              // Schalte den Wert von 'mode' um
-              mode = !mode!;
-            });
-            // Rufe die Funktionen mit dem umgeschalteten Wert auf
-            saveThemeMode(mode!);
-            widget.onThemeChanged(mode!);
+            // Beim Klick den Theme-Modus umschalten und speichern.
+            final newMode = !isDarkMode;
+            widget.onThemeChanged(newMode);
+            saveThemeMode(newMode);
           },
         ),
       ],

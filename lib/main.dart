@@ -4,6 +4,7 @@ import 'package:tcg_app/class/common/appbar.dart';
 import 'package:tcg_app/class/common/bottombar.dart';
 import 'package:tcg_app/class/common/lists.dart';
 import 'package:tcg_app/class/savedata.dart';
+import 'package:tcg_app/class/yugiohkarte.dart';
 import 'package:tcg_app/theme/light_theme.dart';
 import 'package:tcg_app/theme/dark_theme.dart';
 import 'package:tcg_app/theme/sizing.dart';
@@ -16,6 +17,7 @@ import 'package:tcg_app/class/meta.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SaveData.initPreferences();
+
   runApp(const MainApp());
 }
 
@@ -28,7 +30,7 @@ class MainApp extends StatefulWidget {
 
 class _MainAppState extends State<MainApp> {
   final SaveData data = SaveData();
-  bool isDarkMode = false;
+  bool? isDarkMode;
   String name = "";
   int _selectedIndex = 0;
 
@@ -41,7 +43,7 @@ class _MainAppState extends State<MainApp> {
   Future<void> _loadData() async {
     final loadedMode = await data.loadBool("darkMode");
     setState(() {
-      isDarkMode = loadedMode ?? false;
+      isDarkMode = loadedMode;
     });
   }
 
@@ -64,7 +66,9 @@ class _MainAppState extends State<MainApp> {
       debugShowCheckedModeBanner: false,
       theme: lightTheme(context),
       darkTheme: darkTheme(context),
-      themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
+      themeMode: isDarkMode == null
+          ? ThemeMode.system
+          : (isDarkMode! ? ThemeMode.dark : ThemeMode.light),
       home: MainScreen(
         data: data,
         selectedIndex: _selectedIndex,
@@ -91,8 +95,6 @@ class MainScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    MockDatabaseRepository db = MockDatabaseRepository();
-    final List kartenliste = db.getAllYugiohKarten();
     final List<Widget> pages = [
       const Home(),
       const Search(),
@@ -116,19 +118,7 @@ class MainScreen extends StatelessWidget {
           onThemeChanged: onThemeChanged,
         ),
       ),
-      body: ListView.builder(
-        itemCount: kartenliste.length, // Anzahl der Elemente
-        itemBuilder: (context, index) {
-          final karte = kartenliste[index];
-          return ListTile(
-            title: Text(karte.name),
-            leading: Image.asset(
-              karte.imagePath,
-            ), // Beispiel: Zeigt das Bild der Karte
-            // Weitere Widgets oder Infos hier
-          );
-        },
-      ),
+      body: pages[selectedIndex],
       bottomNavigationBar: Bottombar(
         currentIndex: selectedIndex,
         valueChanged: onItemTapped,

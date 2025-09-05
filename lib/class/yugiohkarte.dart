@@ -6,7 +6,7 @@ class YugiohKarte {
   final int idNumber;
   final String name;
   final String cardType;
-  final String archetype;
+  final List<String> archetype;
   final String imagePath;
 
   YugiohKarte({

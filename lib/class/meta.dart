@@ -1,43 +1,43 @@
 import 'package:flutter/material.dart';
-import 'package:tcg_app/class/common/card.dart';
-import 'package:tcg_app/class/common/lists.dart';
-import 'package:tcg_app/class/common/show_card_array_vertical.dart';
+import 'package:tcg_app/class/DatabaseRepo/mock_database.dart';
+
+import 'package:tcg_app/class/yugiohkarte.dart';
 
 class Meta extends StatelessWidget {
   const Meta({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final List<List<DeckCard>> listCards = [decks, cards, decks, cards, decks];
+    // Die Listen der Karten
+    MockDatabaseRepository db = MockDatabaseRepository();
+    Future<List<YugiohKarte>> listCards = db.getallCards();
 
-    final List<int> crossAxisCounts = [1, 2, 3, 4, 5];
-    final List<String> texts = ["Turnier Decks", "Turnier Karten"];
-
-    return ListView.builder(
-      itemCount: listCards.length,
-      itemBuilder: (context, index) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: 40),
-            if (index % 2 == 0)
-              Text(
-                texts[0].toString(),
-                style: Theme.of(context).textTheme.headlineMedium,
-              )
-            else
-              Text(
-                texts[1].toString(),
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-            SizedBox(height: 20),
-            ShowcardarrayVertical(
-              cards: listCards[index],
-              crossAxisCount: crossAxisCounts[index],
-            ),
-            if (index == listCards.length - 1) SizedBox(height: 40),
-          ],
-        );
+    return FutureBuilder<List<YugiohKarte>>(
+      future: listCards,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          // You must return a widget here to show a loading state
+          return CircularProgressIndicator();
+        } else if (snapshot.connectionState == ConnectionState.done &&
+            snapshot.hasData) {
+          // You must return a widget here to display the data
+          return ListView.builder(
+            itemCount: snapshot.data!.length,
+            itemBuilder: (context, index) {
+              YugiohKarte card = snapshot.data![index];
+              return Card(
+                child: ListTile(
+                  title: Text(card.name),
+                  leading: Image.asset(card.imagePath),
+                ),
+              );
+            },
+          );
+        } else {
+          return Text(
+            'Es ist ein Fehler aufgetreten oder es gibt keine Daten.',
+          );
+        }
       },
     );
   }

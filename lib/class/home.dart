@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:tcg_app/class/common/card.dart';
-import 'package:tcg_app/class/common/lists.dart';
+import 'package:tcg_app/class/DatabaseRepo/mock_database.dart';
 
-import 'package:tcg_app/class/common/show_card_array_horizontal.dart';
+import 'package:tcg_app/class/yugiohkarte.dart';
 
 class Home extends StatelessWidget {
   const Home({super.key});
@@ -10,40 +9,38 @@ class Home extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Die Listen der Karten
-    final List<List<DeckCard>> listCards = [decks, cards, decks, cards, decks];
+    MockDatabaseRepository db = MockDatabaseRepository();
+    Future<List<YugiohKarte>> listCards = db.getallCards();
 
-    // Die passenden crossAxisCount-Werte in einer parallelen Liste
-    final List<int> crossAxisCounts = [7, 2, 3, 4, 5];
-    final List<String> texts = [
-      "beliebte Community Decks",
-      "beliebte Community Karten",
-    ];
-
-    return ListView.builder(
-      itemCount: listCards.length,
-      itemBuilder: (context, index) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: 40),
-            if (index % 2 == 0)
-              Text(
-                texts[0].toString(),
-                style: Theme.of(context).textTheme.headlineMedium,
-              )
-            else
-              Text(
-                texts[1].toString(),
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-            SizedBox(height: 20),
-            ShowcardarrayHorizontal(
-              cards: listCards[index],
-              crossAxisCount: crossAxisCounts[index],
+    return FutureBuilder<List<YugiohKarte>>(
+      future: listCards,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          // You must return a widget here to show a loading state
+          return CircularProgressIndicator();
+        } else if (snapshot.connectionState == ConnectionState.done &&
+            snapshot.hasData) {
+          // You must return a widget here to display the data
+          return GridView.builder(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 4,
             ),
-            if (index == listCards.length - 1) SizedBox(height: 40),
-          ],
-        );
+            itemCount: snapshot.data!.length,
+            itemBuilder: (context, index) {
+              YugiohKarte card = snapshot.data![index];
+              return Card(
+                child: ListTile(
+                  title: Text(card.name),
+                  leading: Image.asset(card.imagePath),
+                ),
+              );
+            },
+          );
+        } else {
+          return Text(
+            'Es ist ein Fehler aufgetreten oder es gibt keine Daten.',
+          );
+        }
       },
     );
   }
