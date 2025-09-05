@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/DatabaseRepo/mock_database.dart';
-
 import 'package:tcg_app/class/yugiohkarte.dart';
 
 class Home extends StatelessWidget {
@@ -8,7 +7,6 @@ class Home extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Die Listen der Karten
     MockDatabaseRepository db = MockDatabaseRepository();
     Future<List<YugiohKarte>> listCards = db.getallCards();
 
@@ -16,32 +14,290 @@ class Home extends StatelessWidget {
       future: listCards,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          // You must return a widget here to show a loading state
-          return CircularProgressIndicator();
+          return const Center(child: CircularProgressIndicator());
         } else if (snapshot.connectionState == ConnectionState.done &&
             snapshot.hasData) {
-          // You must return a widget here to display the data
-          return GridView.builder(
+          return SingleChildScrollView(
+            child: Column(
+              children: [
+                // ERSTE REIHE: Zwei GridViews nebeneinander
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Linkes GridView
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(
+                          right: 20.0,
+                          bottom: 40.0,
+                        ),
+                        child: ShowList(
+                          snapshot: snapshot,
+                          crossAxisCount: 1,
+                          title: "Kategorie A",
+                        ),
+                      ),
+                    ),
+                    // Rechtes GridView
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(
+                          left: 20.0,
+                          bottom: 40.0,
+                        ),
+                        child: ShowList(
+                          snapshot: snapshot,
+                          crossAxisCount: 1,
+                          title: "Kategorie B",
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                // ZWEITE REIHE: Ein GridView über die ganze Breite - HORIZONTAL SCROLLBAR
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 40.0),
+                  child: SizedBox(
+                    height:
+                        250, // Feste Höhe für horizontal scrollbares GridView
+                    child: ShowListHorizontal(
+                      snapshot: snapshot,
+                      crossAxisCount: 2, // 2 Reihen übereinander
+                      title: "Kategorie C",
+                    ),
+                  ),
+                ),
+
+                // DRITTE REIHE: Drei GridViews nebeneinander
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Linkes GridView
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(
+                          right: 10.0,
+                          bottom: 40.0,
+                        ),
+                        child: ShowList(
+                          snapshot: snapshot,
+                          crossAxisCount: 1,
+                          title: "Kategorie D",
+                        ),
+                      ),
+                    ),
+                    // Mittleres GridView
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                        child: ShowList(
+                          snapshot: snapshot,
+                          crossAxisCount: 1,
+                          title: "Kategorie E",
+                        ),
+                      ),
+                    ),
+                    // Rechtes GridView
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(
+                          left: 10.0,
+                          bottom: 40.0,
+                        ),
+                        child: ShowList(
+                          snapshot: snapshot,
+                          crossAxisCount: 1,
+                          title: "Kategorie F",
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Abstand am Ende
+                const SizedBox(height: 20),
+              ],
+            ),
+          );
+        } else {
+          return const Center(
+            child: Text(
+              'Es ist ein Fehler aufgetreten oder es gibt keine Daten.',
+            ),
+          );
+        }
+      },
+    );
+  }
+}
+
+class ShowList extends StatelessWidget {
+  final AsyncSnapshot<List<YugiohKarte>> snapshot;
+  final int crossAxisCount;
+  final String? title;
+
+  const ShowList({
+    super.key,
+    required this.snapshot,
+    this.crossAxisCount = 2,
+    this.title,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Optionaler Titel
+        if (title != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10.0),
+            child: Text(
+              title!,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+          ),
+
+        // GridView
+        GridView.builder(
+          physics: const NeverScrollableScrollPhysics(),
+          shrinkWrap: true,
+          scrollDirection: Axis.vertical,
+          padding: EdgeInsets.zero,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 1,
+            childAspectRatio: 3.0,
+            crossAxisSpacing: 2,
+            mainAxisSpacing: 10,
+          ),
+          itemCount: snapshot.data!.length,
+          itemBuilder: (context, index) {
+            YugiohKarte card = snapshot.data![index];
+            return Card(
+              margin: EdgeInsets.zero,
+              color: Colors.transparent,
+              elevation: 0,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Bild links
+                  Expanded(
+                    flex: 2,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.asset(card.imagePath, fit: BoxFit.contain),
+                    ),
+                  ),
+                  // Text rechts neben dem Bild
+                  Expanded(
+                    flex: 3,
+                    child: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Text(
+                        card.name,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                        textAlign: TextAlign.left,
+                        overflow: TextOverflow.visible,
+                        maxLines: 2,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class ShowListHorizontal extends StatelessWidget {
+  final AsyncSnapshot<List<YugiohKarte>> snapshot;
+  final int crossAxisCount;
+  final String? title;
+
+  const ShowListHorizontal({
+    super.key,
+    required this.snapshot,
+    this.crossAxisCount = 2,
+    this.title,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Optionaler Titel
+        if (title != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10.0),
+            child: Text(
+              title!,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+          ),
+
+        // Horizontal scrollbares GridView
+        Expanded(
+          child: GridView.builder(
+            scrollDirection: Axis.horizontal, // HORIZONTAL SCROLLEN
+            padding: EdgeInsets.zero,
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 4,
+              crossAxisCount: crossAxisCount, // Anzahl Reihen übereinander
+              childAspectRatio:
+                  1.5, // Verhältnis für horizontal scrollende Karten
+              crossAxisSpacing: 4,
+              mainAxisSpacing: 8,
             ),
             itemCount: snapshot.data!.length,
             itemBuilder: (context, index) {
               YugiohKarte card = snapshot.data![index];
               return Card(
-                child: ListTile(
-                  title: Text(card.name),
-                  leading: Image.asset(card.imagePath),
+                margin: EdgeInsets.zero,
+                color: Colors.transparent,
+                elevation: 0,
+                child: Column(
+                  // Column für Text unter dem Bild bei horizontal scrollenden Karten
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Bild oben
+                    Expanded(
+                      flex: 4,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.asset(card.imagePath, fit: BoxFit.contain),
+                      ),
+                    ),
+                    // Text unten
+                    Expanded(
+                      flex: 1,
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Text(
+                          card.name,
+                          style: Theme.of(context).textTheme.bodySmall,
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.visible,
+                          maxLines: 2,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               );
             },
-          );
-        } else {
-          return Text(
-            'Es ist ein Fehler aufgetreten oder es gibt keine Daten.',
-          );
-        }
-      },
+          ),
+        ),
+      ],
     );
   }
 }

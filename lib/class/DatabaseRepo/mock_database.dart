@@ -600,7 +600,7 @@ You can banish 1 monster from your face-up field or GY with 2000 or less ATK, th
 
   @override
   Future<List<YugiohKarte>> getallCards() async {
-    await Future.delayed(Duration(milliseconds: 2));
+    await Future.delayed(Duration(seconds: 1));
     return _cardList;
   }
 
