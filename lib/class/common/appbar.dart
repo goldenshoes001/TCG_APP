@@ -19,10 +19,9 @@ class Barwidget extends StatefulWidget {
 }
 
 class _BarwidgetState extends State<Barwidget> {
-  // `mode` ist nicht mehr notwendig.
+
   bool? mode;
 
-  // Der Ladevorgang wird beibehalten, um den Zustand der App zu speichern.
   @override
   void initState() {
     super.initState();
@@ -32,8 +31,7 @@ class _BarwidgetState extends State<Barwidget> {
   Future<void> _loadThemeMode() async {
     final loadedMode = await SaveData().loadBool("darkMode");
     setState(() {
-      // isDarkMode wird hier gesetzt, aber das Icon wird direkt
-      // über den Theme-Kontext gesteuert.
+
       mode = loadedMode;
     });
   }
@@ -44,10 +42,7 @@ class _BarwidgetState extends State<Barwidget> {
 
   @override
   Widget build(BuildContext context) {
-    // Der Code mit `mode == null` ist ebenfalls nicht mehr notwendig,
-    // da wir den `context` direkt nutzen.
 
-    // Rufe die Helligkeit des aktuellen Themes ab.
     final currentBrightness = Theme.of(context).brightness;
     final isDarkMode = currentBrightness == Brightness.dark;
 
@@ -55,12 +50,12 @@ class _BarwidgetState extends State<Barwidget> {
       centerTitle: false,
       actions: [
         IconButton(
-          // Basierend auf der Helligkeit des Themes das Icon wählen
+
           icon: isDarkMode
               ? const Icon(Icons.light_mode)
               : const Icon(Icons.dark_mode),
           onPressed: () {
-            // Beim Klick den Theme-Modus umschalten und speichern.
+
             final newMode = !isDarkMode;
             widget.onThemeChanged(newMode);
             saveThemeMode(newMode);

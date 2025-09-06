@@ -20,11 +20,11 @@ class Home extends StatelessWidget {
           return SingleChildScrollView(
             child: Column(
               children: [
-                // ERSTE REIHE: Zwei GridViews nebeneinander
+
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Linkes GridView
+
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.only(
@@ -38,7 +38,7 @@ class Home extends StatelessWidget {
                         ),
                       ),
                     ),
-                    // Rechtes GridView
+
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.only(
@@ -55,25 +55,24 @@ class Home extends StatelessWidget {
                   ],
                 ),
 
-                // ZWEITE REIHE: Ein GridView über die ganze Breite - HORIZONTAL SCROLLBAR
+
                 Padding(
                   padding: const EdgeInsets.only(bottom: 40.0),
                   child: SizedBox(
-                    height:
-                        250, // Feste Höhe für horizontal scrollbares GridView
+                    height:250,
                     child: ShowListHorizontal(
                       snapshot: snapshot,
-                      crossAxisCount: 2, // 2 Reihen übereinander
+                      crossAxisCount: 2, 
                       title: "Kategorie C",
                     ),
                   ),
                 ),
 
-                // DRITTE REIHE: Drei GridViews nebeneinander
+               
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Linkes GridView
+                 
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.only(
@@ -87,7 +86,7 @@ class Home extends StatelessWidget {
                         ),
                       ),
                     ),
-                    // Mittleres GridView
+               
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 10.0),
@@ -98,7 +97,7 @@ class Home extends StatelessWidget {
                         ),
                       ),
                     ),
-                    // Rechtes GridView
+                 
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.only(
@@ -115,7 +114,6 @@ class Home extends StatelessWidget {
                   ],
                 ),
 
-                // Abstand am Ende
                 const SizedBox(height: 20),
               ],
             ),
@@ -149,7 +147,7 @@ class ShowList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Optionaler Titel
+     
         if (title != null)
           Padding(
             padding: const EdgeInsets.only(bottom: 10.0),
@@ -161,7 +159,7 @@ class ShowList extends StatelessWidget {
             ),
           ),
 
-        // GridView
+ 
         GridView.builder(
           physics: const NeverScrollableScrollPhysics(),
           shrinkWrap: true,
@@ -184,7 +182,7 @@ class ShowList extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Bild links
+               
                   Expanded(
                     flex: 2,
                     child: ClipRRect(
@@ -192,7 +190,7 @@ class ShowList extends StatelessWidget {
                       child: Image.asset(card.imagePath, fit: BoxFit.contain),
                     ),
                   ),
-                  // Text rechts neben dem Bild
+                
                   Expanded(
                     flex: 3,
                     child: Padding(
@@ -233,7 +231,7 @@ class ShowListHorizontal extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Optionaler Titel
+     
         if (title != null)
           Padding(
             padding: const EdgeInsets.only(bottom: 10.0),
@@ -245,15 +243,15 @@ class ShowListHorizontal extends StatelessWidget {
             ),
           ),
 
-        // Horizontal scrollbares GridView
+   
         Expanded(
           child: GridView.builder(
-            scrollDirection: Axis.horizontal, // HORIZONTAL SCROLLEN
+            scrollDirection: Axis.horizontal,
             padding: EdgeInsets.zero,
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: crossAxisCount, // Anzahl Reihen übereinander
+              crossAxisCount: crossAxisCount,
               childAspectRatio:
-                  1.5, // Verhältnis für horizontal scrollende Karten
+                  1.5, 
               crossAxisSpacing: 4,
               mainAxisSpacing: 8,
             ),
@@ -265,11 +263,11 @@ class ShowListHorizontal extends StatelessWidget {
                 color: Colors.transparent,
                 elevation: 0,
                 child: Column(
-                  // Column für Text unter dem Bild bei horizontal scrollenden Karten
+            
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // Bild oben
+                 
                     Expanded(
                       flex: 4,
                       child: ClipRRect(
@@ -277,7 +275,7 @@ class ShowListHorizontal extends StatelessWidget {
                         child: Image.asset(card.imagePath, fit: BoxFit.contain),
                       ),
                     ),
-                    // Text unten
+                   
                     Expanded(
                       flex: 1,
                       child: Padding(
