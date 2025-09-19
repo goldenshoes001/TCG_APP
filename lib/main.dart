@@ -6,32 +6,24 @@ import 'package:tcg_app/class/savedata.dart';
 import 'package:tcg_app/theme/light_theme.dart';
 import 'package:tcg_app/theme/dark_theme.dart';
 import 'package:tcg_app/theme/sizing.dart';
-
 import 'package:tcg_app/class/home.dart';
 import 'package:tcg_app/class/search.dart';
 import 'package:tcg_app/class/login.dart';
+import 'package:tcg_app/class/common/user_profile_side.dart';
 import 'package:tcg_app/class/meta.dart';
-
-// Füge die Firebase-Imports hinzu
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 void main() async {
-  // Stellt sicher, dass das Flutter-Binding initialisiert ist
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialisiert Firebase mit den plattformspezifischen Optionen
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
-  // Initialisiert die Speicherung
   await SaveData.initPreferences();
-
   runApp(const MainApp());
 }
 
 class MainApp extends StatefulWidget {
   const MainApp({super.key});
-
   @override
   State<MainApp> createState() => _MainAppState();
 }
@@ -39,7 +31,6 @@ class MainApp extends StatefulWidget {
 class _MainAppState extends State<MainApp> {
   final SaveData data = SaveData();
   bool? isDarkMode;
-  String name = "";
   int _selectedIndex = 0;
 
   @override
@@ -77,10 +68,30 @@ class _MainAppState extends State<MainApp> {
       themeMode: isDarkMode == null
           ? ThemeMode.system
           : (isDarkMode! ? ThemeMode.dark : ThemeMode.light),
-      home: MainScreen(
-        selectedIndex: _selectedIndex,
-        onItemTapped: _onItemTapped,
-        onThemeChanged: _toggleDarkMode,
+
+      // Der StreamBuilder entscheidet direkt, welche Hauptseite angezeigt wird
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasData) {
+            // Benutzer ist angemeldet, zeige den Hauptbildschirm
+            return MainScreen(
+              selectedIndex: _selectedIndex,
+              onItemTapped: _onItemTapped,
+              onThemeChanged: _toggleDarkMode,
+            );
+          } else {
+            // Benutzer ist abgemeldet, zeige den Login-Bildschirm
+            return Profile(
+              selectedIndex: 2,
+              onItemTapped: _onItemTapped,
+              onThemeChanged: _toggleDarkMode,
+            );
+          }
+        },
       ),
     );
   }
@@ -100,10 +111,11 @@ class MainScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Definiere die Seiten nur für angemeldete Benutzer
     final List<Widget> pages = [
       const Home(),
       const Search(),
-      Profile(
+      UserProfileScreen(
         selectedIndex: selectedIndex,
         onItemTapped: onItemTapped,
         onThemeChanged: onThemeChanged,

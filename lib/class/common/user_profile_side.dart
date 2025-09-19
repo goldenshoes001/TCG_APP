@@ -3,22 +3,18 @@ import 'package:tcg_app/class/common/appbar.dart';
 import 'package:tcg_app/class/common/bottombar.dart';
 import 'package:tcg_app/class/common/lists.dart';
 import 'package:tcg_app/theme/sizing.dart';
+import 'package:tcg_app/class/FirebaseAuthRepository.dart';
 
 class UserProfileScreen extends StatefulWidget {
   final int selectedIndex;
   final Function(int) onItemTapped;
-
   final Function(bool) onThemeChanged;
-  final String username;
 
   const UserProfileScreen({
     super.key,
-
     required this.selectedIndex,
     required this.onItemTapped,
-
     required this.onThemeChanged,
-    required this.username,
   });
 
   @override
@@ -26,14 +22,51 @@ class UserProfileScreen extends StatefulWidget {
 }
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
-  // Neue Methode für die Navigation
-  void _handleBottomNavigation(int index) {
-    if (index != widget.selectedIndex) {
-      // Zurück zum Hauptscreen navigieren und den gewählten Index setzen
-      Navigator.pop(context);
-      widget.onItemTapped(index);
+  String? _username;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUsername();
+  }
+
+  void _fetchUsername() {
+    final authRepo = FirebaseAuthRepository();
+    final currentUser = authRepo.getCurrentUser();
+
+    String? name = currentUser?.displayName;
+    if (name == null || name.isEmpty) {
+      name = currentUser?.email;
     }
-    // Wenn derselbe Index gewählt wird (Profil), bleiben wir auf dieser Seite
+
+    setState(() {
+      _username = name;
+    });
+  }
+
+  Future<void> _handleLogout() async {
+    final authRepo = FirebaseAuthRepository();
+    try {
+      await authRepo.signOut();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Sie wurden erfolgreich abgemeldet."),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Fehler beim Abmelden: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -53,34 +86,31 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Willkommensnachricht
             Text(
-              "Willkommen, ${widget.username}!",
+              "Willkommen, ${_username ?? 'Gast'}!",
               style: Theme.of(context).textTheme.headlineMedium,
             ),
             const SizedBox(height: 20),
-
-            // Profilinformationen
             Card(
-              margin: EdgeInsets.all(16),
+              margin: const EdgeInsets.all(16),
               child: Padding(
-                padding: EdgeInsets.all(16),
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    Icon(Icons.person, size: 100, color: Colors.lightBlue),
+                    const Icon(
+                      Icons.person,
+                      size: 100,
+                      color: Colors.lightBlue,
+                    ),
                     const SizedBox(height: 10),
                     Text(
-                      "Benutzername: ${widget.username}",
+                      "Benutzer: ${_username ?? 'Nicht angemeldet'}",
                       style: Theme.of(context).textTheme.headlineMedium,
                     ),
                     const SizedBox(height: 20),
-
-                    // Logout Button
                     ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                      child: Text("Abmelden"),
+                      onPressed: _handleLogout,
+                      child: const Text("Abmelden"),
                     ),
                   ],
                 ),
@@ -91,7 +121,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       ),
       bottomNavigationBar: Bottombar(
         currentIndex: widget.selectedIndex,
-        valueChanged: _handleBottomNavigation, // Neue Methode verwenden
+        // Die Bottombar ruft jetzt direkt die onItemTapped-Methode auf
+        valueChanged: widget.onItemTapped,
         navigationItems: iconList,
       ),
     );

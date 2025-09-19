@@ -306,7 +306,6 @@ class _RegistrierenState extends State<Registrieren> {
                 selectedIndex: widget.selectedIndex,
                 onItemTapped: widget.onItemTapped,
                 onThemeChanged: widget.onThemeChanged,
-                username: email,
               ),
             ),
           );

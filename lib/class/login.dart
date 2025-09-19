@@ -58,7 +58,6 @@ class _ProfileState extends State<Profile> {
                 selectedIndex: widget.selectedIndex,
                 onItemTapped: widget.onItemTapped,
                 onThemeChanged: widget.onThemeChanged,
-                username: username,
               ),
             ),
           );
