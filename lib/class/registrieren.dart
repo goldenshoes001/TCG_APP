@@ -7,7 +7,7 @@ import 'package:tcg_app/theme/sizing.dart';
 import 'package:tcg_app/class/FirebaseAuthRepository.dart';
 
 // Stelle sicher, dass du das Benutzerprofil importierst
-import 'package:tcg_app/class/common/user_profile_side.dart';
+
 
 class Registrieren extends StatefulWidget {
   final int selectedIndex;
@@ -297,22 +297,15 @@ class _RegistrierenState extends State<Registrieren> {
           ),
         );
 
-        // Nach der Registrierung zum Profilbildschirm wechseln
         if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => UserProfileScreen(
-                selectedIndex: widget.selectedIndex,
-                onItemTapped: widget.onItemTapped,
-                onThemeChanged: widget.onThemeChanged,
-              ),
-            ),
-          );
           emailAdressController.clear();
           repeatEmailAdressController.clear();
           pwController.clear();
           pwRepeatController.clear();
+          
+          // Navigate back to main app - auth state change will handle UI update
+          Navigator.pop(context);
+          widget.onItemTapped(2); // Go to profile tab
         }
       } on Exception catch (e) {
         // Fehler von Firebase abfangen
@@ -512,7 +505,10 @@ class _RegistrierenState extends State<Registrieren> {
                                       : _repeatPasswordValidationColor ==
                                             Colors.red
                                       ? Icons.error
-                                      : Icons.warning,
+                                      : _repeatPasswordValidationColor ==
+                                            Colors.orange
+                                      ? Icons.warning
+                                      : Icons.info,
                                   color: _repeatPasswordValidationColor,
                                   size: 20,
                                 ),

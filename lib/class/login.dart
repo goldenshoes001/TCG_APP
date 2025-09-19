@@ -1,15 +1,11 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/FirebaseAuthRepository.dart';
 
-import 'package:tcg_app/class/common/user_profile_side.dart';
 import 'package:tcg_app/class/registrieren.dart';
-import 'package:tcg_app/class/savedata.dart';
 
 class Profile extends StatefulWidget {
   final Function(int) onItemTapped;
   final Function(bool) onThemeChanged;
-
   final int selectedIndex;
 
   const Profile({
@@ -17,7 +13,7 @@ class Profile extends StatefulWidget {
     required this.onItemTapped,
     required this.onThemeChanged,
     required this.selectedIndex,
-  });
+  }) : super(key: key);
 
   @override
   State<Profile> createState() => _ProfileState();
@@ -25,14 +21,18 @@ class Profile extends StatefulWidget {
 
 class _ProfileState extends State<Profile> {
   final _formKey = GlobalKey<FormState>();
-
   final passwordController = TextEditingController();
   final userNameController = TextEditingController();
-
   bool _isPasswordVisible = false;
 
+  @override
+  void dispose() {
+    passwordController.dispose();
+    userNameController.dispose();
+    super.dispose();
+  }
+
   Future<void> handleLogin() async {
-    // Die Validierung des Formulars ist der erste Schritt
     if (_formKey.currentState!.validate()) {
       final FirebaseAuthRepository auth = FirebaseAuthRepository();
       final String username = userNameController.text.trim();
@@ -41,35 +41,33 @@ class _ProfileState extends State<Profile> {
       try {
         await auth.signInWithEmailAndPassword(username, password);
 
-        // Bei erfolgreicher Anmeldung
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Anmeldung erfolgreich!"),
-            backgroundColor: Colors.green,
-          ),
-        );
-
-        // Navigiere zum nächsten Bildschirm
         if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => UserProfileScreen(
-                selectedIndex: widget.selectedIndex,
-                onItemTapped: widget.onItemTapped,
-                onThemeChanged: widget.onThemeChanged,
-              ),
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Anmeldung erfolgreich!"),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
             ),
           );
-          passwordController.text = "";
-          userNameController.text = "";
+          
+          passwordController.clear();
+          userNameController.clear();
+          
+          // No need for manual navigation
         }
       } on Exception catch (e) {
-        // Bei einem Fehler, z.B. falsche Anmeldedaten
         String message = e.toString().replaceFirst('Exception: ', '');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), backgroundColor: Colors.red),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(message),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
       }
     }
   }
