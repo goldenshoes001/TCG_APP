@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "22327832859",
+    "project_id": "tcg-app-e357e",
+    "storage_bucket": "tcg-app-e357e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:22327832859:android:f039a488d31707e81fa3be",
+        "android_client_info": {
+          "package_name": "com.example.tcg_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD_ZkQsRo1aA9z9QYGs_fuxUWupaRHtKE0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

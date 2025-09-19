@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 
 class YugiohKarte {
   static const List<String> _cardTypes = ["monster", "spell", "trap"];

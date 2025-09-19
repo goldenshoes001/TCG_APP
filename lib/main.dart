@@ -1,21 +1,29 @@
 import 'package:flutter/material.dart';
-import 'package:tcg_app/class/DatabaseRepo/mock_database.dart';
 import 'package:tcg_app/class/common/appbar.dart';
 import 'package:tcg_app/class/common/bottombar.dart';
 import 'package:tcg_app/class/common/lists.dart';
 import 'package:tcg_app/class/savedata.dart';
-import 'package:tcg_app/class/yugiohkarte.dart';
 import 'package:tcg_app/theme/light_theme.dart';
 import 'package:tcg_app/theme/dark_theme.dart';
 import 'package:tcg_app/theme/sizing.dart';
 
 import 'package:tcg_app/class/home.dart';
 import 'package:tcg_app/class/search.dart';
-import 'package:tcg_app/class/profile.dart';
+import 'package:tcg_app/class/login.dart';
 import 'package:tcg_app/class/meta.dart';
 
+// Füge die Firebase-Imports hinzu
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+
 void main() async {
+  // Stellt sicher, dass das Flutter-Binding initialisiert ist
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialisiert Firebase mit den plattformspezifischen Optionen
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Initialisiert die Speicherung
   await SaveData.initPreferences();
 
   runApp(const MainApp());
@@ -70,7 +78,6 @@ class _MainAppState extends State<MainApp> {
           ? ThemeMode.system
           : (isDarkMode! ? ThemeMode.dark : ThemeMode.light),
       home: MainScreen(
-        data: data,
         selectedIndex: _selectedIndex,
         onItemTapped: _onItemTapped,
         onThemeChanged: _toggleDarkMode,
@@ -80,14 +87,12 @@ class _MainAppState extends State<MainApp> {
 }
 
 class MainScreen extends StatelessWidget {
-  final SaveData data;
   final int selectedIndex;
   final Function(int) onItemTapped;
   final Function(bool) onThemeChanged;
 
   const MainScreen({
     super.key,
-    required this.data,
     required this.selectedIndex,
     required this.onItemTapped,
     required this.onThemeChanged,
@@ -99,7 +104,6 @@ class MainScreen extends StatelessWidget {
       const Home(),
       const Search(),
       Profile(
-        data: data,
         selectedIndex: selectedIndex,
         onItemTapped: onItemTapped,
         onThemeChanged: onThemeChanged,

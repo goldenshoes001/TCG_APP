@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:tcg_app/class/common/appbar.dart';
 import 'package:tcg_app/class/common/bottombar.dart';
 import 'package:tcg_app/class/common/lists.dart';
-import 'package:tcg_app/class/savedata.dart';
 import 'package:tcg_app/theme/sizing.dart';
 
 class UserProfileScreen extends StatefulWidget {
-  final SaveData data;
   final int selectedIndex;
   final Function(int) onItemTapped;
 
@@ -15,7 +13,7 @@ class UserProfileScreen extends StatefulWidget {
 
   const UserProfileScreen({
     super.key,
-    required this.data,
+
     required this.selectedIndex,
     required this.onItemTapped,
 
@@ -64,7 +62,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
             // Profilinformationen
             Card(
-              color: Colors.orange,
               margin: EdgeInsets.all(16),
               child: Padding(
                 padding: EdgeInsets.all(16),

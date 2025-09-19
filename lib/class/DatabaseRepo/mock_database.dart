@@ -177,7 +177,7 @@ class MockDatabaseRepository implements DatabaseRepository {
 
       ● Once, during this End Phase, if the number of cards in your hand is more than the number of cards your opponent controls +6, you must randomly shuffle cards from your hand into the Deck so the number in your hand equals the number your opponent controls +6.
 
-      You can only activate 1 other \"Mulcharmy\" monster effect, the turn you activate this effect.''',
+      You can only activate 1 other "Mulcharmy" monster effect, the turn you activate this effect.''',
     ),
     Monstercard(
       imagePath: "assets/images/handtraps/magmahut.jpg",
