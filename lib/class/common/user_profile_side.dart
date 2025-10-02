@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+
 import 'package:tcg_app/class/FirebaseAuthRepository.dart';
-import 'package:tcg_app/class/login.dart';
+import 'package:tcg_app/class/common/user.dart';
 
 class UserProfileScreen extends StatefulWidget {
   final int selectedIndex;
@@ -19,26 +20,28 @@ class UserProfileScreen extends StatefulWidget {
 }
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
-  String? _username;
+  final Userdata userdb = Userdata();
+  final authRepo = FirebaseAuthRepository();
+  late final Future<Map<String, dynamic>> userData;
+
+  String? email;
+  String? uid;
 
   @override
   void initState() {
     super.initState();
-    _fetchUsername();
-  }
-
-  void _fetchUsername() {
-    final authRepo = FirebaseAuthRepository();
     final currentUser = authRepo.getCurrentUser();
 
-    String? name = currentUser?.displayName;
-    if (name == null || name.isEmpty) {
-      name = currentUser?.email;
-    }
+    if (currentUser != null) {
+      uid = currentUser.uid;
+      email = currentUser.displayName ?? currentUser.email;
 
-    setState(() {
-      _username = name;
-    });
+      userData = userdb.readUser(uid!);
+    } else {
+      uid = null;
+      email = "Gast";
+      userData = Future.value({}); // Leere Map als Fallback
+    }
   }
 
   Future<void> _handleLogout() async {
@@ -55,8 +58,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             duration: Duration(seconds: 2),
           ),
         );
-        
-        widget.onItemTapped(2); // Switch to profile tab which will show login
+
+        // Weiterleiten des Benutzers zur Anmeldeseite/Homescreen
+        widget.onItemTapped(2);
       }
     } catch (e) {
       if (mounted) {
@@ -78,34 +82,73 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            "Willkommen, ${_username ?? 'Gast'}!",
-            style: Theme.of(context).textTheme.headlineMedium,
+          // KORREKTE IMPLEMENTIERUNG DER FUTUREBUILDER
+          // Der Typ ist jetzt Future<Map<String, dynamic>>
+          FutureBuilder<Map<String, dynamic>>(
+            future: userData,
+            builder: (BuildContext context, snapshot) {
+              // 1. Ladezustand: Wenn die Daten noch nicht da sind
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Column(
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 10),
+                    Text("Lade Benutzerprofil..."),
+                  ],
+                );
+              }
+
+              if (snapshot.hasError) {
+                return Text('Fehler beim Laden der Userdaten');
+              }
+
+              if (snapshot.hasData) {
+                final userMap = snapshot.data!;
+
+                return Column(
+                  children: [
+                    Text(
+                      'Willkommen, ${userMap['username'] ?? email ?? "Benutzer"}!',
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text('E-Mail: ${userMap['email'] ?? ""}'),
+                    Text('username: ${userMap['username'] ?? ""}'),
+                    Text('Benutzer-ID: ${userMap['userId'] ?? ""}'),
+                  ],
+                );
+              }
+
+              return const Text("Keine Profilinformationen verfügbar.");
+            },
           ),
-          const SizedBox(height: 20),
-          Card(
-            margin: const EdgeInsets.all(16),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  const Icon(Icons.person, size: 100, color: Colors.lightBlue),
-                  const SizedBox(height: 10),
-                  Text(
-                    "Benutzer: ${_username ?? 'Nicht angemeldet'}",
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: _handleLogout,
-                    child: const Text("Abmelden"),
-                  ),
-                ],
-              ),
+
+          const SizedBox(height: 40),
+          ElevatedButton(
+            onPressed: _handleLogout,
+            child: const Text("Abmelden"),
+          ),
+          const SizedBox(height: 40),
+          OutlinedButton(
+            onPressed: deleteUser,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.red,
+              side: const BorderSide(color: Colors.red),
             ),
+            child: const Text("Account löschen"),
           ),
         ],
       ),
     );
+  }
+
+  void deleteUser() {
+    final userdb = Userdata();
+    final currentUser = authRepo.getCurrentUser()!.uid;
+
+    userdb.deleteUserCompletely(currentUser);
   }
 }

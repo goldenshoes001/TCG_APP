@@ -1,8 +1,7 @@
-import 'dart:math';
+
 
 import 'package:flutter/material.dart';
 
-final _rng = Random();
 
 List<String> cardTypes = ["monster", "spell", "trap"];
 

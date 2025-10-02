@@ -1,13 +1,11 @@
-import 'dart:ui';
-
 import 'package:firebase_auth/firebase_auth.dart';
+import '';
 import 'package:tcg_app/class/DatabaseRepo/database_repository.dart';
 import 'package:tcg_app/class/fallenkarte.dart';
 import 'package:tcg_app/class/kommentar.dart';
 import 'package:tcg_app/class/monstercard.dart';
 import 'package:tcg_app/class/yugiohkarte.dart';
 import 'package:tcg_app/class/zauberkarte.dart';
-import 'package:tcg_app/theme/dark_theme.dart';
 
 class MockDatabaseRepository implements DatabaseRepository {
   static MockDatabaseRepository? _instance;

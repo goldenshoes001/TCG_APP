@@ -83,4 +83,5 @@ class DefaultFirebaseOptions {
     authDomain: 'tcg-app-e357e.firebaseapp.com',
     storageBucket: 'tcg-app-e357e.firebasestorage.app',
   );
+
 }

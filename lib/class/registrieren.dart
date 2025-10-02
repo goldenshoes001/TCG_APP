@@ -1,13 +1,14 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/common/appbar.dart';
 import 'package:tcg_app/class/common/bottombar.dart';
 import 'package:tcg_app/class/common/lists.dart';
+import 'package:tcg_app/class/common/user.dart';
 import 'package:tcg_app/theme/sizing.dart';
 // Importiere deine FirebaseAuthRepository
 import 'package:tcg_app/class/FirebaseAuthRepository.dart';
 
 // Stelle sicher, dass du das Benutzerprofil importierst
-
 
 class Registrieren extends StatefulWidget {
   final int selectedIndex;
@@ -29,6 +30,7 @@ class _RegistrierenState extends State<Registrieren> {
   final _formKey = GlobalKey<FormState>();
 
   final emailAdressController = TextEditingController();
+  final usernameController = TextEditingController();
   final repeatEmailAdressController = TextEditingController();
   final pwController = TextEditingController();
   final pwRepeatController = TextEditingController();
@@ -261,61 +263,7 @@ class _RegistrierenState extends State<Registrieren> {
     }
   }
 
-  Future<void> handleRegistrieren() async {
-    // 1. Zuerst die Live-Validierung prüfen
-    if (_emailValidationColor != Colors.green ||
-        _repeatEmailValidationColor != Colors.green ||
-        _passwordStrengthColor != Colors.green ||
-        _repeatPasswordValidationColor != Colors.green) {
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            "Bitte korrigieren Sie alle Fehler vor der Registrierung.",
-          ),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    // 2. Formular-Validierung
-    if (_formKey.currentState!.validate()) {
-      final FirebaseAuthRepository auth = FirebaseAuthRepository();
-      final String email = emailAdressController.text.trim();
-      final String password = pwController.text;
-
-      try {
-        await auth.createUserWithEmailAndPassword(email, password);
-
-        // Bei erfolgreicher Registrierung
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Registrierung erfolgreich!"),
-            backgroundColor: Colors.green,
-          ),
-        );
-
-        if (mounted) {
-          emailAdressController.clear();
-          repeatEmailAdressController.clear();
-          pwController.clear();
-          pwRepeatController.clear();
-          
-          // Navigate back to main app - auth state change will handle UI update
-          Navigator.pop(context);
-          widget.onItemTapped(2); // Go to profile tab
-        }
-      } on Exception catch (e) {
-        // Fehler von Firebase abfangen
-        String message = e.toString().replaceFirst('Exception: ', '');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), backgroundColor: Colors.red),
-        );
-      }
-    }
-  }
+  // 2. Formular-Validierung
 
   @override
   Widget build(BuildContext context) {
@@ -343,7 +291,17 @@ class _RegistrierenState extends State<Registrieren> {
                   key: _formKey,
                   child: Column(
                     children: [
+                      TextFormField(
+                        decoration: InputDecoration(
+                          prefixIcon: Icon(Icons.boy_sharp),
+                          labelText: "username",
+                          hintText: "username",
+                        ),
+                        controller: usernameController,
+                        keyboardType: TextInputType.name,
+                      ),
                       // E-Mail Feld
+                      const SizedBox(height: 40),
                       TextFormField(
                         decoration: InputDecoration(
                           prefixIcon: const Icon(Icons.mail),
@@ -528,12 +486,14 @@ class _RegistrierenState extends State<Registrieren> {
                             ],
                           ),
                         ),
+
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
                             return 'Bitte bestätigen Sie Ihr Passwort';
                           }
                           return null;
                         },
+
                         controller: pwRepeatController,
                         obscureText: !_isRepeatPasswordVisible,
                       ),
@@ -562,6 +522,10 @@ class _RegistrierenState extends State<Registrieren> {
                     child: const Text("Registrieren"),
                   ),
                 ),
+
+                const SizedBox(height: 20),
+
+                // Delete Account Button
               ],
             ),
           ),
@@ -573,5 +537,70 @@ class _RegistrierenState extends State<Registrieren> {
         navigationItems: iconList,
       ),
     );
+  }
+
+  Future<void> handleRegistrieren() async {
+    // 1. Zuerst die Live-Validierung prüfen
+    if (_emailValidationColor != Colors.green ||
+        _repeatEmailValidationColor != Colors.green ||
+        _passwordStrengthColor != Colors.green ||
+        _repeatPasswordValidationColor != Colors.green) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Bitte korrigieren Sie alle Fehler vor der Registrierung.",
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // 2. Formular-Validierung
+    if (_formKey.currentState!.validate()) {
+      final FirebaseAuthRepository auth = FirebaseAuthRepository();
+      final Userdata db = Userdata();
+      final String email = emailAdressController.text.trim();
+      final String password = pwController.text;
+      final String username = usernameController.text;
+
+      try {
+        // Erst den Benutzer erstellen
+        await auth.createUserWithEmailAndPassword(email, password);
+
+        // Dann die UID des neu erstellten Benutzers holen
+        final String userId = auth.getCurrentUser()!.uid;
+
+        await db.createUser(username, email, userId);
+
+        // Bei erfolgreicher Registrierung
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Registrierung erfolgreich!"),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        if (mounted) {
+          emailAdressController.clear();
+          usernameController.clear();
+          repeatEmailAdressController.clear();
+          pwController.clear();
+          pwRepeatController.clear();
+
+          // Navigate back to main app - auth state change will handle UI update
+          Navigator.pop(context);
+          widget.onItemTapped(2); // Go to profile tab
+        }
+      } on Exception catch (e) {
+        // Fehler von Firebase abfangen
+        String message = e.toString().replaceFirst('Exception: ', '');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 }
