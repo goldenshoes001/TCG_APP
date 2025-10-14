@@ -1,5 +1,8 @@
+
+
+
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:tcg_app/class/common/authrepo.dart';
+import 'package:tcg_app/class/Firebase/interfaces/authrepo.dart';
 
 /// Eine Singleton-Klasse zur Kapselung aller Firebase-Authentifizierungslogiken.
 /// Dies stellt sicher, dass es nur eine einzige Instanz im gesamten App-Lebenszyklus gibt.

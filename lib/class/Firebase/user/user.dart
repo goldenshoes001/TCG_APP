@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:tcg_app/class/common/dbRepo.dart';
+import 'package:tcg_app/class/Firebase/interfaces/dbRepo.dart';
+
 
 class Userdata implements Dbrepo {
   static Userdata? _instance;

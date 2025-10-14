@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:tcg_app/class/FirebaseAuthRepository.dart';
+import 'package:tcg_app/class/Firebase/interfaces/FirebaseAuthRepository.dart';
+import 'package:tcg_app/class/Firebase/user/registrieren.dart';
 
-import 'package:tcg_app/class/registrieren.dart';
 
 class Profile extends StatefulWidget {
   final Function(int) onItemTapped;

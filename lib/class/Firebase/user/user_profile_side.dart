@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-
-import 'package:tcg_app/class/FirebaseAuthRepository.dart';
-import 'package:tcg_app/class/common/user.dart';
+import 'package:tcg_app/class/Firebase/interfaces/FirebaseAuthRepository.dart';
+import 'package:tcg_app/class/Firebase/user/user.dart';
 
 class UserProfileScreen extends StatefulWidget {
   final int selectedIndex;

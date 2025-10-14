@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:tcg_app/class/savedata.dart';
+import 'package:tcg_app/class/sharedPreference.dart';
 import 'package:tcg_app/theme/sizing.dart';
 
 class Barwidget extends StatefulWidget {
@@ -19,7 +19,6 @@ class Barwidget extends StatefulWidget {
 }
 
 class _BarwidgetState extends State<Barwidget> {
-
   bool? mode;
 
   @override
@@ -31,7 +30,6 @@ class _BarwidgetState extends State<Barwidget> {
   Future<void> _loadThemeMode() async {
     final loadedMode = await SaveData().loadBool("darkMode");
     setState(() {
-
       mode = loadedMode;
     });
   }
@@ -42,7 +40,6 @@ class _BarwidgetState extends State<Barwidget> {
 
   @override
   Widget build(BuildContext context) {
-
     final currentBrightness = Theme.of(context).brightness;
     final isDarkMode = currentBrightness == Brightness.dark;
 
@@ -50,12 +47,10 @@ class _BarwidgetState extends State<Barwidget> {
       centerTitle: false,
       actions: [
         IconButton(
-
           icon: isDarkMode
               ? const Icon(Icons.light_mode)
               : const Icon(Icons.dark_mode),
           onPressed: () {
-
             final newMode = !isDarkMode;
             widget.onThemeChanged(newMode);
             saveThemeMode(newMode);

@@ -1,7 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:tcg_app/class/kartenarten/yugiohkarte.dart';
 import 'package:tcg_app/class/kommentar.dart';
 
-import 'package:tcg_app/class/yugiohkarte.dart';
+
 
 abstract class DatabaseRepository {
   Future<List<YugiohKarte>> getallCards();

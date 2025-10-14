@@ -1,12 +1,14 @@
-import 'package:firebase_auth/firebase_auth.dart';
+
 import 'package:flutter/material.dart';
+import 'package:tcg_app/class/Firebase/interfaces/FirebaseAuthRepository.dart';
+import 'package:tcg_app/class/Firebase/user/user.dart';
 import 'package:tcg_app/class/common/appbar.dart';
 import 'package:tcg_app/class/common/bottombar.dart';
 import 'package:tcg_app/class/common/lists.dart';
-import 'package:tcg_app/class/common/user.dart';
+
 import 'package:tcg_app/theme/sizing.dart';
 // Importiere deine FirebaseAuthRepository
-import 'package:tcg_app/class/FirebaseAuthRepository.dart';
+
 
 // Stelle sicher, dass du das Benutzerprofil importierst
 

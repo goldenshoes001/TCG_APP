@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:tcg_app/class/Firebase/user/login.dart';
+import 'package:tcg_app/class/Firebase/user/user_profile_side.dart';
 import 'package:tcg_app/class/common/appbar.dart';
 import 'package:tcg_app/class/common/bottombar.dart';
 import 'package:tcg_app/class/common/lists.dart';
-import 'package:tcg_app/class/common/user_profile_side.dart';
-import 'package:tcg_app/class/savedata.dart';
+import 'package:tcg_app/class/sharedPreference.dart';
+import 'package:tcg_app/class/widgets/home.dart';
+import 'package:tcg_app/class/widgets/meta.dart';
+import 'package:tcg_app/class/widgets/search.dart';
 import 'package:tcg_app/theme/light_theme.dart';
 import 'package:tcg_app/theme/dark_theme.dart';
 import 'package:tcg_app/theme/sizing.dart';
-import 'package:tcg_app/class/home.dart';
-import 'package:tcg_app/class/search.dart';
-import 'package:tcg_app/class/login.dart';
-import 'package:tcg_app/class/meta.dart';
+
 import 'package:firebase_core/firebase_core.dart';
 import '../firebase_options.dart';
 import 'package:firebase_auth/firebase_auth.dart';
