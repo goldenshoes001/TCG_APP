@@ -21,7 +21,7 @@ class Home extends StatelessWidget {
           return Column(children: [Text(snapshot.data!)]);
         }
 
-        return Text('Keine Daten');
+        return Text('ahdd Daten');
       },
     );
   }
