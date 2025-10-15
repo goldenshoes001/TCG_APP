@@ -67,5 +67,11 @@ class Userdata implements Dbrepo {
       await currentUser.delete();
     }
   }
+  
+  @override
+  Future<void> getAllCardsFromBannlist() {
+    // TODO: implement getAllCardsFromBannlist
+    throw UnimplementedError();
+  }
 }
 
