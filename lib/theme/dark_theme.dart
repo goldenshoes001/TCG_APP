@@ -79,6 +79,20 @@ ThemeData darkTheme(BuildContext context) => generalTheme(context).copyWith(
     ),
   ),
 
+  listTileTheme: const ListTileThemeData(
+    // Farbe für den gesamten ListTile-Inhalt (Titel, Untertitel, Icons)
+    textColor: Colors.white,
+    iconColor: Colors.white70,
+
+    // Die beste Methode: Den Stil für den Titel direkt festlegen.
+    titleTextStyle: TextStyle(
+      color: Colors.white,
+      // Optional: Weitere Anpassungen basierend auf Ihrem bodyLarge
+      // fontSize: 16,
+      // fontWeight: FontWeight.w500,
+    ),
+  ), // <--- FEHLENDE KLAMMER UND KOMMA HINZUGEFÜGT
+
   textTheme: generalTheme(context).textTheme.copyWith(
     bodyLarge: generalTheme(
       context,

@@ -9,11 +9,11 @@ class Profile extends StatefulWidget {
   final int selectedIndex;
 
   const Profile({
-    Key? key,
+    super.key,
     required this.onItemTapped,
     required this.onThemeChanged,
     required this.selectedIndex,
-  }) : super(key: key);
+  });
 
   @override
   State<Profile> createState() => _ProfileState();
