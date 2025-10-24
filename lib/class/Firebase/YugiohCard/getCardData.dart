@@ -40,7 +40,6 @@ class CardData implements Dbrepo {
     throw UnimplementedError();
   }
 
-  @override
   // Methode für TCG Bannlist
   Future<List<Map<String, dynamic>>> getTCGBannedCards() async {
     try {
