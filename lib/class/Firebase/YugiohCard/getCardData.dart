@@ -4,7 +4,6 @@ import 'package:tcg_app/class/Firebase/interfaces/dbRepo.dart';
 
 class CardData implements Dbrepo {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
 
   // Wichtig: Die Methode muss 'async' sein und 'Future<List<Map<String, dynamic>>>' zurückgeben,
   // da sie Dokumente abruft, die Maps sind.
@@ -80,6 +79,33 @@ class CardData implements Dbrepo {
       }
 
       if (element["banlist_info"]["ban_tcg"] == "Limited") {
+        limited.add(element);
+      }
+    }
+
+    sortedList["limited"] = limited;
+    sortedList["banned"] = banned;
+    sortedList["semiLimited"] = semiLimited;
+    return sortedList;
+  }
+
+  Future<Map<String, List<dynamic>>> sortOCGBannCards() async {
+    Future<List<Map<String, dynamic>>> liste = getOCGBannedCards();
+    List<dynamic> banned = [];
+    List<dynamic> semiLimited = [];
+    List<dynamic> limited = [];
+
+    Map<String, List<dynamic>> sortedList = {};
+
+    for (var element in await liste) {
+      if (element["banlist_info"]["ban_ocg"] == "Forbidden") {
+        banned.add(element);
+      }
+      if (element["banlist_info"]["ban_ocg"] == "Semi-Limited") {
+        semiLimited.add(element);
+      }
+
+      if (element["banlist_info"]["ban_ocg"] == "Limited") {
         limited.add(element);
       }
     }
