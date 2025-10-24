@@ -1,6 +1,4 @@
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
-
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 
 class Home extends StatefulWidget {
@@ -10,51 +8,19 @@ class Home extends StatefulWidget {
   State<Home> createState() => _HomeState();
 }
 
-Future<String> getImgPath(String gsPath) async {
-  if (gsPath.isEmpty) {
-    print("Fehler: gsPath ist leer.");
-    return '';
-  }
-
-  if (!gsPath.startsWith('gs://')) {
-    print("Fehler: Kein gs:// Pfad: $gsPath");
-    return '';
-  }
-
-  try {
-    final storage = FirebaseStorage.instance;
-
-    // Extrahiere und dekodiere den Pfad
-    final uri = Uri.parse(gsPath);
-    final path = Uri.decodeComponent(uri.path.substring(1));
-
-    // Verwende ref() mit dem dekodierten Pfad
-    final Reference gsReference = storage.ref(path);
-    final String downloadUrl = await gsReference.getDownloadURL();
-
-    return downloadUrl;
-  } on FirebaseException catch (e) {
-    print('Firebase Storage Fehler ($gsPath): ${e.code} - ${e.message}');
-    return '';
-  } catch (e) {
-    print('Allgemeiner Fehler beim Abrufen der URL für $gsPath: $e');
-    return '';
-  }
-}
-
 class _HomeState extends State<Home> {
-  final getChardData _cardData = getChardData();
-  late Future<List<Map<String, dynamic>>> cards = _cardData
-      .getAllCardsFromBannlist();
+  final CardData _cardData = CardData();
+  late Future<Map<String, List<dynamic>>> sortedCards = _cardData
+      .sortTCGBannCards();
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: cards,
+    return FutureBuilder<Map<String, List<dynamic>>>(
+      future: sortedCards,
       builder:
           (
             BuildContext context,
-            AsyncSnapshot<List<Map<String, dynamic>>> snapshot,
+            AsyncSnapshot<Map<String, List<dynamic>>> snapshot,
           ) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
@@ -65,47 +31,208 @@ class _HomeState extends State<Home> {
                   style: const TextStyle(color: Colors.red),
                 ),
               );
-            } else if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-              final cards = snapshot.data!;
-              return ListView.builder(
-                itemCount: cards.length,
-                itemBuilder: (context, index) {
-                  final card = cards[index];
+            } else if (snapshot.hasData) {
+              final banned = snapshot.data!['banned'] ?? [];
+              final semiLimited = snapshot.data!['semiLimited'] ?? [];
+              final limited = snapshot.data!['limited'] ?? [];
 
-                  return FutureBuilder<String>(
-                    future: getImgPath(card["card_images"][0]["image_url"]),
-                    builder: (context, imgSnapshot) {
-                      return ListTile(
-                        title: Text(card['name'] ?? 'Unbekannt'),
-                        trailing:
-                            imgSnapshot.connectionState ==
-                                    ConnectionState.done &&
-                                imgSnapshot.hasData &&
-                                imgSnapshot.data!.isNotEmpty
-                            ? Image.network(
-                                imgSnapshot.data!,
-                                width: 50,
-                                height: 50,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Icon(Icons.error);
-                                },
-                              )
-                            : const SizedBox(
-                                width: 50,
-                                height: 50,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              ),
-                      );
-                    },
-                  );
-                },
+              return ListView(
+                children: [
+                  // VERBOTENE KARTEN (Rot)
+                  if (banned.isNotEmpty) ...[
+                    // 1. Header (Außerhalb des Containers)
+                    _buildSectionHeader(
+                      'Verboten',
+                      const Color.fromARGB(255, 240, 18, 2),
+                    ),
+                    // 2. Container mit Karten
+                    _buildSectionContainer(
+                      color: const Color.fromARGB(255, 240, 18, 2),
+                      cards: banned,
+                      icon: Icons.cancel,
+                      iconText: null,
+                    ),
+                  ],
+                  if (limited.isNotEmpty) ...[
+                    // 1. Header (Außerhalb des Containers)
+                    _buildSectionHeader('Limitiert', Colors.orange),
+                    // 2. Container mit Karten
+                    _buildSectionContainer(
+                      color: Colors.orange.shade700,
+                      cards: limited,
+                      icon: null,
+                      iconText: '1',
+                    ),
+
+                    // SEMI-LIMITIERTE KARTEN (Orange)
+                    if (semiLimited.isNotEmpty) ...[
+                      // 1. Header (Außerhalb des Containers)
+                      _buildSectionHeader(
+                        'Semi-Limitiert',
+                        Colors.green.shade300,
+                      ),
+                      // 2. Container mit Karten
+                      _buildSectionContainer(
+                        color: const Color.fromARGB(255, 20, 235, 127),
+                        cards: semiLimited,
+                        icon: null,
+                        iconText: '2',
+                      ),
+                    ],
+
+                    // LIMITIERTE KARTEN (Gelb)
+                  ],
+                ],
               );
             } else {
               return const Center(child: Text("Keine Karten gefunden"));
             }
           },
+    );
+  }
+
+  // Baut den Container für die Kartenliste OHNE Header
+  Widget _buildSectionContainer({
+    required Color color,
+    required List<dynamic> cards,
+    IconData? icon,
+    String? iconText,
+  }) {
+    // Die Farbe wird für den Hintergrund des Containers verwendet
+    final Color containerColor = color;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+      padding: const EdgeInsets.only(top: 4.0), // Etwas Platz oben
+      decoration: BoxDecoration(
+        color: containerColor, // Hintergrundfarbe des Containers
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color, width: 2), // Farblicher Rand
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Liste der Karten
+          ...cards.map(
+            (card) => Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: _buildCardItem(
+                card: card,
+                icon: icon,
+                iconText: iconText,
+                iconColor: Colors.white, // Die Bannlisten-Farbe für Icons/Rand
+              ),
+            ),
+          ),
+          const SizedBox(height: 8), // Platz unten
+        ],
+      ),
+    );
+  }
+
+  // Baut den Sektionstitel (jetzt separat)
+  Widget _buildSectionHeader(String title, Color color) {
+    // Weißer Text, aber Farbe zur Abgrenzung in einem leichten Padding
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+          color: color, // Die Farbe des Headers ist die Bannlisten-Farbe
+        ),
+      ),
+    );
+  }
+
+  // Baut einen einzelnen Karten-Eintrag
+  Widget _buildCardItem({
+    required Map<String, dynamic> card,
+    IconData? icon,
+    String? iconText,
+    required Color iconColor,
+  }) {
+    final Future<String> imgPathFuture = _cardData.getImgPath(
+      card["card_images"][0]["image_url"],
+    );
+    const imageSize = 180.0; // Größe reduziert für besseres Layout
+
+    // Die einzelne Karte erhält nun Padding, aber keinen eigenen weißen Container
+    return Row(
+      crossAxisAlignment:
+          CrossAxisAlignment.center, // Vertikale Ausrichtung zentriert
+      children: [
+        // 1. Verboten-Zeichen / Zahl (jetzt im eigenen Container mit weißem Hintergrund und farbigem Rand)
+        Center(
+          child: icon != null
+              ? Icon(icon, color: iconColor, size: 10)
+              : Text(
+                  iconText ?? '',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: iconColor,
+                  ),
+                ),
+        ),
+        // Abstand zwischen Icon und Bild
+        // 2. Kartenbild (FutureBuilder NUR für das Bild)
+        FutureBuilder<String>(
+          future: imgPathFuture,
+          builder: (context, imgSnapshot) {
+            if (imgSnapshot.connectionState == ConnectionState.done &&
+                imgSnapshot.hasData &&
+                imgSnapshot.data!.isNotEmpty) {
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: Image.network(
+                  imgSnapshot.data!,
+                  width: imageSize,
+                  height: imageSize,
+
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      width: imageSize,
+                      height: imageSize,
+                      color: Colors.grey.shade300,
+                      child: const Icon(Icons.error, size: 30),
+                    );
+                  },
+                ),
+              );
+            }
+
+            // Ladeanzeige NUR für das Bild
+            return Container(
+              width: imageSize,
+              height: imageSize,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Center(
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            );
+          },
+        ),
+
+        // 3. Kartenname
+        Expanded(
+          child: Text(
+            card["name"],
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Colors
+                  .white, // Textfarbe ist weiß, da der Container farbig ist
+            ),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     );
   }
 }
