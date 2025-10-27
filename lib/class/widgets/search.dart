@@ -33,9 +33,8 @@ class Search extends StatelessWidget {
                     : theme.lightColorOfContainer,
               ),
               width: MediaQuery.of(context).size.width * 0.9,
-              // Der Container hat keine feste Höhe mehr, da Expanded das regelt
+
               child: SingleChildScrollView(
-                // Das SingleChildScrollView ist jetzt der direkte Child des Containers
                 padding: const EdgeInsets.all(20.0),
                 child: Text(
                   "Ergebnisse werden hier angezeigt...",
