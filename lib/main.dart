@@ -44,6 +44,8 @@ class _MainAppState extends State<MainApp> {
         setState(() {
           _currentUser = user;
         });
+      } else {
+        FirebaseAuth.instance.signInAnonymously();
       }
     });
   }
