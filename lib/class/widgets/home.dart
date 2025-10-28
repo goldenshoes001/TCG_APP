@@ -45,15 +45,14 @@ class _HomeState extends State<Home> {
                   _showTCGBannlist = false;
                 });
               },
-              child: const Text("OCG Bannlist"),
+              child: const Text("Update"),
             ),
-
             ElevatedButton(
-              onPressed: () async {
-                final cardData = CardData();
-                await cardData.updateAlgoliaWithImages();
+              onPressed: () {
+                CardData card = CardData();
+                card.updateAlgoliaWithImages();
               },
-              child: Text('Algolita'),
+              child: const Text("OCG Bannlist"),
             ),
           ],
         ),
