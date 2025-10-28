@@ -19,7 +19,6 @@ class _SearchState extends State<Search> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final data = CardData();
 
     return Padding(
