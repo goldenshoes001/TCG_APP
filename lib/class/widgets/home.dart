@@ -17,7 +17,7 @@ class _HomeState extends State<Home> {
   final Future<Map<String, List<dynamic>>> TCGList = CardData()
       .sortTCGBannCards();
   final Future<Map<String, List<dynamic>>> OCGList = CardData()
-      .sortTCGBannCards();
+      .sortOCGBannCards();
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -46,6 +46,14 @@ class _HomeState extends State<Home> {
                 });
               },
               child: const Text("OCG Bannlist"),
+            ),
+
+            ElevatedButton(
+              onPressed: () async {
+                final cardData = CardData();
+                await cardData.updateAlgoliaWithImages();
+              },
+              child: Text('Algolita'),
             ),
           ],
         ),

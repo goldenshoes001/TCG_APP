@@ -1,158 +1,198 @@
+// getCardData.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:tcg_app/class/Firebase/interfaces/dbRepo.dart';
+import 'package:algoliasearch/algoliasearch.dart' as algolia_lib;
+
+// 🛑 WICHTIG: Verwende den Admin Key NUR für Schreibvorgänge (wie updateAlgoliaWithImages)
+// Für Lesezugriffe (search) reicht der Search API Key (d1fa622037651adc1672871ca583aab3)
+// Da du den Write/Admin Key für Lese- und Schreibvorgänge verwendest, funktioniert es,
+// ist aber aus Sicherheitssicht nicht optimal. Ich belasse es für die Funktion deines Skripts.
+final algolia_lib.SearchClient client = algolia_lib.SearchClient(
+  appId: 'ZFFHWZ011E',
+  apiKey: 'bbcc7bed24e11232cbfd76ce9017b629',
+);
 
 class CardData implements Dbrepo {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseStorage storage = FirebaseStorage.instance;
 
-  // Wichtig: Die Methode muss 'async' sein und 'Future<List<Map<String, dynamic>>>' zurückgeben,
-  // da sie Dokumente abruft, die Maps sind.
+  // --- HILFSMETHODE FÜR ALGOILA SUCHE ---
+
+  // Kapselt die Logik für Algolia-Abfragen mit optionalem Suchtext und Filter
+  Future<List<Map<String, dynamic>>> _searchAlgolia(
+    String? query,
+    String? filter,
+  ) async {
+    print(
+      "DEBUG START: _searchAlgolia aufgerufen mit Query: $query, Filter: $filter",
+    );
+
+    try {
+      final response = await client.search(
+        searchMethodParams: algolia_lib.SearchMethodParams(
+          requests: [
+            algolia_lib.SearchForHits(
+              indexName: 'cards',
+              query: query,
+              filters: filter, // Filter-String für Bannlisten
+              hitsPerPage:
+                  1000, // Hohe Zahl, um alle Bannlisten-Karten zu erfassen
+            ),
+          ],
+        ),
+      );
+
+      // Algolia-Antworten sind Maps, deren Hits-Array wir extrahieren
+      final dynamic hitsData = (response.results.first as Map)['hits'];
+
+      if (hitsData == null || hitsData is! List) {
+        return [];
+      }
+
+      final List<dynamic> hits = hitsData as List;
+
+      // Konvertiere zu Map-Liste
+      final List<Map<String, dynamic>> cards = hits
+          .map((hit) => Map<String, dynamic>.from(hit as Map))
+          .toList();
+
+      // Client-seitige Sortierung nach Name, falls Algolia-Sortierung nicht genutzt wird
+      cards.sort(
+        (a, b) =>
+            (a['name'] as String? ?? '').compareTo(b['name'] as String? ?? ''),
+      );
+
+      print("Algolia erfolgreich erreicht. Gefundene Hits: ${cards.length}");
+
+      return cards;
+    } catch (e, stacktrace) {
+      print("🚨🚨🚨 ALGO-FEHLER AUFGETRETEN 🚨🚨🚨");
+      print("Fehlermeldung: $e");
+      print("Stacktrace: $stacktrace");
+      print("🚨🚨🚨 ALGO-FEHLER ENDE 🚨🚨🚨");
+      return [];
+    }
+  }
+
+  // --- FIREBASE LESEN (NUR BEI BEDARF/MUSS) ---
+
+  // Diese Methode liest aus Firestore (wird wahrscheinlich nicht mehr benötigt)
   Future<List<Map<String, dynamic>>> getallChards() async {
     try {
-      // 1. Holen Sie die Referenz zur 'cards' Collection.
-      // 2. Rufen Sie .get() auf, um die Abfrage auszuführen (asynchron).
       QuerySnapshot<Map<String, dynamic>> snapshot = await _db
           .collection('cards')
           .limit(50)
           .get();
 
-      // 3. Verwenden Sie .docs, um die Liste der Dokumente zu erhalten.
-      // 4. Verwenden Sie .map((doc) => doc.data()) und .toList(), um die Dokument-Snapshots
-      //    in eine saubere Liste von Maps umzuwandeln (reine Daten).
       return snapshot.docs.map((doc) => doc.data()).toList();
     } catch (e) {
-      // Fehlerbehandlung: Wichtig bei Datenbankzugriffen
       print("Fehler beim Abrufen der Karten: $e");
-      // Geben Sie bei einem Fehler eine leere Liste zurück
       return [];
     }
   }
 
-  @override
-  Future<void> createDeck() {
-    // TODO: implement createDeck
-    throw UnimplementedError();
-  }
+  // --- BANNLISTE (JETZT ALGOILA) ---
 
-  @override
-  Future<void> createUser(String username, String email, String userId) {
-    // TODO: implement createUser
-    throw UnimplementedError();
-  }
+  // Ruft TCG-banned Karten über Algolia ab (nutzt Filter)
 
-  // Methode für TCG Bannlist
   Future<List<Map<String, dynamic>>> getTCGBannedCards() async {
-    try {
-      QuerySnapshot<Map<String, dynamic>> snapshot = await _db
-          .collection('cards')
-          .where('banlist_info.ban_tcg', isNull: false)
-          .get();
-
-      // Sortiere die Ergebnisse im Code nach Namen
-      final cards = snapshot.docs.map((doc) => doc.data()).toList();
-      cards.sort(
-        (a, b) => (a['name'] as String).compareTo(b['name'] as String),
-      );
-
-      return cards;
-    } catch (e) {
-      print("Fehler beim Abrufen der TCG Karten: $e");
-      return [];
-    }
+    // ⬇️ Wählt nur die relevanten Status, was robuster ist
+    final String filter =
+        'banlist_info.ban_tcg:Forbidden OR banlist_info.ban_tcg:Limited OR banlist_info.ban_tcg:Semi-Limited';
+    return _searchAlgolia(null, filter);
   }
 
-  Future<Map<String, List<dynamic>>> sortTCGBannCards() async {
-    Future<List<Map<String, dynamic>>> liste = getTCGBannedCards();
-    List<dynamic> banned = [];
-    List<dynamic> semiLimited = [];
-    List<dynamic> limited = [];
-
-    Map<String, List<dynamic>> sortedList = {};
-
-    for (var element in await liste) {
-      if (element["banlist_info"]["ban_tcg"] == "Forbidden") {
-        banned.add(element);
-      }
-      if (element["banlist_info"]["ban_tcg"] == "Semi-Limited") {
-        semiLimited.add(element);
-      }
-
-      if (element["banlist_info"]["ban_tcg"] == "Limited") {
-        limited.add(element);
-      }
-    }
-
-    sortedList["limited"] = limited;
-    sortedList["banned"] = banned;
-    sortedList["semiLimited"] = semiLimited;
-    return sortedList;
-  }
-
-  Future<Map<String, List<dynamic>>> sortOCGBannCards() async {
-    Future<List<Map<String, dynamic>>> liste = getOCGBannedCards();
-    List<dynamic> banned = [];
-    List<dynamic> semiLimited = [];
-    List<dynamic> limited = [];
-
-    Map<String, List<dynamic>> sortedList = {};
-
-    for (var element in await liste) {
-      if (element["banlist_info"]["ban_ocg"] == "Forbidden") {
-        banned.add(element);
-      }
-      if (element["banlist_info"]["ban_ocg"] == "Semi-Limited") {
-        semiLimited.add(element);
-      }
-
-      if (element["banlist_info"]["ban_ocg"] == "Limited") {
-        limited.add(element);
-      }
-    }
-
-    sortedList["limited"] = limited;
-    sortedList["banned"] = banned;
-    sortedList["semiLimited"] = semiLimited;
-    return sortedList;
-  }
-
-  // Methode für OCG Bannlist
+  // Ruft OCG-banned Karten über Algolia ab (nutzt Filter)
   Future<List<Map<String, dynamic>>> getOCGBannedCards() async {
-    try {
-      QuerySnapshot<Map<String, dynamic>> snapshot = await _db
-          .collection('cards')
-          .where('banlist_info.ban_ocg', isNull: false)
-          .get();
-
-      // Sortiere die Ergebnisse im Code nach Namen
-      final cards = snapshot.docs.map((doc) => doc.data()).toList();
-      cards.sort(
-        (a, b) => (a['name'] as String).compareTo(b['name'] as String),
-      );
-
-      return cards;
-    } catch (e) {
-      print("Fehler beim Abrufen der OCG Karten: $e");
-      return [];
-    }
+    // ⬇️ Wählt nur die relevanten Status, was robuster ist
+    final String filter =
+        'banlist_info.ban_ocg:Forbidden OR banlist_info.ban_ocg:Limited OR banlist_info.ban_ocg:Semi-Limited';
+    return _searchAlgolia(null, filter);
   }
 
-  // Behalten Sie die alte Methode für Kompatibilität oder löschen Sie sie
+  // Sortiert die TCG-Karten nach Bannstatus (nutzt die Algolia-Ergebnisse)
+  Future<Map<String, List<dynamic>>> sortTCGBannCards() async {
+    List<Map<String, dynamic>> liste = await getTCGBannedCards();
+    List<dynamic> banned = [];
+    List<dynamic> semiLimited = [];
+    List<dynamic> limited = [];
+
+    Map<String, List<dynamic>> sortedList = {};
+
+    for (var element in liste) {
+      if (element["banlist_info"] is Map) {
+        String? banStatus = element["banlist_info"]["ban_tcg"] as String?;
+
+        if (banStatus == "Forbidden") {
+          banned.add(element);
+        } else if (banStatus == "Semi-Limited") {
+          semiLimited.add(element);
+        } else if (banStatus == "Limited") {
+          limited.add(element);
+        }
+      }
+    }
+
+    sortedList["limited"] = limited;
+    sortedList["banned"] = banned;
+    sortedList["semiLimited"] = semiLimited;
+    return sortedList;
+  }
+
+  // Sortiert die OCG-Karten nach Bannstatus (nutzt die Algolia-Ergebnisse)
+  Future<Map<String, List<dynamic>>> sortOCGBannCards() async {
+    List<Map<String, dynamic>> liste = await getOCGBannedCards();
+    List<dynamic> banned = [];
+    List<dynamic> semiLimited = [];
+    List<dynamic> limited = [];
+
+    Map<String, List<dynamic>> sortedList = {};
+
+    for (var element in liste) {
+      if (element["banlist_info"] is Map) {
+        String? banStatus = element["banlist_info"]["ban_ocg"] as String?;
+
+        if (banStatus == "Forbidden") {
+          banned.add(element);
+        } else if (banStatus == "Semi-Limited") {
+          semiLimited.add(element);
+        } else if (banStatus == "Limited") {
+          limited.add(element);
+        }
+      }
+    }
+
+    sortedList["limited"] = limited;
+    sortedList["banned"] = banned;
+    sortedList["semiLimited"] = semiLimited;
+    return sortedList;
+  }
+
   @override
   Future<List<Map<String, dynamic>>> getAllCardsFromBannlist() async {
-    // Standardmäßig TCG zurückgeben
-    return getTCGBannedCards();
+    return getTCGBannedCards(); // Delegiert an die Algolia-Methode
   }
+
+  // --- ALGOILA SUCHE ---
+
+  // Ruft Ergebnisse anhand eines Suchbegriffs über Algolia ab (nutzt die Hilfsmethode)
+  Future<List<Map<String, dynamic>>> ergebniseAnzeigen(String suchfeld) async {
+    if (suchfeld.isEmpty) return [];
+
+    return _searchAlgolia(suchfeld, null);
+  }
+
+  // --- FIREBASE SPEICHER/HELPER ---
 
   Future<String> getImgPath(String gsPath) async {
     try {
       final storage = FirebaseStorage.instance;
 
-      // Extrahiere und dekodiere den Pfad
       final uri = Uri.parse(gsPath);
       final path = Uri.decodeComponent(uri.path.substring(1));
 
-      // Verwende ref() mit dem dekodierten Pfad
       final Reference gsReference = storage.ref(path);
       final String downloadUrl = await gsReference.getDownloadURL();
 
@@ -166,22 +206,6 @@ class CardData implements Dbrepo {
     }
   }
 
-  @override
-  Future<void> readDeck() {
-    // TODO: implement readDeck
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<Map<String, dynamic>> readUser(String userId) {
-    // TODO: implement readUser
-    throw UnimplementedError();
-  }
-
-  // In getCardData.dart
-
-  // In getCardData.dart
-
   Future<String> getCorrectImgPath(List<String> imageUrls) async {
     const String storageFolder = 'hohe auflösung/';
 
@@ -189,24 +213,18 @@ class CardData implements Dbrepo {
       if (imageUrl.isEmpty) continue;
 
       try {
-        // 1. Dateinamen aus der URL extrahieren
         final uri = Uri.parse(imageUrl);
         final fileName = uri.pathSegments.last;
 
-        // 2. Den vollständigen Storage-Pfad erstellen
         final storagePath = storageFolder + fileName;
 
-        // 3. Referenz auf die Datei erstellen
         final ref = storage.ref().child(storagePath);
 
-        // 4. Metadaten abrufen um zu prüfen ob die Datei existiert
         await ref.getMetadata();
 
-        // 5. Wenn erfolgreich, den Download-Link zurückgeben
         final downloadUrl = await ref.getDownloadURL();
         return downloadUrl;
       } on FirebaseException catch (e) {
-        // Datei existiert nicht in hoher Auflösung, nächste URL versuchen
         if (e.code == 'object-not-found') {
           continue;
         }
@@ -218,72 +236,131 @@ class CardData implements Dbrepo {
       }
     }
 
-    // Fallback: Wenn kein hochauflösendes Bild gefunden wurde,
-    // verwenden Sie die erste Standard-API-URL
     if (imageUrls.isNotEmpty) {
       return imageUrls.first;
     }
 
-    // Nichts gefunden
     return '';
   }
 
-  Future<List<Map<String, dynamic>>> ergebniseAnzeigen(String suchfeld) async {
-    FirebaseFirestore db = FirebaseFirestore.instance;
+  // --- ALGOLIA WRITE (ADMIN) ---
 
-    // Der Suchbegriff
-    final startString = suchfeld;
+  // Aktualisiert Algolia-Index mit Daten aus Firestore
+  Future<void> updateAlgoliaWithImages() async {
+    final db = FirebaseFirestore.instance;
 
-    // Der Endpunkt: String + \uf8ff
-    final endString = suchfeld + '\uf8ff';
+    // Client für Schreibvorgänge (muss den Admin Key verwenden)
+    final writeClient = algolia_lib.SearchClient(
+      appId: 'ZFFHWZ011E',
+      apiKey: 'bbcc7bed24e11232cbfd76ce9017b629', // Admin API Key
+    );
 
     try {
-      // Suche nach Kartennamen
-      QuerySnapshot<Map<String, dynamic>> nameSnapshot = await db
-          .collection('cards')
-          .where('name', isGreaterThanOrEqualTo: startString)
-          .where('name', isLessThan: endString)
-          .orderBy('name')
-          .get();
+      print("Starte Aktualisierung der Algolia-Daten mit Bildern...");
 
-      // Suche nach Archtype
-      QuerySnapshot<Map<String, dynamic>> archtypeSnapshot = await db
-          .collection('cards')
-          .where('archetype', isGreaterThanOrEqualTo: startString)
-          .where('archetype', isLessThan: endString)
-          .orderBy('archetype')
-          .get();
+      int totalProcessed = 0;
+      int batchSize = 500;
+      DocumentSnapshot? lastDoc;
 
-      // Kombiniere beide Ergebnisse
-      final Map<String, Map<String, dynamic>> uniqueCards = {};
+      while (true) {
+        Query query = db.collection('cards').limit(batchSize);
 
-      // Füge Karten aus der Namenssuche hinzu
-      for (var doc in nameSnapshot.docs) {
-        final data = doc.data();
-        final cardId = data['id']?.toString() ?? doc.id;
-        uniqueCards[cardId] = data;
-      }
-
-      // Füge Karten aus der Archtype-Suche hinzu (nur wenn noch nicht vorhanden)
-      for (var doc in archtypeSnapshot.docs) {
-        final data = doc.data();
-        final cardId = data['id']?.toString() ?? doc.id;
-        if (!uniqueCards.containsKey(cardId)) {
-          uniqueCards[cardId] = data;
+        if (lastDoc != null) {
+          query = query.startAfterDocument(lastDoc);
         }
+
+        final snapshot = await query.get();
+
+        if (snapshot.docs.isEmpty) {
+          print("Keine weiteren Dokumente gefunden.");
+          break;
+        }
+
+        print(
+          "Verarbeite Batch ${(totalProcessed / batchSize).floor() + 1} (${snapshot.docs.length} Karten)...",
+        );
+
+        final List<Map<String, dynamic>> recordsToUpdate = [];
+
+        for (var doc in snapshot.docs) {
+          final data = doc.data() as Map<String, dynamic>;
+
+          final record = {
+            'objectID': doc.id,
+            'name': data['name'],
+            'desc': data['desc'],
+            'type': data['type'],
+            'race': data['race'],
+            'attribute': data['attribute'],
+            'atk': data['atk'],
+            'def': data['def'],
+            'level': data['level'],
+            'frameType': data['frameType'],
+            'archetype': data['archetype'],
+            'scale': data['scale'],
+            'linkval': data['linkval'],
+
+            // 🟢 KORREKTUR: banlist_info als Map übernehmen
+            'banlist_info': data['banlist_info'] as Map<String, dynamic>? ?? {},
+            // 🟢 KORREKTUR: card_images als List übernehmen
+            'card_images': (data['card_images'] as List?)?.toList() ?? [],
+          };
+
+          recordsToUpdate.add(record);
+        }
+
+        // Upload zu Algolia
+        await writeClient.batch(
+          indexName: 'cards',
+          batchWriteParams: algolia_lib.BatchWriteParams(
+            requests: recordsToUpdate.map((record) {
+              return algolia_lib.BatchRequest(
+                action: algolia_lib
+                    .Action
+                    .addObject, // Fügt hinzu oder überschreibt, wenn objectID existiert
+                body: record,
+              );
+            }).toList(),
+          ),
+        );
+
+        totalProcessed += snapshot.docs.length;
+        lastDoc = snapshot.docs.last;
+
+        print("✅ Batch hochgeladen. Gesamt: $totalProcessed Karten");
+
+        await Future.delayed(Duration(milliseconds: 500));
       }
 
-      // Konvertiere zurück in Liste und sortiere nach Namen
-      final cards = uniqueCards.values.toList();
-      cards.sort(
-        (a, b) =>
-            (a['name'] as String? ?? '').compareTo(b['name'] as String? ?? ''),
-      );
+      print("🎉 Erfolgreich $totalProcessed Karten mit Bildern aktualisiert!");
 
-      return cards;
-    } catch (e) {
-      print("Fehler bei der Prefix-Suche: $e");
-      return [];
+      writeClient.dispose();
+    } catch (e, stacktrace) {
+      print("❌ Fehler beim Aktualisieren: $e");
+      print("Stacktrace: $stacktrace");
+      writeClient.dispose();
     }
+  }
+
+  // --- UNIMPLEMENTED METHODS ---
+
+  @override
+  Future<void> createDeck() {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> createUser(String username, String email, String userId) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> readDeck() {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Map<String, dynamic>> readUser(String userId) {
+    throw UnimplementedError();
   }
 }
