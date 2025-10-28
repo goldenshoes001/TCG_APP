@@ -1,12 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 // Importe für Firebase Storage und die angepasste CardData Klasse
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
-import 'package:tcg_app/class/Firebase/YugiohCard/imgPathName.dart';
 
 // Importe für Theme-Daten (angenommen, diese existieren in Ihrem Projekt)
-import 'package:tcg_app/theme/dark_theme.dart';
-import 'package:tcg_app/theme/light_theme.dart';
 
 class Search extends StatefulWidget {
   const Search({super.key});

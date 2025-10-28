@@ -21,7 +21,7 @@ class sortedCardList extends StatelessWidget {
               return Center(
                 child: Text(
                   "Fehler: ${snapshot.error}",
-                  style: const TextStyle(color: Colors.red),
+                  style: const TextStyle(color: Colors.transparent),
                 ),
               );
             } else if (snapshot.hasData) {
@@ -34,28 +34,28 @@ class sortedCardList extends StatelessWidget {
                   if (banned.isNotEmpty) ...[
                     _buildSectionHeader(
                       'Forbidden',
-                      const Color.fromARGB(255, 240, 18, 2),
+                      const Color.fromARGB(255, 255, 255, 255),
                     ),
                     _buildSectionContainer(
-                      color: const Color.fromARGB(255, 240, 18, 2),
+                      color: Colors.transparent,
                       cards: banned,
                       icon: Icons.cancel,
                       iconText: null,
                     ),
                   ],
                   if (limited.isNotEmpty) ...[
-                    _buildSectionHeader('limited', Colors.orange),
+                    _buildSectionHeader('limited', Colors.white),
                     _buildSectionContainer(
-                      color: Colors.orange.shade700,
+                      color: Colors.transparent,
                       cards: limited,
                       icon: null,
                       iconText: '1',
                     ),
                   ],
                   if (semiLimited.isNotEmpty) ...[
-                    _buildSectionHeader('Semi-limited', Colors.yellow.shade300),
+                    _buildSectionHeader('Semi-limited', Colors.white),
                     _buildSectionContainer(
-                      color: Colors.yellow,
+                      color: Colors.transparent,
                       cards: semiLimited,
                       icon: null,
                       iconText: '2',
