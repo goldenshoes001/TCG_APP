@@ -228,47 +228,68 @@ class CardData implements Dbrepo {
   }) async {
     List<String> facetFilters = [];
     List<String> numericFilters = [];
-    List<String> typeFilters = []; // Trennung des Typ-Filters
 
-    // 1. Typ-Filter: Normalisierung.
-    final String? normalizedType = _normalizeType(type);
+    // 1. Typ-Filter: Jetzt als facetFilter mit restrictSearchableAttributes
+    if (type != null && type.isNotEmpty) {
+      // Extrahiere das Schlüsselwort aus dem Typ
+      String searchKeyword = type;
 
-    if (normalizedType != null && normalizedType.isNotEmpty) {
-      // NEU: Logik zur Erstellung von OR-Filtern für komplexe Typen
-      if (normalizedType == 'Ritual Monster') {
-        // Sucht nach "Ritual Monster" ODER "Ritual Effect Monster"
-        typeFilters.add(
-          '(type:"Ritual Monster" OR type:"Ritual Effect Monster")',
-        );
-      } else if (normalizedType == 'Pendulum') {
-        // Sucht nach allen relevanten Pendulum-Unterformen
-        typeFilters.add(
-          '(type:"Pendulum Effect Monster" OR type:"Pendulum Normal Monster" OR type:"Pendulum Flip Effect Monster" OR type:"Pendulum Effect Fusion Monster" OR type:"Pendulum Effect Synchro Monster" OR type:"Pendulum Effect Xyz Monster")',
-        );
-      } else if (normalizedType == 'Fusion Monster') {
-        typeFilters.add(
-          '(type:"Fusion Monster" OR type:"Effect Fusion Monster")',
-        );
-      } else if (normalizedType == 'Synchro Monster') {
-        typeFilters.add(
-          '(type:"Synchro Monster" OR type:"Synchro Effect Monster")',
-        );
-      } else if (normalizedType == 'XYZ Monster') {
-        typeFilters.add('(type:"XYZ Monster" OR type:"XYZ Effect Monster")');
-      } else if (normalizedType == 'Link Monster') {
-        typeFilters.add('(type:"Link Monster" OR type:"Link Effect Monster")');
-      } else if (normalizedType == 'Effect Monster') {
-        // Sammelt alle Basistypen, die 'Effect Monster' oder eine einfache Variante sind
-        typeFilters.add(
-          '(type:"Effect Monster" OR type:"Tuner Monster" OR type:"Flip Effect Monster" OR type:"Spirit Monster" OR type:"Toon Monster" OR type:"Union Effect Monster" OR type:"Gemini Monster")',
-        );
-      } else {
-        // Für alle anderen Basistypen (Spell Card, Trap Card, Normal Monster, Token etc.)
-        typeFilters.add('type:"$normalizedType"');
-      }
+      // Für zusammengesetzte Namen das wichtigste Wort extrahieren
+      if (type.contains('Gemini'))
+        searchKeyword = 'Gemini';
+      else if (type.contains('Flip'))
+        searchKeyword = 'Flip';
+      else if (type.contains('Spirit'))
+        searchKeyword = 'Spirit';
+      else if (type.contains('Tuner'))
+        searchKeyword = 'Tuner';
+      else if (type.contains('Union'))
+        searchKeyword = 'Union';
+      else if (type.contains('Toon'))
+        searchKeyword = 'Toon';
+      else if (type.contains('Ritual'))
+        searchKeyword = 'Ritual';
+      else if (type.contains('Fusion'))
+        searchKeyword = 'Fusion';
+      else if (type.contains('Synchro'))
+        searchKeyword = 'Synchro';
+      else if (type.contains('XYZ'))
+        searchKeyword = 'XYZ';
+      else if (type.contains('Link'))
+        searchKeyword = 'Link';
+      else if (type.contains('Pendulum'))
+        searchKeyword = 'Pendulum';
+      else if (type.contains('Effect'))
+        searchKeyword = 'Effect';
+      else if (type.contains('Normal'))
+        searchKeyword = 'Normal';
+      else if (type.contains('Spell'))
+        searchKeyword = 'Spell';
+      else if (type.contains('Trap'))
+        searchKeyword = 'Trap';
+      else if (type.contains('Token'))
+        searchKeyword = 'Token';
+      else if (type.contains('Skill'))
+        searchKeyword = 'Skill';
+
+      // Nutze den Keyword als Query, aber beschränke die Suche auf das type-Attribut
+      return await _searchAlgoliaWithTypeQuery(
+        searchKeyword,
+        facetFilters,
+        numericFilters,
+        race,
+        attribute,
+        level,
+        linkRating,
+        scale,
+        atk,
+        def,
+        banlistTCG,
+        banlistOCG,
+      );
     }
 
-    // 2. Weitere Facettenfilter (bleiben als FacetFilters)
+    // 2. Weitere Facettenfilter
     if (race != null && race.isNotEmpty) {
       facetFilters.add('race:$race');
     }
@@ -299,16 +320,117 @@ class CardData implements Dbrepo {
       numericFilters.add('def=$def');
     }
 
-    // Ruft die Methode OHNE Query (Textsuche) auf.
     final result = await _searchAlgoliaWithFilters(
       facetFilters,
       numericFilters,
-      typeFilters:
-          typeFilters, // Übergabe des Typ-Filters, jetzt ein vollständiger Filter-String
+      typeFilters: [],
       query: null,
     );
 
     return result;
+  }
+
+  // Neue Hilfsmethode für Typ-Suche mit Query
+  Future<List<Map<String, dynamic>>> _searchAlgoliaWithTypeQuery(
+    String typeKeyword,
+    List<String> facetFilters,
+    List<String> numericFilters,
+    String? race,
+    String? attribute,
+    int? level,
+    int? linkRating,
+    int? scale,
+    String? atk,
+    String? def,
+    String? banlistTCG,
+    String? banlistOCG,
+  ) async {
+    try {
+      // Weitere Filter hinzufügen
+      if (race != null && race.isNotEmpty) {
+        facetFilters.add('race:$race');
+      }
+      if (attribute != null && attribute.isNotEmpty) {
+        facetFilters.add('attribute:$attribute');
+      }
+      if (banlistTCG != null && banlistTCG.isNotEmpty) {
+        facetFilters.add('banlist_info.ban_tcg:$banlistTCG');
+      }
+      if (banlistOCG != null && banlistOCG.isNotEmpty) {
+        facetFilters.add('banlist_info.ban_ocg:$banlistOCG');
+      }
+
+      // Numerische Filter
+      if (level != null) {
+        numericFilters.add('level=$level');
+      }
+      if (linkRating != null) {
+        numericFilters.add('linkval=$linkRating');
+      }
+      if (scale != null) {
+        numericFilters.add('scale=$scale');
+      }
+      if (atk != null && atk.isNotEmpty && atk != '?') {
+        numericFilters.add('atk=$atk');
+      }
+      if (def != null && def.isNotEmpty && def != '?') {
+        numericFilters.add('def=$def');
+      }
+
+      final List<List<String>>? finalFacetFilters = facetFilters.isEmpty
+          ? null
+          : facetFilters.map((f) => [f]).toList();
+
+      final String? finalFilters = numericFilters.isEmpty
+          ? null
+          : numericFilters.join(' AND ');
+
+      print('🔍 Algolia Type Search Debug:');
+      print('Type Keyword (Query auf type-Attribut): $typeKeyword');
+      print('Facet Filters: $finalFacetFilters');
+      print('Numeric Filters: $finalFilters');
+
+      final response = await client.search(
+        searchMethodParams: algolia_lib.SearchMethodParams(
+          requests: [
+            algolia_lib.SearchForHits(
+              indexName: 'cards',
+              query: typeKeyword,
+              restrictSearchableAttributes: ['type'], // NUR im type-Feld suchen
+              facetFilters: finalFacetFilters,
+              filters: finalFilters,
+              hitsPerPage: 1000,
+            ),
+          ],
+        ),
+      );
+
+      final dynamic hitsData = (response.results.first as Map)['hits'];
+
+      if (hitsData == null || hitsData is! List) {
+        print('❌ Keine Hits gefunden');
+        return [];
+      }
+
+      final List<dynamic> hits = hitsData as List;
+
+      final List<Map<String, dynamic>> cards = hits
+          .map((hit) => Map<String, dynamic>.from(hit as Map))
+          .toList();
+
+      cards.sort(
+        (a, b) =>
+            (a['name'] as String? ?? '').compareTo(b['name'] as String? ?? ''),
+      );
+
+      print('✅ ${cards.length} Karten gefunden');
+
+      return cards;
+    } catch (e, stacktrace) {
+      print('❌ Algolia Fehler: $e');
+      print('Stacktrace: $stacktrace');
+      return [];
+    }
   }
 
   // --- HILFSMETHODE FÜR ALGOILA SUCHE MIT FILTERN (ANGEPASST) ---

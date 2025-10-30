@@ -68,7 +68,7 @@ class _MetaState extends State<Meta> {
     'Aqua',
     'Beast',
     'Beast-Warrior',
-    'Creator-God',
+    'Creator God',
     'Cyberse',
     'Dinosaur',
     'Divine-Beast',
@@ -224,6 +224,12 @@ class _MetaState extends State<Meta> {
 
   @override
   Widget build(BuildContext context) {
+    // KORREKTUR: Wenn eine Karte ausgewählt ist, gib nur die CardDetailView zurück.
+    if (_selectedCard != null) {
+      return _buildCardDetail();
+    }
+
+    // Wenn keine Karte ausgewählt ist, zeige die Such- und Filter-UI.
     return Padding(
       padding: EdgeInsets.all(MediaQuery.of(context).size.height / 30),
       child: Column(
@@ -284,59 +290,51 @@ class _MetaState extends State<Meta> {
               ),
             ),
 
-          // Filter-Bereich
+          // Filter-Bereich / Suchergebnisse
           Expanded(
-            child: _selectedCard != null
-                ? _buildCardDetail()
-                : SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (_showFilters) ...[
+                    Text(
+                      'Kartensuche nach Eigenschaften',
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    SizedBox(height: MediaQuery.of(context).size.height / 55),
+
+                    _buildFilterGrid(),
+
+                    SizedBox(height: MediaQuery.of(context).size.height / 40),
+
+                    // Buttons
+                    Row(
                       children: [
-                        if (_showFilters) ...[
-                          Text(
-                            'Kartensuche nach Eigenschaften',
-                            style: Theme.of(context).textTheme.headlineSmall,
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _performSearch,
+                            icon: const Icon(Icons.search),
+                            label: const Text('Suchen'),
                           ),
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height / 55,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _resetFilters,
+                            icon: const Icon(Icons.clear),
+                            label: const Text('Zurücksetzen'),
                           ),
-
-                          _buildFilterGrid(),
-
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height / 40,
-                          ),
-
-                          // Buttons
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: _performSearch,
-                                  icon: const Icon(Icons.search),
-                                  label: const Text('Suchen'),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: _resetFilters,
-                                  icon: const Icon(Icons.clear),
-                                  label: const Text('Zurücksetzen'),
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height / 40,
-                          ),
-                        ],
-
-                        if (!_showFilters) _buildSearchResults(),
+                        ),
                       ],
                     ),
-                  ),
+
+                    SizedBox(height: MediaQuery.of(context).size.height / 40),
+                  ],
+
+                  if (!_showFilters) _buildSearchResults(),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -665,6 +663,7 @@ class _MetaState extends State<Meta> {
   }
 
   Widget _buildCardDetail() {
+    // Diese Methode gibt die vollflächige Detailansicht zurück
     return CardDetailView(
       cardData: _selectedCard!,
       onBack: () {
