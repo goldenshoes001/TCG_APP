@@ -94,17 +94,26 @@ class CardDetailView extends StatelessWidget {
                     child: Icon(Icons.broken_image, size: 100),
                   );
                 } else {
-                  return Image.network(
-                    snapshot.data!,
-                    height: 310,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const SizedBox(
-                        width: 150,
-                        height: 210,
-                        child: Icon(Icons.broken_image, size: 100),
-                      );
-                    },
+                  return Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back),
+                        color: Colors.white,
+                        onPressed: onBack,
+                      ),
+                      Image.network(
+                        snapshot.data!,
+                        height: 310,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const SizedBox(
+                            width: 150,
+                            height: 210,
+                            child: Icon(Icons.broken_image, size: 100),
+                          );
+                        },
+                      ),
+                    ],
                   );
                 }
               },
@@ -214,15 +223,6 @@ class CardDetailView extends StatelessWidget {
           const SizedBox(height: 10),
 
           // Zurück-Button
-          Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back),
-                color: Colors.white,
-                onPressed: onBack,
-              ),
-            ],
-          ),
         ],
       ),
     );
