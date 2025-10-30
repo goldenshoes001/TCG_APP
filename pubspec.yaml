@@ -8,8 +8,10 @@ environment:
   sdk: ^3.8.1
 
 dependencies:
+  algoliasearch: ^1.39.0
   cached_network_image: ^3.4.1
   cloud_firestore: ^6.0.2
+  firebase_admin: ^0.3.1
   firebase_auth: ^6.0.2
   firebase_core: ^4.1.0
   firebase_storage: ^13.0.3

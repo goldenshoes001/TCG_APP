@@ -14,46 +14,65 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   bool _showTCGBannlist = true;
   bool _showOCGBannlist = false;
+  bool _isCardSelected = false; // Neuer State für Kartenauswahl
+
   final Future<Map<String, List<dynamic>>> TCGList = CardData()
       .sortTCGBannCards();
   final Future<Map<String, List<dynamic>>> OCGList = CardData()
-      .sortTCGBannCards();
+      .sortOCGBannCards();
+
+  void _onCardSelectionChanged(bool isSelected) {
+    setState(() {
+      _isCardSelected = isSelected;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
-      // Besser: Column statt Row für vertikales Layout
       mainAxisAlignment: MainAxisAlignment.start,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Buttons in einer Row
-        Row(
-          children: [
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  _showTCGBannlist = !_showTCGBannlist;
-                  _showOCGBannlist = false;
-                });
-              },
-              child: const Text("TCG Bannlist"),
-            ),
-            const SizedBox(width: 8),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  _showOCGBannlist = !_showOCGBannlist;
-                  _showTCGBannlist = false;
-                });
-              },
-              child: const Text("OCG Bannlist"),
-            ),
-          ],
-        ),
+        // Buttons nur anzeigen, wenn keine Karte ausgewählt ist
+        if (!_isCardSelected)
+          Row(
+            children: [
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _showTCGBannlist = !_showTCGBannlist;
+                    _showOCGBannlist = false;
+                  });
+                },
+                child: const Text("TCG Bannlist"),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _showOCGBannlist = !_showOCGBannlist;
+                    _showTCGBannlist = false;
+                  });
+                },
+                child: const Text("OCG Bannist"),
+              ),
+            ],
+          ),
         // Die Bannlist(s)
         if (_showTCGBannlist)
-          Expanded(child: sortedCardList(sortedCards: TCGList)),
+          Expanded(
+            child: sortedCardList(
+              sortedCards: TCGList,
+              onCardSelectionChanged: _onCardSelectionChanged,
+            ),
+          ),
         if (_showOCGBannlist)
-          Expanded(child: sortedCardList(sortedCards: OCGList)),
+          Expanded(
+            child: sortedCardList(
+              sortedCards: OCGList,
+              onCardSelectionChanged: _onCardSelectionChanged,
+            ),
+          ),
       ],
     );
   }
