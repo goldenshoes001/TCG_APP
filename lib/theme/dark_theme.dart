@@ -12,8 +12,20 @@ ThemeData darkTheme(BuildContext context) => generalTheme(context).copyWith(
   brightness: Brightness.dark,
   cardColor: cardColor,
   scaffoldBackgroundColor: bodyColor,
+  canvasColor: cardColor,
 
   outlinedButtonTheme: OutlinedButtonThemeData(
+    style: OutlinedButton.styleFrom(
+      foregroundColor: labelcolor,
+      backgroundColor: cardColor,
+      side: BorderSide(color: cardColor, width: 2),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      textStyle: Theme.of(context).textTheme.bodyLarge,
+    ),
+  ),
+
+  elevatedButtonTheme: ElevatedButtonThemeData(
     style: OutlinedButton.styleFrom(
       foregroundColor: labelcolor,
       backgroundColor: cardColor,
@@ -30,7 +42,11 @@ ThemeData darkTheme(BuildContext context) => generalTheme(context).copyWith(
     prefixIconColor: inputField,
     suffixIconColor: inputField,
     hoverColor: inputField,
-
+    labelStyle: TextStyle(
+      color: inputField,
+      fontFamily: fontFamily,
+      // Passen Sie die Schriftgröße bei Bedarf an
+    ),
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(borderRadius),
       borderSide: BorderSide(color: inputField),

@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 Color barColor = Color(0xFF121926);
 Color bodyColor = Color(0xFF0d1421);
 
-Color textBar = Colors.white;
+Color textBar = const Color.fromARGB(255, 255, 255, 255);
 Color textColor = Colors.white;
 Color shadow = Colors.transparent;
-Color surfaceTintColor = Colors.transparent;
+Color surfaceTintColor = Colors.black;
 Color iconColor = Colors.white;
 Color selectedIconColor = Colors.lightBlue;
 Color unselectedIconColor = Colors.transparent;
@@ -15,10 +15,18 @@ Color labelcolor = Colors.white;
 Color colorHeadlineLarge = Colors.white;
 Color colorHeadlineMedium = Colors.white;
 Color colorHeadlineSmall = Colors.white;
-Color colorBodyLarge = Color(0xFFFFFFFF);
+
+// Setzen Sie diese Farbe auf eine helle Farbe, damit sie im dunklen Hintergrund sichtbar ist
+Color colorBodyLarge = Colors
+    .white; // <--- Wahrscheinlich auch auf Weiß setzen, da der vorherige Wert (RGB 52) zu dunkel war
 Color bodyMediumColor = Colors.white;
 Color colorBodySmall = Colors.white;
-Color cardColor = Color(0xFF1F2937);
+
+// ⭐ KORRIGIERTE CARD COLOR: Muss dunkel sein, da dies der Hintergrund der Eingabefelder ist!
+Color cardColor = Color(
+  0xFF1F2937,
+); // <--- Sehr dunkles Grau (Dark Mode Standard)
+
 Color containerColor = Color(0xFF1F2937);
-Color inputField = Colors.white;
+Color inputField = const Color.fromARGB(255, 255, 255, 255);
 Color errorColor = Colors.red;

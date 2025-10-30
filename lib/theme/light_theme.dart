@@ -5,17 +5,29 @@ import 'package:tcg_app/theme/sizing.dart';
 import "package:tcg_app/theme/textstyle.dart";
 
 extension MyLightThemeDataExtension on ThemeData {
-  Color get lightColorOfContainer => containerColor;
+  Color get darkColorOfContainer => containerColor;
 }
 
 ThemeData lightTheme(BuildContext context) => generalTheme(context).copyWith(
   brightness: Brightness.light,
   cardColor: cardColor,
   scaffoldBackgroundColor: bodyColor,
+  canvasColor: cardColor,
 
   outlinedButtonTheme: OutlinedButtonThemeData(
     style: OutlinedButton.styleFrom(
-      foregroundColor: Colors.grey,
+      foregroundColor: labelcolor,
+      backgroundColor: cardColor,
+      side: BorderSide(color: cardColor, width: 2),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      textStyle: Theme.of(context).textTheme.bodyLarge,
+    ),
+  ),
+
+  elevatedButtonTheme: ElevatedButtonThemeData(
+    style: OutlinedButton.styleFrom(
+      foregroundColor: labelcolor,
       backgroundColor: cardColor,
       side: BorderSide(color: cardColor, width: 2),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -30,7 +42,11 @@ ThemeData lightTheme(BuildContext context) => generalTheme(context).copyWith(
     prefixIconColor: inputField,
     suffixIconColor: inputField,
     hoverColor: inputField,
-
+    labelStyle: TextStyle(
+      color: inputField,
+      fontFamily: fontFamily,
+      // Passen Sie die Schriftgröße bei Bedarf an
+    ),
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(borderRadius),
       borderSide: BorderSide(color: inputField),
@@ -58,7 +74,7 @@ ThemeData lightTheme(BuildContext context) => generalTheme(context).copyWith(
       fontSize: appbarTextSize,
       fontWeight: fontWeightAppbar,
     ),
-    toolbarHeight: MediaQuery.sizeOf(context).height * 1,
+    toolbarHeight: MediaQuery.sizeOf(context).height * appbarSize,
     iconTheme: IconThemeData(color: Colors.white),
   ),
   navigationBarTheme: NavigationBarThemeData(
@@ -71,13 +87,28 @@ ThemeData lightTheme(BuildContext context) => generalTheme(context).copyWith(
 
     labelTextStyle: WidgetStateProperty.all(
       TextStyle(
-        color: labelcolor,
+        color: textColor,
         fontFamily: fontFamily,
         fontSize: sizeLabels,
         fontWeight: FontWeight.normal,
       ),
     ),
   ),
+
+  listTileTheme: const ListTileThemeData(
+    // Farbe für den gesamten ListTile-Inhalt (Titel, Untertitel, Icons)
+    textColor: Colors.white,
+    iconColor: Colors.white70,
+
+    // Die beste Methode: Den Stil für den Titel direkt festlegen.
+    titleTextStyle: TextStyle(
+      color: Colors.white,
+      // Optional: Weitere Anpassungen basierend auf Ihrem bodyLarge
+      // fontSize: 16,
+      // fontWeight: FontWeight.w500,
+    ),
+  ), // <--- FEHLENDE KLAMMER UND KOMMA HINZUGEFÜGT
+
   textTheme: generalTheme(context).textTheme.copyWith(
     bodyLarge: generalTheme(
       context,
@@ -94,23 +125,9 @@ ThemeData lightTheme(BuildContext context) => generalTheme(context).copyWith(
 
     headlineMedium: generalTheme(
       context,
-    ).textTheme.headlineMedium!.copyWith(color: colorHeadlineMedium),
+    ).textTheme.headlineMedium!.copyWith(color: colorHeadlineLarge),
     headlineSmall: generalTheme(
       context,
     ).textTheme.headlineSmall!.copyWith(color: colorHeadlineSmall),
   ),
-
-  listTileTheme: const ListTileThemeData(
-    // Farbe für den gesamten ListTile-Inhalt (Titel, Untertitel, Icons)
-    textColor: Colors.black,
-    iconColor: Colors.white70,
-
-    // Die beste Methode: Den Stil für den Titel direkt festlegen.
-    titleTextStyle: TextStyle(
-      color: Colors.grey,
-      // Optional: Weitere Anpassungen basierend auf Ihrem bodyLarge
-      // fontSize: 16,
-      // fontWeight: FontWeight.w500,
-    ),
-  ), // <--- FEHLENDE KLAMMER UND KOMMA HINZUGEFÜGT
 );

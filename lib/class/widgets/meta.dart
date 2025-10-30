@@ -506,18 +506,20 @@ class _MetaState extends State<Meta> {
   }) {
     return DropdownButtonFormField<String>(
       decoration: InputDecoration(
-        labelText: label,
+        iconColor: Colors.white,
+        hintText: label,
         border: const OutlineInputBorder(),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
       value: value,
       items: [
-        const DropdownMenuItem<String>(value: null, child: Text('Alle')),
+        DropdownMenuItem<String>(value: null, child: Text(label)),
         ...items.map(
           (item) => DropdownMenuItem<String>(
             value: item,
             child: Text(
               item,
+
               overflow: TextOverflow
                   .ellipsis, // Verhindert Überlauf bei langen Wörtern
             ),
@@ -525,6 +527,7 @@ class _MetaState extends State<Meta> {
         ),
       ],
       onChanged: onChanged,
+      style: Theme.of(context).textTheme.bodyMedium,
     );
   }
 
@@ -565,10 +568,7 @@ class _MetaState extends State<Meta> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '${cards.length} Karte(n) gefunden',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            Text('${cards.length} Karte(n) gefunden'),
             const SizedBox(height: 10),
             ListView.builder(
               shrinkWrap: true,
