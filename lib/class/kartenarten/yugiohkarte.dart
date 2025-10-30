@@ -4,19 +4,21 @@ class YugiohKarte {
   final String type;
   final String frameType;
   final String desc;
+  final bool hasEffect;
+  final List<String> formats;
+  final List<String> treatedAs;
   final String imagePath;
+
   final String? betaName;
   final int? views;
   final int? viewsweek;
   final int? upvotes;
   final int? downvotes;
-  final List<String> formats;
-  final List<String> treatedAs;
   final DateTime? tcgDate;
   final DateTime? ocgDate;
   final int? konamiid;
   final String? mdRarity;
-  final bool hasEffect;
+
   final int? genesysPoints;
 
   YugiohKarte({

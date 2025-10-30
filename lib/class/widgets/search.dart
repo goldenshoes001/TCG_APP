@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-// Importe für Firebase Storage und die angepasste CardData Klasse
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
-
-// Importe für Theme-Daten (angenommen, diese existieren in Ihrem Projekt)
+import 'package:tcg_app/class/common/buildCards.dart';
 
 class Search extends StatefulWidget {
   const Search({super.key});
@@ -13,9 +11,10 @@ class Search extends StatefulWidget {
 
 class _SearchState extends State<Search> {
   final TextEditingController suchfeld = TextEditingController();
-
-  // State-Variable, die das Future für die Suche hält.
   Future<List<Map<String, dynamic>>>? _searchFuture;
+
+  // State-Variable für die ausgewählte Karte
+  Map<String, dynamic>? _selectedCard;
 
   @override
   Widget build(BuildContext context) {
@@ -38,17 +37,16 @@ class _SearchState extends State<Search> {
             onSubmitted: (value) {
               final trimmedValue = suchfeld.text.trim();
               if (trimmedValue.isNotEmpty) {
-                // Setze den State, um das FutureBuilder zu triggern
                 setState(() {
                   _searchFuture = data
                       .ergebniseAnzeigen(trimmedValue)
-                      // Cast für Typsicherheit
                       .then((list) => list.cast<Map<String, dynamic>>());
+                  _selectedCard = null; // Zurücksetzen bei neuer Suche
                 });
               } else {
                 setState(() {
-                  // Setze das Future zurück, falls der Suchbegriff leer ist
                   _searchFuture = Future.value([]);
+                  _selectedCard = null;
                 });
               }
             },
@@ -56,157 +54,146 @@ class _SearchState extends State<Search> {
           ),
           SizedBox(height: MediaQuery.of(context).size.height / 55),
 
-          // --- Ergebnis-Anzeige (FutureBuilder) ---
+          // --- Ergebnis-Anzeige oder Detail-Ansicht ---
           Expanded(
-            child: FutureBuilder<List<Map<String, dynamic>>>(
-              future: _searchFuture,
-              builder: (context, snapshot) {
-                // Fall 0: Keine Suche gestartet
-                if (_searchFuture == null) {
-                  return const Center(
-                    child: Text('Geben Sie einen Suchbegriff ein.'),
-                  );
-                }
-
-                // Fall 1: Daten werden geladen
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                // Fall 2: Fehler
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Text('Fehler beim Laden: ${snapshot.error}'),
-                  );
-                }
-
-                // Fall 3: Daten sind geladen (Erfolg oder leere Liste)
-                final cards = snapshot.data;
-
-                if (cards == null || cards.isEmpty) {
-                  return const Center(
-                    child: Text(
-                      'Keine Karten mit diesem Prefix gefunden.',
-                      textAlign: TextAlign.center,
-                    ),
-                  );
-                }
-
-                // --- ListView.builder ---
-                return ListView.builder(
-                  itemCount: cards.length,
-                  itemBuilder: (context, index) {
-                    final card = cards[index];
-                    CardData cardData = CardData();
-
-                    // Holt den Kartennamen
-                    final cardName = card["name"] ?? 'Unbekannte Karte';
-
-                    // card_images ist eine Liste von Maps mit gs:// URLs
-                    final List<dynamic>? cardImagesDynamic =
-                        card["card_images"];
-                    final List<String> cardImages = [];
-
-                    if (cardImagesDynamic != null) {
-                      for (var imageObj in cardImagesDynamic) {
-                        if (imageObj is Map<String, dynamic>) {
-                          // Priorisiere image_url (hohe Auflösung), dann image_url_cropped
-                          final imageUrl =
-                              imageObj['image_url'] ??
-                              imageObj['image_url_cropped'] ??
-                              '';
-                          if (imageUrl.isNotEmpty) {
-                            cardImages.add(imageUrl.toString());
-                          }
-                        }
-                      }
-                    }
-
-                    // Diese Liste enthält jetzt gs:// URLs
-                    Future<String> imageUrlFuture = cardData.getCorrectImgPath(
-                      cardImages,
-                    );
-
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          // 1. Element: Das Bild (FutureBuilder für imageUrlFuture)
-                          FutureBuilder<String>(
-                            future: imageUrlFuture,
-                            builder: (context, snapshot) {
-                              if (snapshot.connectionState ==
-                                  ConnectionState.waiting) {
-                                // Platzhalter, während das Bild lädt
-                                return const SizedBox(
-                                  width: 50,
-                                  height: 70,
-                                  child: Center(
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  ),
-                                );
-                              } else if (snapshot.hasError ||
-                                  !snapshot.hasData ||
-                                  snapshot.data!.isEmpty) {
-                                // Fehler oder kein Bildpfad gefunden
-                                return const SizedBox(
-                                  width: 50,
-                                  height: 70,
-                                  child: Icon(Icons.broken_image),
-                                );
-                              } else {
-                                // Das geladene Bild
-                                return Image.network(
-                                  snapshot.data!,
-                                  height: 70,
-                                  width: 50,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return const SizedBox(
-                                      width: 50,
-                                      height: 70,
-                                      child: Icon(Icons.broken_image),
-                                    );
-                                  },
-                                  loadingBuilder:
-                                      (context, child, loadingProgress) {
-                                        if (loadingProgress == null)
-                                          return child;
-                                        return const SizedBox(
-                                          width: 50,
-                                          height: 70,
-                                          child: Center(
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                );
-                              }
-                            },
-                          ),
-
-                          // Fügt Platz zwischen Bild und Text hinzu
-                          const SizedBox(width: 15),
-
-                          // 2. Element: Der Name der Karte
-                          Expanded(child: Text(cardName)),
-                        ],
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
+            child: _selectedCard != null
+                ? _buildCardDetail()
+                : _buildSearchResults(data),
           ),
         ],
       ),
     );
   }
-}
 
-// --- Firestore Suchfunktion (Prefix-Suche) ---
+  // Sucherergebnisse anzeigen
+  Widget _buildSearchResults(CardData data) {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _searchFuture,
+      builder: (context, snapshot) {
+        if (_searchFuture == null) {
+          return const Center(child: Text('Geben Sie einen Suchbegriff ein.'));
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(child: Text('Fehler beim Laden: ${snapshot.error}'));
+        }
+
+        final cards = snapshot.data;
+
+        if (cards == null || cards.isEmpty) {
+          return const Center(
+            child: Text(
+              'Keine Karten mit diesem Prefix gefunden.',
+              textAlign: TextAlign.center,
+            ),
+          );
+        }
+
+        return ListView.builder(
+          itemCount: cards.length,
+          itemBuilder: (context, index) {
+            final card = cards[index];
+            CardData cardData = CardData();
+
+            final cardName = card["name"] ?? 'Unbekannte Karte';
+
+            final List<dynamic>? cardImagesDynamic = card["card_images"];
+            final List<String> cardImages = [];
+
+            if (cardImagesDynamic != null) {
+              for (var imageObj in cardImagesDynamic) {
+                if (imageObj is Map<String, dynamic>) {
+                  final imageUrl =
+                      imageObj['image_url'] ??
+                      imageObj['image_url_cropped'] ??
+                      '';
+                  if (imageUrl.isNotEmpty) {
+                    cardImages.add(imageUrl.toString());
+                  }
+                }
+              }
+            }
+
+            Future<String> imageUrlFuture = cardData.getCorrectImgPath(
+              cardImages,
+            );
+
+            return GestureDetector(
+              onTap: () {
+                setState(() {
+                  _selectedCard = card;
+                });
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    FutureBuilder<String>(
+                      future: imageUrlFuture,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const SizedBox(
+                            width: 50,
+                            height: 70,
+                            child: Center(
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          );
+                        } else if (snapshot.hasError ||
+                            !snapshot.hasData ||
+                            snapshot.data!.isEmpty) {
+                          return const SizedBox(
+                            width: 50,
+                            height: 70,
+                            child: Icon(Icons.broken_image),
+                          );
+                        } else {
+                          return Image.network(
+                            snapshot.data!,
+                            height: 70,
+                            width: 50,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const SizedBox(
+                                width: 50,
+                                height: 70,
+                                child: Icon(Icons.broken_image),
+                              );
+                            },
+                          );
+                        }
+                      },
+                    ),
+
+                    const SizedBox(width: 15),
+
+                    Expanded(child: Text(cardName)),
+
+                    const Icon(Icons.chevron_right, color: Colors.grey),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildCardDetail() {
+    return CardDetailView(
+      cardData: _selectedCard!,
+      onBack: () {
+        setState(() {
+          _selectedCard = null;
+        });
+      },
+    );
+  }
+}
