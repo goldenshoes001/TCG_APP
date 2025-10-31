@@ -343,7 +343,7 @@ class CardData implements Dbrepo {
     List<String> numericFilters,
     String? race,
     String? attribute,
-    String? archetype, // NEU: Archetype-Parameter
+    String? archetype,
     int? level,
     int? linkRating,
     String? linkRatingOperator,
@@ -355,47 +355,44 @@ class CardData implements Dbrepo {
     String? banlistOCG,
   ) async {
     try {
-      // Weitere Filter hinzufügen
-      if (race != null && race.isNotEmpty) {
-        facetFilters.add('race:$race');
-      }
-      if (attribute != null && attribute.isNotEmpty) {
-        facetFilters.add('attribute:$attribute');
-      }
-      // NEU: Archetype-Filter
-      if (archetype != null && archetype.isNotEmpty) {
-        facetFilters.add('archetype:$archetype');
-      }
-      if (banlistTCG != null && banlistTCG.isNotEmpty) {
-        facetFilters.add('banlist_info.ban_tcg:$banlistTCG');
-      }
-      if (banlistOCG != null && banlistOCG.isNotEmpty) {
-        facetFilters.add('banlist_info.ban_ocg:$banlistOCG');
-      }
+      // 1. Facettenfilter (Dynamisch und kompakt)
+      final List<String> newFacetFilters = [
+        // Einfache Facetten-Filter
+        if (race != null && race.isNotEmpty) 'race:$race',
+        if (attribute != null && attribute.isNotEmpty) 'attribute:$attribute',
+        if (archetype != null && archetype.isNotEmpty) 'archetype:$archetype',
 
-      // Numerische Filter mit Operatoren
-      if (level != null) {
-        numericFilters.add('level=$level');
-      }
+        // Bannlisten-Filter mit spezifischem Pfad
+        if (banlistTCG != null && banlistTCG.isNotEmpty)
+          'banlist_info.ban_tcg:$banlistTCG',
+        if (banlistOCG != null && banlistOCG.isNotEmpty)
+          'banlist_info.ban_ocg:$banlistOCG',
+      ];
 
-      if (linkRating != null) {
-        final op = linkRatingOperator ?? '=';
-        numericFilters.add('linkval$op$linkRating');
-      }
+      // Fügt die neu erstellten Filter zu der übergebenen Liste hinzu
+      facetFilters.addAll(newFacetFilters);
 
-      if (scale != null) {
-        final op = scaleOperator ?? '=';
-        numericFilters.add('scale$op$scale');
-      }
+      // 2. Numerische Filter (Dynamisch und kompakt)
+      final List<String> newNumericFilters = [
+        // Level
+        if (level != null) 'level=$level',
 
-      if (atk != null && atk.isNotEmpty && atk != '?') {
-        numericFilters.add('atk$atk');
-      }
+        // Link Rating mit dynamischem Operator
+        if (linkRating != null)
+          'linkval${linkRatingOperator ?? '='}$linkRating',
 
-      if (def != null && def.isNotEmpty && def != '?') {
-        numericFilters.add('def$def');
-      }
+        // Scale mit dynamischem Operator
+        if (scale != null) 'scale${scaleOperator ?? '='}$scale',
 
+        // ATK und DEF (enthalten den Operator bereits im String)
+        if (atk != null && atk.isNotEmpty && atk != '?') 'atk$atk',
+        if (def != null && def.isNotEmpty && def != '?') 'def$def',
+      ];
+
+      // Fügt die neu erstellten Filter zu der übergebenen Liste hinzu
+      numericFilters.addAll(newNumericFilters);
+
+      // 3. Algolia Suche vorbereiten und ausführen
       final List<List<String>>? finalFacetFilters = facetFilters.isEmpty
           ? null
           : facetFilters.map((f) => [f]).toList();
@@ -690,11 +687,11 @@ class CardData implements Dbrepo {
 
   // getCardData.dart - Vollständige getAllArchetypes Methode mit Pagination
 
-  Future<List<String>> getAllArchetypes() async {
+  Future<List<String>> getFacetValues(String fieldName) async {
     try {
-      print('[v0] Lade Archetypen...');
+      print('[v0] Lade Facetten für Feld: $fieldName...');
 
-      // Versuche zuerst Facetten zu laden
+      // 1. Versuche zuerst Facetten zu laden (Algolia Facet Search)
       try {
         final response = await client.search(
           searchMethodParams: algolia_lib.SearchMethodParams(
@@ -702,7 +699,7 @@ class CardData implements Dbrepo {
               algolia_lib.SearchForHits(
                 indexName: 'cards',
                 query: '',
-                facets: ['archetype'],
+                facets: [fieldName], // Dynamischer Feldname
                 hitsPerPage: 0,
               ),
             ],
@@ -715,29 +712,30 @@ class CardData implements Dbrepo {
           final Map<String, dynamic> facets = Map<String, dynamic>.from(
             facetsData,
           );
-          final archetypesFacet = facets['archetype'];
+          // Nutze den übergebenen fieldName, um die Facettenwerte abzurufen
+          final facetValuesMap = facets[fieldName];
 
-          if (archetypesFacet != null && archetypesFacet is Map) {
-            final List<String> archetypes =
-                (archetypesFacet as Map<String, dynamic>).keys
-                    .where((key) => key != null && key.toString().isNotEmpty)
-                    .map((key) => key.toString())
-                    .toList();
+          if (facetValuesMap != null && facetValuesMap is Map) {
+            final List<String> values = (facetValuesMap as Map<String, dynamic>)
+                .keys
+                .where((key) => key != null && key.toString().isNotEmpty)
+                .map((key) => key.toString())
+                .toList();
 
-            if (archetypes.isNotEmpty) {
-              archetypes.sort();
-
-              return archetypes;
+            if (values.isNotEmpty) {
+              values.sort();
+              print('[v0] Facetten für $fieldName erfolgreich geladen.');
+              return values;
             }
           }
         }
       } catch (e) {
-        print('[v0] Facetten-Laden fehlgeschlagen: $e');
+        print('[v0] Facetten-Laden für $fieldName fehlgeschlagen: $e');
       }
 
-      // Fallback: Lade ALLE Karten mit Pagination und extrahiere Archetypen
+      // 2. Fallback: Lade ALLE Karten mit Pagination und extrahiere Werte
 
-      final Set<String> archetypesSet = {};
+      final Set<String> valuesSet = {};
       int page = 0;
       int hitsPerPage = 1000;
       bool hasMorePages = true;
@@ -751,14 +749,13 @@ class CardData implements Dbrepo {
                 query: '',
                 hitsPerPage: hitsPerPage,
                 page: page,
-                attributesToRetrieve: ['archetype'],
+                attributesToRetrieve: [fieldName], // Dynamischer Feldname
               ),
             ],
           ),
         );
 
         final dynamic hitsData = (response.results.first as Map)['hits'];
-        final int? nbHits = (response.results.first as Map)['nbHits'] as int?;
         final int? nbPages = (response.results.first as Map)['nbPages'] as int?;
 
         if (hitsData == null || hitsData is! List || hitsData.isEmpty) {
@@ -770,9 +767,9 @@ class CardData implements Dbrepo {
 
         for (var hit in hits) {
           if (hit is Map<String, dynamic>) {
-            final archetype = hit['archetype'];
-            if (archetype != null && archetype.toString().isNotEmpty) {
-              archetypesSet.add(archetype.toString());
+            final value = hit[fieldName]; // Dynamischer Feldname
+            if (value != null && value.toString().isNotEmpty) {
+              valuesSet.add(value.toString());
             }
           }
         }
@@ -787,12 +784,12 @@ class CardData implements Dbrepo {
         }
       }
 
-      final List<String> archetypes = archetypesSet.toList();
-      archetypes.sort();
+      final List<String> values = valuesSet.toList();
+      values.sort();
 
-      return archetypes;
+      return values;
     } catch (e, stacktrace) {
-      print('[v0] Fehler beim Laden der Archetypen: $e');
+      print('[v0] Fehler beim Laden der Facetten ($fieldName): $e');
       print('[v0] Stacktrace: $stacktrace');
       return [];
     }

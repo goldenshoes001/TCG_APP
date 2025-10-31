@@ -1,3 +1,5 @@
+// meta.dart (KORRIGIERT: Behebt FlutterError: setState() called after dispose())
+
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 import 'package:tcg_app/class/common/buildCards.dart';
@@ -26,9 +28,14 @@ class _MetaState extends State<Meta> {
   String? _selectedBanlistTCG;
   String? _selectedBanlistOCG;
 
-  // NEU: Liste für dynamisch geladene Archetypen
+  // NEU: Listen für dynamisch geladene Filter-Werte
+  List<String> _types = [];
+  List<String> _races = [];
+  List<String> _attributes = [];
   List<String> _archetypes = [];
-  bool _archetypesLoading = true;
+
+  // NEU: Konsolidierter Loading State für alle Filter
+  bool _filtersLoading = true;
 
   final TextEditingController _atkController = TextEditingController();
   final TextEditingController _defController = TextEditingController();
@@ -43,22 +50,44 @@ class _MetaState extends State<Meta> {
   @override
   void initState() {
     super.initState();
-    _loadArchetypes();
+    // Konsolidierter Aufruf zum Laden aller Filter
+    _loadFilterData();
   }
 
-  // NEU: Archetypen aus Algolia laden
-  Future<void> _loadArchetypes() async {
+  // KORRIGIERT: Fügt 'if (mounted)' Prüfung vor jedem setState() in asynchronen Funktionen hinzu
+  Future<void> _loadFilterData() async {
+    // Setze Loading State vor dem Start (dieser Aufruf ist sicher in initState)
+    if (mounted) {
+      setState(() {
+        _filtersLoading = true;
+      });
+    }
+
     try {
-      final archetypes = await _cardData.getAllArchetypes();
-      setState(() {
-        _archetypes = archetypes;
-        _archetypesLoading = false;
-      });
+      // Vier separate Aufrufe unter Verwendung der getFacetValues Methode
+      final loadedTypes = await _cardData.getFacetValues('type');
+      final loadedRaces = await _cardData.getFacetValues('race');
+      final loadedAttributes = await _cardData.getFacetValues('attribute');
+      final loadedArchetypes = await _cardData.getFacetValues('archetype');
+
+      // WICHTIG: Prüfe, ob das Widget noch aktiv ist, bevor setState() aufgerufen wird
+      if (mounted) {
+        setState(() {
+          _types = loadedTypes;
+          _races = loadedRaces;
+          _attributes = loadedAttributes;
+          _archetypes = loadedArchetypes;
+          _filtersLoading = false;
+        });
+      }
     } catch (e) {
-      print('Fehler beim Laden der Archetypen: $e');
-      setState(() {
-        _archetypesLoading = false;
-      });
+      print('Fehler beim Laden der Filterdaten: $e');
+      // WICHTIG: Prüfe, ob das Widget noch aktiv ist
+      if (mounted) {
+        setState(() {
+          _filtersLoading = false;
+        });
+      }
     }
   }
 
@@ -71,73 +100,6 @@ class _MetaState extends State<Meta> {
     _linkRatingController.dispose();
     super.dispose();
   }
-
-  final List<String> _types = [
-    'Effect Monster',
-    'Flip Monster',
-    'Fusion Monster',
-    'Gemini Monster',
-    'Link Monster',
-    'Normal Monster',
-    'Pendulum',
-    'Ritual Monster',
-    'Skill Card',
-    'Spell Card',
-    'Spirit Monster',
-    'Synchro Monster',
-    'Token',
-    'Toon Monster',
-    'Trap Card',
-    'Tuner Monster',
-    'Union Effect Monster',
-    'XYZ Monster',
-  ]..sort();
-
-  final List<String> _races = [
-    'Aqua',
-    'Beast',
-    'Beast-Warrior',
-    'Continuous',
-    'Counter',
-    'Creator God',
-    'Cyberse',
-    'Dinosaur',
-    'Divine-Beast',
-    'Dragon',
-    'Equip',
-    'Fairy',
-    'Field',
-    'Fiend',
-    'Fish',
-    'Illusion',
-    'Insect',
-    'Machine',
-    'Normal',
-    'Plant',
-    'Psychic',
-    'Pyro',
-    'Quick-Play',
-    'Reptile',
-    'Ritual',
-    'Rock',
-    'Sea Serpent',
-    'Spellcaster',
-    'Thunder',
-    'Warrior',
-    'Winged Beast',
-    'Wyrm',
-    'Zombie',
-  ]..sort();
-
-  final List<String> _attributes = [
-    'DARK',
-    'DIVINE',
-    'EARTH',
-    'FIRE',
-    'LIGHT',
-    'WATER',
-    'WIND',
-  ]..sort();
 
   final List<String> _banlistStatuses = [
     'Forbidden',
@@ -246,6 +208,11 @@ class _MetaState extends State<Meta> {
       return _buildCardDetail();
     }
 
+    // Zeige Ladeindikator an, während Filterdaten abgerufen werden
+    if (_filtersLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return Padding(
       padding: EdgeInsets.all(MediaQuery.of(context).size.height / 30),
       child: Column(
@@ -352,6 +319,7 @@ class _MetaState extends State<Meta> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // DYNAMISCH: Type
         _buildDropdown(
           label: 'Type',
           value: _selectedType,
@@ -362,6 +330,7 @@ class _MetaState extends State<Meta> {
 
         Row(
           children: [
+            // DYNAMISCH: Race
             Expanded(
               child: _buildDropdown(
                 label: 'Race',
@@ -371,6 +340,7 @@ class _MetaState extends State<Meta> {
               ),
             ),
             const SizedBox(width: spacing),
+            // DYNAMISCH: Attribute
             Expanded(
               child: _buildDropdown(
                 label: 'Attribut',
@@ -384,21 +354,13 @@ class _MetaState extends State<Meta> {
         ),
         const SizedBox(height: spacing),
 
-        // NEU: Archetype mit Loading-Indikator
-        _archetypesLoading
-            ? const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: CircularProgressIndicator(),
-                ),
-              )
-            : _buildDropdown(
-                label: 'Archetyp',
-                value: _selectedArchetype,
-                items: _archetypes,
-                onChanged: (value) =>
-                    setState(() => _selectedArchetype = value),
-              ),
+        // DYNAMISCH: Archetype
+        _buildDropdown(
+          label: 'Archetyp',
+          value: _selectedArchetype,
+          items: _archetypes,
+          onChanged: (value) => setState(() => _selectedArchetype = value),
+        ),
         const SizedBox(height: spacing),
 
         _buildDropdown(
@@ -583,9 +545,7 @@ class _MetaState extends State<Meta> {
               );
             }).toList(),
             onChanged: onOperatorChanged,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium, // ← DIESE ZEILE HINZUFÜGEN
+            style: Theme.of(context).textTheme.bodyMedium,
           ),
         ),
         const SizedBox(width: 8),
@@ -624,6 +584,7 @@ class _MetaState extends State<Meta> {
 
       items: [
         DropdownMenuItem<String>(value: null, child: Text(label)),
+        // Fügt die dynamisch geladenen Elemente hinzu
         ...items.map(
           (item) => DropdownMenuItem<String>(
             value: item,
