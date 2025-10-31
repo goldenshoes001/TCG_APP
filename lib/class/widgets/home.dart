@@ -5,7 +5,10 @@ import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 import 'package:tcg_app/class/common/buildCards.dart';
 
 class Home extends StatefulWidget {
-  const Home({super.key});
+  final Map<String, List<dynamic>>? preloadedTCGBannlist;
+  final Map<String, List<dynamic>>? preloadedOCGBannlist;
+
+  const Home({super.key, this.preloadedTCGBannlist, this.preloadedOCGBannlist});
 
   @override
   State<Home> createState() => _HomeState();
@@ -23,8 +26,18 @@ class _HomeState extends State<Home> {
   @override
   void initState() {
     super.initState();
-    _tcgListFuture = _cardData.sortTCGBannCards();
-    _ocgListFuture = _cardData.sortOCGBannCards();
+    // Nutze vorgeladene Daten wenn verfügbar, sonst lade neu
+    if (widget.preloadedTCGBannlist != null) {
+      _tcgListFuture = Future.value(widget.preloadedTCGBannlist!);
+    } else {
+      _tcgListFuture = _cardData.sortTCGBannCards();
+    }
+
+    if (widget.preloadedOCGBannlist != null) {
+      _ocgListFuture = Future.value(widget.preloadedOCGBannlist!);
+    } else {
+      _ocgListFuture = _cardData.sortOCGBannCards();
+    }
   }
 
   @override
@@ -279,7 +292,6 @@ class _HomeState extends State<Home> {
           Expanded(
             child: Text(
               card["name"],
-
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
             ),

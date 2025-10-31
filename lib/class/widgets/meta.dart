@@ -1,11 +1,22 @@
-// meta.dart (KORRIGIERT: Behebt FlutterError: setState() called after dispose())
+// meta.dart (MIT PRELOADING SUPPORT)
 
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 import 'package:tcg_app/class/common/buildCards.dart';
 
 class Meta extends StatefulWidget {
-  const Meta({super.key});
+  final List<String>? preloadedTypes;
+  final List<String>? preloadedRaces;
+  final List<String>? preloadedAttributes;
+  final List<String>? preloadedArchetypes;
+
+  const Meta({
+    super.key,
+    this.preloadedTypes,
+    this.preloadedRaces,
+    this.preloadedAttributes,
+    this.preloadedArchetypes,
+  });
 
   @override
   State<Meta> createState() => _MetaState();
@@ -28,13 +39,12 @@ class _MetaState extends State<Meta> {
   String? _selectedBanlistTCG;
   String? _selectedBanlistOCG;
 
-  // NEU: Listen für dynamisch geladene Filter-Werte
+  // Listen für dynamisch geladene Filter-Werte
   List<String> _types = [];
   List<String> _races = [];
   List<String> _attributes = [];
   List<String> _archetypes = [];
 
-  // NEU: Konsolidierter Loading State für alle Filter
   bool _filtersLoading = true;
 
   final TextEditingController _atkController = TextEditingController();
@@ -50,13 +60,28 @@ class _MetaState extends State<Meta> {
   @override
   void initState() {
     super.initState();
-    // Konsolidierter Aufruf zum Laden aller Filter
     _loadFilterData();
   }
 
-  // KORRIGIERT: Fügt 'if (mounted)' Prüfung vor jedem setState() in asynchronen Funktionen hinzu
   Future<void> _loadFilterData() async {
-    // Setze Loading State vor dem Start (dieser Aufruf ist sicher in initState)
+    // Nutze vorgeladene Daten wenn verfügbar
+    if (widget.preloadedTypes != null &&
+        widget.preloadedRaces != null &&
+        widget.preloadedAttributes != null &&
+        widget.preloadedArchetypes != null) {
+      if (mounted) {
+        setState(() {
+          _types = widget.preloadedTypes!;
+          _races = widget.preloadedRaces!;
+          _attributes = widget.preloadedAttributes!;
+          _archetypes = widget.preloadedArchetypes!;
+          _filtersLoading = false;
+        });
+      }
+      return;
+    }
+
+    // Fallback: Lade Daten neu falls nicht vorgeladen
     if (mounted) {
       setState(() {
         _filtersLoading = true;
@@ -64,13 +89,11 @@ class _MetaState extends State<Meta> {
     }
 
     try {
-      // Vier separate Aufrufe unter Verwendung der getFacetValues Methode
       final loadedTypes = await _cardData.getFacetValues('type');
       final loadedRaces = await _cardData.getFacetValues('race');
       final loadedAttributes = await _cardData.getFacetValues('attribute');
       final loadedArchetypes = await _cardData.getFacetValues('archetype');
 
-      // WICHTIG: Prüfe, ob das Widget noch aktiv ist, bevor setState() aufgerufen wird
       if (mounted) {
         setState(() {
           _types = loadedTypes;
@@ -82,7 +105,6 @@ class _MetaState extends State<Meta> {
       }
     } catch (e) {
       print('Fehler beim Laden der Filterdaten: $e');
-      // WICHTIG: Prüfe, ob das Widget noch aktiv ist
       if (mounted) {
         setState(() {
           _filtersLoading = false;
@@ -208,7 +230,6 @@ class _MetaState extends State<Meta> {
       return _buildCardDetail();
     }
 
-    // Zeige Ladeindikator an, während Filterdaten abgerufen werden
     if (_filtersLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -222,9 +243,9 @@ class _MetaState extends State<Meta> {
           SizedBox(height: MediaQuery.of(context).size.height / 350),
 
           TextField(
-            decoration: InputDecoration(
+            decoration: const InputDecoration(
               hintText: "Suchen...",
-              prefixIcon: const Icon(Icons.search),
+              prefixIcon: Icon(Icons.search),
             ),
             onSubmitted: (value) {
               final trimmedValue = _suchfeld.text.trim();
@@ -319,7 +340,6 @@ class _MetaState extends State<Meta> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // DYNAMISCH: Type
         _buildDropdown(
           label: 'Type',
           value: _selectedType,
@@ -330,7 +350,6 @@ class _MetaState extends State<Meta> {
 
         Row(
           children: [
-            // DYNAMISCH: Race
             Expanded(
               child: _buildDropdown(
                 label: 'Race',
@@ -340,7 +359,6 @@ class _MetaState extends State<Meta> {
               ),
             ),
             const SizedBox(width: spacing),
-            // DYNAMISCH: Attribute
             Expanded(
               child: _buildDropdown(
                 label: 'Attribut',
@@ -354,7 +372,6 @@ class _MetaState extends State<Meta> {
         ),
         const SizedBox(height: spacing),
 
-        // DYNAMISCH: Archetype
         _buildDropdown(
           label: 'Archetyp',
           value: _selectedArchetype,
@@ -581,10 +598,8 @@ class _MetaState extends State<Meta> {
         border: const OutlineInputBorder(),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
-
       items: [
         DropdownMenuItem<String>(value: null, child: Text(label)),
-        // Fügt die dynamisch geladenen Elemente hinzu
         ...items.map(
           (item) => DropdownMenuItem<String>(
             value: item,
