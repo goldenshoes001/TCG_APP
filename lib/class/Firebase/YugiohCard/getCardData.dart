@@ -1,4 +1,4 @@
-// getCardData.dart (KORRIGIERT für flexible Typ-Suche mit OR-Klauseln)
+// getCardData.dart (KORRIGIERT für flexible Typ-Suche mit OR-Klauseln + Operatoren)
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -59,7 +59,6 @@ class CardData implements Dbrepo {
 
   // --- HILFSMETHODE ZUR TYP-NORMALISIERUNG (UNVERÄNDERT) ---
 
-  // Normalisiert komplexe Typen auf einen Haupttyp (z.B. alle Ritual/Pendulum-Typen auf den Basis-Typ).
   String? _normalizeType(String? type) {
     if (type == null || type.isEmpty) {
       return null;
@@ -67,37 +66,30 @@ class CardData implements Dbrepo {
 
     final lowerType = type.toLowerCase();
 
-    // Pendulum-Typen zusammenfassen: "Pendulum Effect Monster" -> "Pendulum"
     if (lowerType.contains('pendulum')) {
       return 'Pendulum';
     }
 
-    // Ritual-Typen zusammenfassen: "Ritual Effect Monster" -> "Ritual Monster"
     if (lowerType.contains('ritual')) {
       return 'Ritual Monster';
     }
 
-    // Fusion-Typen zusammenfassen
     if (lowerType.contains('fusion')) {
       return 'Fusion Monster';
     }
 
-    // Synchro-Typen zusammenfassen
     if (lowerType.contains('synchro')) {
       return 'Synchro Monster';
     }
 
-    // XYZ-Typen zusammenfassen
     if (lowerType.contains('xyz')) {
       return 'XYZ Monster';
     }
 
-    // Link-Typen zusammenfassen
     if (lowerType.contains('link')) {
       return 'Link Monster';
     }
 
-    // Basistyp "Effect Monster" für alle, die nicht spezifisch sind
     if (lowerType.contains('effect monster') ||
         lowerType.contains('tuner') ||
         lowerType.contains('flip') ||
@@ -108,8 +100,6 @@ class CardData implements Dbrepo {
       return 'Effect Monster';
     }
 
-    // Für alle anderen Basistypen (Normal Monster, Spell Card, Trap Card, Token, Skill Card)
-    // den Originalwert zurückgeben (der aus der meta.dart Liste kommt).
     return type;
   }
 
@@ -208,11 +198,10 @@ class CardData implements Dbrepo {
   Future<List<Map<String, dynamic>>> ergebniseAnzeigen(String suchfeld) async {
     if (suchfeld.isEmpty) return [];
 
-    // Normale Textsuche, daher wird der Query genutzt
     return _searchAlgolia(suchfeld, null);
   }
 
-  // --- HAUPSUCHE MIT FILTERN (KORRIGIERT) ---
+  // --- HAUPSUCHE MIT FILTERN (AKTUALISIERT mit Operatoren) ---
 
   Future<List<Map<String, dynamic>>> searchWithFilters({
     String? type,
@@ -220,7 +209,9 @@ class CardData implements Dbrepo {
     String? attribute,
     int? level,
     int? linkRating,
+    String? linkRatingOperator,
     int? scale,
+    String? scaleOperator,
     String? atk,
     String? def,
     String? banlistTCG,
@@ -229,12 +220,10 @@ class CardData implements Dbrepo {
     List<String> facetFilters = [];
     List<String> numericFilters = [];
 
-    // 1. Typ-Filter: Jetzt als facetFilter mit restrictSearchableAttributes
+    // 1. Typ-Filter
     if (type != null && type.isNotEmpty) {
-      // Extrahiere das Schlüsselwort aus dem Typ
       String searchKeyword = type;
 
-      // Für zusammengesetzte Namen das wichtigste Wort extrahieren
       if (type.contains('Gemini'))
         searchKeyword = 'Gemini';
       else if (type.contains('Flip'))
@@ -272,7 +261,6 @@ class CardData implements Dbrepo {
       else if (type.contains('Skill'))
         searchKeyword = 'Skill';
 
-      // Nutze den Keyword als Query, aber beschränke die Suche auf das type-Attribut
       return await _searchAlgoliaWithTypeQuery(
         searchKeyword,
         facetFilters,
@@ -281,7 +269,9 @@ class CardData implements Dbrepo {
         attribute,
         level,
         linkRating,
+        linkRatingOperator,
         scale,
+        scaleOperator,
         atk,
         def,
         banlistTCG,
@@ -303,21 +293,33 @@ class CardData implements Dbrepo {
       facetFilters.add('banlist_info.ban_ocg:$banlistOCG');
     }
 
-    // 3. Numerische Filter
+    // 3. Numerische Filter mit Operatoren
     if (level != null) {
       numericFilters.add('level=$level');
     }
+
+    // LinkRating mit Operator
     if (linkRating != null) {
-      numericFilters.add('linkval=$linkRating');
+      final op = linkRatingOperator ?? '=';
+      numericFilters.add('linkval$op$linkRating');
     }
+
+    // Scale mit Operator
     if (scale != null) {
-      numericFilters.add('scale=$scale');
+      final op = scaleOperator ?? '=';
+      numericFilters.add('scale$op$scale');
     }
+
+    // ATK - Format: "=1000" oder ">=2000" oder "<=500"
     if (atk != null && atk.isNotEmpty && atk != '?') {
-      numericFilters.add('atk=$atk');
+      // atk kommt bereits formatiert vom Frontend (z.B. "=1000")
+      numericFilters.add('atk$atk');
     }
+
+    // DEF - Format: "=1000" oder ">=2000" oder "<=500"
     if (def != null && def.isNotEmpty && def != '?') {
-      numericFilters.add('def=$def');
+      // def kommt bereits formatiert vom Frontend (z.B. "=1000")
+      numericFilters.add('def$def');
     }
 
     final result = await _searchAlgoliaWithFilters(
@@ -330,7 +332,7 @@ class CardData implements Dbrepo {
     return result;
   }
 
-  // Neue Hilfsmethode für Typ-Suche mit Query
+  // Neue Hilfsmethode für Typ-Suche mit Query (AKTUALISIERT)
   Future<List<Map<String, dynamic>>> _searchAlgoliaWithTypeQuery(
     String typeKeyword,
     List<String> facetFilters,
@@ -339,7 +341,9 @@ class CardData implements Dbrepo {
     String? attribute,
     int? level,
     int? linkRating,
+    String? linkRatingOperator,
     int? scale,
+    String? scaleOperator,
     String? atk,
     String? def,
     String? banlistTCG,
@@ -360,21 +364,27 @@ class CardData implements Dbrepo {
         facetFilters.add('banlist_info.ban_ocg:$banlistOCG');
       }
 
-      // Numerische Filter
+      // Numerische Filter mit Operatoren
       if (level != null) {
         numericFilters.add('level=$level');
       }
+
       if (linkRating != null) {
-        numericFilters.add('linkval=$linkRating');
+        final op = linkRatingOperator ?? '=';
+        numericFilters.add('linkval$op$linkRating');
       }
+
       if (scale != null) {
-        numericFilters.add('scale=$scale');
+        final op = scaleOperator ?? '=';
+        numericFilters.add('scale$op$scale');
       }
+
       if (atk != null && atk.isNotEmpty && atk != '?') {
-        numericFilters.add('atk=$atk');
+        numericFilters.add('atk$atk');
       }
+
       if (def != null && def.isNotEmpty && def != '?') {
-        numericFilters.add('def=$def');
+        numericFilters.add('def$def');
       }
 
       final List<List<String>>? finalFacetFilters = facetFilters.isEmpty
@@ -396,7 +406,7 @@ class CardData implements Dbrepo {
             algolia_lib.SearchForHits(
               indexName: 'cards',
               query: typeKeyword,
-              restrictSearchableAttributes: ['type'], // NUR im type-Feld suchen
+              restrictSearchableAttributes: ['type'],
               facetFilters: finalFacetFilters,
               filters: finalFilters,
               hitsPerPage: 1000,
@@ -439,19 +449,15 @@ class CardData implements Dbrepo {
     List<String> facetFilters,
     List<String> numericFilters, {
     String? query,
-    List<String> typeFilters = const [], // Enthält nun fertige Filter-Strings
+    List<String> typeFilters = const [],
   }) async {
     try {
-      // Für AND-Verknüpfung: Jeder Facet-Filter in ein eigenes Array
       final List<List<String>>? finalFacetFilters = facetFilters.isEmpty
           ? null
           : facetFilters.map((f) => [f]).toList();
 
-      // Kombinierte Filtermethode (numerisch + Typ)
       List<String> allFilters = numericFilters;
 
-      // Hinzufügen der Typ-Filter (Fertige OR-Strings oder einfache type:"Wert")
-      // Die Strings in typeFilters sind bereits fertig formatiert, z.B. '(type:"Ritual Monster" OR type:"Ritual Effect Monster")'
       if (typeFilters.isNotEmpty) {
         for (var typeFilter in typeFilters) {
           allFilters.add(typeFilter);
@@ -462,14 +468,12 @@ class CardData implements Dbrepo {
           ? null
           : allFilters.join(' AND ');
 
-      // Query ist nur gesetzt, wenn es eine Textsuche ist (von ergebniseAnzeigen)
       final String finalQuery = query ?? '';
 
-      // DEBUG: Print was wir an Algolia senden
       print('🔍 Algolia Search Debug:');
       print('Query (Textsuche): $finalQuery');
       print('Facet Filters (Rasse/Attribut/Bannliste): $finalFacetFilters');
-      print('Filters (Numerisch/Typ): $finalFilters'); // Typ ist hier enthalten
+      print('Filters (Numerisch/Typ): $finalFilters');
 
       final response = await client.search(
         searchMethodParams: algolia_lib.SearchMethodParams(
@@ -478,8 +482,7 @@ class CardData implements Dbrepo {
               indexName: 'cards',
               query: finalQuery,
               facetFilters: finalFacetFilters,
-              filters:
-                  finalFilters, // HIER wird der flexible Typ-Filter angewandt
+              filters: finalFilters,
               hitsPerPage: 1000,
             ),
           ],

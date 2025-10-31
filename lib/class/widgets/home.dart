@@ -108,7 +108,7 @@ class _HomeState extends State<Home> {
               if (banned.isNotEmpty) ...[
                 _buildSectionHeader(
                   'Forbidden',
-                  const Color.fromARGB(255, 255, 255, 255),
+                  Theme.of(context).textTheme.bodyMedium!.color!,
                 ),
                 _buildSectionContainer(
                   color: Colors.transparent,
@@ -118,7 +118,10 @@ class _HomeState extends State<Home> {
                 ),
               ],
               if (limited.isNotEmpty) ...[
-                _buildSectionHeader('Limited', Colors.white),
+                _buildSectionHeader(
+                  'Limited',
+                  Theme.of(context).textTheme.bodyMedium!.color!,
+                ),
                 _buildSectionContainer(
                   color: Colors.transparent,
                   cards: limited,
@@ -127,7 +130,10 @@ class _HomeState extends State<Home> {
                 ),
               ],
               if (semiLimited.isNotEmpty) ...[
-                _buildSectionHeader('Semi-Limited', Colors.white),
+                _buildSectionHeader(
+                  'Semi-Limited',
+                  Theme.of(context).textTheme.bodyMedium!.color!,
+                ),
                 _buildSectionContainer(
                   color: Colors.transparent,
                   cards: semiLimited,
@@ -170,7 +176,7 @@ class _HomeState extends State<Home> {
                 card: card,
                 icon: icon,
                 iconText: iconText,
-                iconColor: Colors.white,
+                iconColor: Theme.of(context).textTheme.bodyMedium!.color!,
               ),
             ),
           ),
@@ -200,7 +206,7 @@ class _HomeState extends State<Home> {
     required Map<String, dynamic> card,
     IconData? icon,
     String? iconText,
-    required Color iconColor,
+    Color? iconColor,
   }) {
     final Future<String> imgPathFuture = _cardData.getImgPath(
       card["card_images"][0]["image_url"],
@@ -260,7 +266,6 @@ class _HomeState extends State<Home> {
                 width: imageSize,
                 height: imageSize,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: const Center(
@@ -274,11 +279,7 @@ class _HomeState extends State<Home> {
           Expanded(
             child: Text(
               card["name"],
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
             ),

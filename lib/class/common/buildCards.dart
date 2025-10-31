@@ -144,52 +144,47 @@ class _CardDetailViewState extends State<CardDetailView> {
                   color: Colors.white,
                   onPressed: widget.onBack,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 22),
                 // Kartenbild (anklickbar für Fullscreen)
-                Expanded(
-                  child: Center(
-                    child: FutureBuilder<String>(
-                      future: imageUrlFuture,
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const SizedBox(
-                            width: 150,
-                            height: 210,
-                            child: Center(child: CircularProgressIndicator()),
-                          );
-                        } else if (snapshot.hasError ||
-                            !snapshot.hasData ||
-                            snapshot.data!.isEmpty) {
-                          return const SizedBox(
-                            width: 150,
-                            height: 210,
-                            child: Icon(Icons.broken_image, size: 100),
-                          );
-                        } else {
-                          return GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _isFullscreen = true;
-                              });
-                            },
-                            child: Image.network(
-                              snapshot.data!,
-                              height: 310,
-                              fit: BoxFit.contain,
-                              errorBuilder: (context, error, stackTrace) {
-                                return const SizedBox(
-                                  width: 150,
-                                  height: 210,
-                                  child: Icon(Icons.broken_image, size: 100),
-                                );
-                              },
-                            ),
-                          );
-                        }
-                      },
-                    ),
-                  ),
+                FutureBuilder<String>(
+                  future: imageUrlFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const SizedBox(
+                        width: 150,
+                        height: 210,
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    } else if (snapshot.hasError ||
+                        !snapshot.hasData ||
+                        snapshot.data!.isEmpty) {
+                      return const SizedBox(
+                        width: 150,
+                        height: 210,
+                        child: Icon(Icons.broken_image, size: 100),
+                      );
+                    } else {
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _isFullscreen = true;
+                          });
+                        },
+                        child: Image.network(
+                          snapshot.data!,
+                          height: 310,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const SizedBox(
+                              width: 150,
+                              height: 210,
+                              child: Icon(Icons.broken_image, size: 100),
+                            );
+                          },
+                        ),
+                      );
+                    }
+                  },
                 ),
               ],
             ),
