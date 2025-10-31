@@ -29,7 +29,7 @@ class _CardDetailViewState extends State<CardDetailView> {
     details["card type"] = widget.cardData["cardType"];
     details["atk"] = widget.cardData["atk"];
     details["def"] = widget.cardData["def"];
-    details["level"] = widget.cardData["lvl"];
+    details["level"] = widget.cardData["level"];
     details["race"] = widget.cardData["race"];
     details["archetype"] = widget.cardData["archetype"];
     details["scale"] = widget.cardData["scale"];

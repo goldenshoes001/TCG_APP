@@ -15,7 +15,6 @@ class _MetaState extends State<Meta> {
   Map<String, dynamic>? _selectedCard;
   bool _showFilters = true;
 
-  // NEU: Controller für das Text-Suchfeld
   final TextEditingController _suchfeld = TextEditingController();
 
   // Filter-Werte
@@ -32,58 +31,58 @@ class _MetaState extends State<Meta> {
 
   @override
   void dispose() {
-    _suchfeld.dispose(); // Wichtig: Controller entsorgen
+    _suchfeld.dispose();
     super.dispose();
   }
 
-  // KORRIGIERTE _types LISTE: Nur noch Basistypen, die im Backend normalisiert werden.
+  // Alphabetisch sortierte Listen
   final List<String> _types = [
-    // Main Deck Types
     'Effect Monster',
     'Flip Monster',
+    'Fusion Monster',
     'Gemini Monster',
+    'Link Monster',
     'Normal Monster',
-    'Pendulum', // Alle Pendulum-Unterformen werden hierher normalisiert
-    'Ritual Monster', // Ritual Effekt Monster wird hierher normalisiert
+    'Pendulum',
+    'Ritual Monster',
+    'Skill Card',
     'Spell Card',
     'Spirit Monster',
+    'Synchro Monster',
+    'Token',
     'Toon Monster',
     'Trap Card',
     'Tuner Monster',
     'Union Effect Monster',
-    // Extra Deck Types
-    'Fusion Monster',
-    'Link Monster',
-    // 'Pendulum Effect Fusion Monster' wurde entfernt
-    'Synchro Monster',
     'XYZ Monster',
-
-    // Other Types
-    'Skill Card',
-    'Token',
-  ];
+  ]..sort();
 
   final List<String> _races = [
-    // Monster Cards
     'Aqua',
     'Beast',
     'Beast-Warrior',
+    'Continuous',
+    'Counter',
     'Creator God',
     'Cyberse',
     'Dinosaur',
     'Divine-Beast',
     'Dragon',
+    'Equip',
     'Fairy',
+    'Field',
     'Fiend',
     'Fish',
-    "Illusion",
+    'Illusion',
     'Insect',
-
     'Machine',
+    'Normal',
     'Plant',
     'Psychic',
     'Pyro',
+    'Quick-Play',
     'Reptile',
+    'Ritual',
     'Rock',
     'Sea Serpent',
     'Spellcaster',
@@ -92,26 +91,17 @@ class _MetaState extends State<Meta> {
     'Winged Beast',
     'Wyrm',
     'Zombie',
-    // Spell Cards
-    'Normal',
-    'Field',
-    'Equip',
-    'Continuous',
-    'Quick-Play',
-    'Ritual',
-    // Trap Cards (also use Normal, Continuous)
-    'Counter',
-  ];
+  ]..sort();
 
   final List<String> _attributes = [
     'DARK',
+    'DIVINE',
+    'EARTH',
+    'FIRE',
     'LIGHT',
     'WATER',
-    'FIRE',
-    'EARTH',
     'WIND',
-    'DIVINE',
-  ];
+  ]..sort();
 
   final List<String> _banlistStatuses = [
     'Forbidden',
@@ -156,7 +146,6 @@ class _MetaState extends State<Meta> {
     '?',
   ];
 
-  // NEU: Hilfsmethode, die nur die State-Variablen zurücksetzt (ohne setState)
   void _resetFiltersState() {
     _selectedType = null;
     _selectedRace = null;
@@ -168,11 +157,10 @@ class _MetaState extends State<Meta> {
     _selectedDef = null;
     _selectedBanlistTCG = null;
     _selectedBanlistOCG = null;
-    _suchfeld.clear(); // Auch das Text-Suchfeld leeren
+    _suchfeld.clear();
   }
 
   void _performSearch() {
-    // Prüfen, ob mindestens ein Filter gesetzt ist
     if (_selectedType == null &&
         _selectedRace == null &&
         _selectedAttribute == null &&
@@ -191,8 +179,6 @@ class _MetaState extends State<Meta> {
       return;
     }
 
-    // WICHTIG: Text-Suchfeld leeren, da Filtersuche Vorrang hat.
-    // Dies verhindert den Konflikt mit der Textsuche in Algolia.
     _suchfeld.clear();
 
     setState(() {
@@ -224,12 +210,11 @@ class _MetaState extends State<Meta> {
 
   @override
   Widget build(BuildContext context) {
-    // KORREKTUR: Wenn eine Karte ausgewählt ist, gib nur die CardDetailView zurück.
+    // Wenn eine Karte ausgewählt ist, gib nur die CardDetailView zurück
     if (_selectedCard != null) {
       return _buildCardDetail();
     }
 
-    // Wenn keine Karte ausgewählt ist, zeige die Such- und Filter-UI.
     return Padding(
       padding: EdgeInsets.all(MediaQuery.of(context).size.height / 30),
       child: Column(
@@ -238,7 +223,6 @@ class _MetaState extends State<Meta> {
         children: [
           SizedBox(height: MediaQuery.of(context).size.height / 350),
 
-          // --- Suchfeld ---
           TextField(
             decoration: InputDecoration(
               hintText: "Suchen...",
@@ -247,7 +231,6 @@ class _MetaState extends State<Meta> {
             onSubmitted: (value) {
               final trimmedValue = _suchfeld.text.trim();
               if (trimmedValue.isNotEmpty) {
-                // Bei einer Textsuche alle Filter-States zurücksetzen
                 _resetFiltersState();
 
                 setState(() {
@@ -255,13 +238,13 @@ class _MetaState extends State<Meta> {
                       .ergebniseAnzeigen(trimmedValue)
                       .then((list) => list.cast<Map<String, dynamic>>());
                   _selectedCard = null;
-                  _showFilters = false; // Zeige Ergebnisse anstelle der Filter
+                  _showFilters = false;
                 });
               } else {
                 setState(() {
                   _searchFuture = Future.value([]);
                   _selectedCard = null;
-                  _showFilters = true; // Zeige Filter, wenn die Suche leer ist
+                  _showFilters = true;
                 });
               }
             },
@@ -269,7 +252,6 @@ class _MetaState extends State<Meta> {
           ),
           SizedBox(height: MediaQuery.of(context).size.height / 55),
 
-          // --- ENDE Suchfeld ---
           if (!_showFilters && _searchFuture != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 16.0),
@@ -277,7 +259,7 @@ class _MetaState extends State<Meta> {
                 children: [
                   ElevatedButton.icon(
                     onPressed: () {
-                      _resetFiltersState(); // Auch hier den Text und Filter-State leeren
+                      _resetFiltersState();
                       setState(() {
                         _showFilters = true;
                         _searchFuture = null;
@@ -290,7 +272,6 @@ class _MetaState extends State<Meta> {
               ),
             ),
 
-          // Filter-Bereich / Suchergebnisse
           Expanded(
             child: SingleChildScrollView(
               child: Column(
@@ -307,7 +288,6 @@ class _MetaState extends State<Meta> {
 
                     SizedBox(height: MediaQuery.of(context).size.height / 40),
 
-                    // Buttons
                     Row(
                       children: [
                         Expanded(
@@ -344,14 +324,9 @@ class _MetaState extends State<Meta> {
   Widget _buildFilterGrid() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Abstand zwischen den Elementen
         const double spacing = 12.0;
-
-        // Berechnung für die 2er-Spalten:
-        // (Gesamtbreite - 1 * Spacing für die Lücke) / 2
         final double itemWidthTwoColumns = (constraints.maxWidth - spacing) / 2;
 
-        // Hilfsfunktion zur Erstellung eines Dropdowns mit variabler Breite
         Widget buildSizedDropdown({
           required Widget child,
           required double width,
@@ -363,7 +338,6 @@ class _MetaState extends State<Meta> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. Type (Volle Breite / 1 Spalte)
             Padding(
               padding: const EdgeInsets.only(bottom: spacing),
               child: buildSizedDropdown(
@@ -377,12 +351,10 @@ class _MetaState extends State<Meta> {
               ),
             ),
 
-            // 2. Restliche Filter (2er-Raster)
             Wrap(
-              spacing: spacing, // Horizontaler Abstand
-              runSpacing: spacing, // Vertikaler Abstand
+              spacing: spacing,
+              runSpacing: spacing,
               children: [
-                // Race
                 buildSizedDropdown(
                   width: itemWidthTwoColumns,
                   child: _buildDropdown(
@@ -392,7 +364,6 @@ class _MetaState extends State<Meta> {
                     onChanged: (value) => setState(() => _selectedRace = value),
                   ),
                 ),
-                // Attribut
                 buildSizedDropdown(
                   width: itemWidthTwoColumns,
                   child: _buildDropdown(
@@ -403,7 +374,6 @@ class _MetaState extends State<Meta> {
                         setState(() => _selectedAttribute = value),
                   ),
                 ),
-                // Level
                 buildSizedDropdown(
                   width: itemWidthTwoColumns,
                   child: _buildDropdown(
@@ -417,7 +387,6 @@ class _MetaState extends State<Meta> {
                     ),
                   ),
                 ),
-                // Link Rating
                 buildSizedDropdown(
                   width: itemWidthTwoColumns,
                   child: _buildDropdown(
@@ -432,7 +401,6 @@ class _MetaState extends State<Meta> {
                     ),
                   ),
                 ),
-                // Scale
                 buildSizedDropdown(
                   width: itemWidthTwoColumns,
                   child: _buildDropdown(
@@ -446,7 +414,6 @@ class _MetaState extends State<Meta> {
                     ),
                   ),
                 ),
-                // ATK
                 buildSizedDropdown(
                   width: itemWidthTwoColumns,
                   child: _buildDropdown(
@@ -456,7 +423,6 @@ class _MetaState extends State<Meta> {
                     onChanged: (value) => setState(() => _selectedAtk = value),
                   ),
                 ),
-                // DEF
                 buildSizedDropdown(
                   width: itemWidthTwoColumns,
                   child: _buildDropdown(
@@ -466,7 +432,6 @@ class _MetaState extends State<Meta> {
                     onChanged: (value) => setState(() => _selectedDef = value),
                   ),
                 ),
-                // TCG Bannliste
                 buildSizedDropdown(
                   width: itemWidthTwoColumns,
                   child: _buildDropdown(
@@ -477,7 +442,6 @@ class _MetaState extends State<Meta> {
                         setState(() => _selectedBanlistTCG = value),
                   ),
                 ),
-                // OCG Bannliste
                 buildSizedDropdown(
                   width: itemWidthTwoColumns,
                   child: _buildDropdown(
@@ -515,12 +479,7 @@ class _MetaState extends State<Meta> {
         ...items.map(
           (item) => DropdownMenuItem<String>(
             value: item,
-            child: Text(
-              item,
-
-              overflow: TextOverflow
-                  .ellipsis, // Verhindert Überlauf bei langen Wörtern
-            ),
+            child: Text(item, overflow: TextOverflow.ellipsis),
           ),
         ),
       ],
@@ -663,7 +622,6 @@ class _MetaState extends State<Meta> {
   }
 
   Widget _buildCardDetail() {
-    // Diese Methode gibt die vollflächige Detailansicht zurück
     return CardDetailView(
       cardData: _selectedCard!,
       onBack: () {

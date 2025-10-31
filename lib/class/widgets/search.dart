@@ -20,6 +20,12 @@ class _SearchState extends State<Search> {
   Widget build(BuildContext context) {
     final data = CardData();
 
+    // Wenn eine Karte ausgewählt ist, zeige nur CardDetailView (ohne Suchfeld)
+    if (_selectedCard != null) {
+      return _buildCardDetail();
+    }
+
+    // Normale Suchansicht mit Suchfeld
     return Padding(
       padding: EdgeInsets.all(MediaQuery.of(context).size.height / 30),
       child: Column(
@@ -41,7 +47,7 @@ class _SearchState extends State<Search> {
                   _searchFuture = data
                       .ergebniseAnzeigen(trimmedValue)
                       .then((list) => list.cast<Map<String, dynamic>>());
-                  _selectedCard = null; // Zurücksetzen bei neuer Suche
+                  _selectedCard = null;
                 });
               } else {
                 setState(() {
@@ -54,12 +60,8 @@ class _SearchState extends State<Search> {
           ),
           SizedBox(height: MediaQuery.of(context).size.height / 55),
 
-          // --- Ergebnis-Anzeige oder Detail-Ansicht ---
-          Expanded(
-            child: _selectedCard != null
-                ? _buildCardDetail()
-                : _buildSearchResults(data),
-          ),
+          // --- Ergebnis-Anzeige ---
+          Expanded(child: _buildSearchResults(data)),
         ],
       ),
     );
