@@ -1,4 +1,4 @@
-// meta.dart (MIT LEVEL-OPERATOR SUPPORT UND IMAGE CACHING)
+// meta.dart - MIT PERSISTENTEN FILTERN
 
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
@@ -23,7 +23,7 @@ class Meta extends StatefulWidget {
   State<Meta> createState() => _MetaState();
 }
 
-class _MetaState extends State<Meta> {
+class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
   final CardData _cardData = CardData();
   Future<List<Map<String, dynamic>>>? _searchFuture;
   Map<String, dynamic>? _selectedCard;
@@ -31,7 +31,7 @@ class _MetaState extends State<Meta> {
 
   final TextEditingController _suchfeld = TextEditingController();
 
-  // Filter-Werte
+  // Filter-Werte (bleiben persistent)
   String? _selectedType;
   String? _selectedRace;
   String? _selectedAttribute;
@@ -58,6 +58,10 @@ class _MetaState extends State<Meta> {
   String _scaleOperator = '=';
   String _linkRatingOperator = '=';
   String _levelOperator = '=';
+
+  // WICHTIG: Behält den State beim Navigieren
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -134,24 +138,27 @@ class _MetaState extends State<Meta> {
 
   final List<String> _operators = ['min', '=', 'max'];
 
+  // NUR die State-Variablen zurücksetzen, NICHT die Controller
   void _resetFiltersState() {
-    _selectedType = null;
-    _selectedRace = null;
-    _selectedAttribute = null;
-    _selectedArchetype = null;
-    _selectedBanlistTCG = null;
-    _selectedBanlistOCG = null;
-    _suchfeld.clear();
-    _atkController.clear();
-    _defController.clear();
-    _scaleController.clear();
-    _linkRatingController.clear();
-    _levelController.clear();
-    _atkOperator = '=';
-    _defOperator = '=';
-    _scaleOperator = '=';
-    _linkRatingOperator = '=';
-    _levelOperator = '=';
+    setState(() {
+      _selectedType = null;
+      _selectedRace = null;
+      _selectedAttribute = null;
+      _selectedArchetype = null;
+      _selectedBanlistTCG = null;
+      _selectedBanlistOCG = null;
+      _suchfeld.clear();
+      _atkController.clear();
+      _defController.clear();
+      _scaleController.clear();
+      _linkRatingController.clear();
+      _levelController.clear();
+      _atkOperator = '=';
+      _defOperator = '=';
+      _scaleOperator = '=';
+      _linkRatingOperator = '=';
+      _levelOperator = '=';
+    });
   }
 
   void _performSearch() {
@@ -247,6 +254,8 @@ class _MetaState extends State<Meta> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // WICHTIG für AutomaticKeepAliveClientMixin
+
     if (_selectedCard != null) {
       return _buildCardDetail();
     }
@@ -308,10 +317,9 @@ class _MetaState extends State<Meta> {
                 children: [
                   ElevatedButton.icon(
                     onPressed: () {
-                      _resetFiltersState();
                       setState(() {
                         _showFilters = true;
-                        _searchFuture = null;
+                        // Filter NICHT zurücksetzen, nur anzeigen
                       });
                     },
                     icon: const Icon(Icons.filter_list),
@@ -705,8 +713,8 @@ class _MetaState extends State<Meta> {
           children: [
             Text(
               '${cards.length} Karte(n) gefunden',
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyMedium!.color,
                 fontWeight: FontWeight.bold,
               ),
             ),

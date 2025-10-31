@@ -121,8 +121,8 @@ class _SearchState extends State<Search> {
           children: [
             Text(
               '${cards.length} Karte(n) gefunden',
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: Theme.of(context).textTheme.bodyMedium?.color,
                 fontWeight: FontWeight.bold,
               ),
             ),
