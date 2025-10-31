@@ -141,7 +141,7 @@ class _CardDetailViewState extends State<CardDetailView> {
                 // Zurück-Button links
                 IconButton(
                   icon: const Icon(Icons.arrow_back),
-                  color: Colors.white,
+                  color: Theme.of(context).textTheme.bodyMedium!.color!,
                   onPressed: widget.onBack,
                 ),
                 const SizedBox(width: 22),
