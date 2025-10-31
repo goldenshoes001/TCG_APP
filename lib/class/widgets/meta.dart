@@ -583,6 +583,9 @@ class _MetaState extends State<Meta> {
               );
             }).toList(),
             onChanged: onOperatorChanged,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium, // ← DIESE ZEILE HINZUFÜGEN
           ),
         ),
         const SizedBox(width: 8),
@@ -590,6 +593,7 @@ class _MetaState extends State<Meta> {
           child: TextField(
             controller: controller,
             keyboardType: TextInputType.number,
+            style: Theme.of(context).textTheme.bodyMedium,
             decoration: InputDecoration(
               hintText: label,
               border: const OutlineInputBorder(),
@@ -612,12 +616,12 @@ class _MetaState extends State<Meta> {
   }) {
     return DropdownButtonFormField<String>(
       decoration: InputDecoration(
-        iconColor: Colors.white,
+        iconColor: Theme.of(context).textTheme.bodyMedium!.color,
         hintText: label,
         border: const OutlineInputBorder(),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
-      value: value,
+
       items: [
         DropdownMenuItem<String>(value: null, child: Text(label)),
         ...items.map(
@@ -752,7 +756,10 @@ class _MetaState extends State<Meta> {
                         ),
                         const SizedBox(width: 15),
                         Expanded(child: Text(cardName)),
-                        const Icon(Icons.chevron_right, color: Colors.grey),
+                        Icon(
+                          Icons.chevron_right,
+                          color: Theme.of(context).textTheme.bodyMedium!.color,
+                        ),
                       ],
                     ),
                   ),
