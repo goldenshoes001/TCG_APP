@@ -139,23 +139,14 @@ class _MainAppState extends State<MainApp> {
       ...(_ocgBannlist?['semiLimited'] ?? []),
     ];
 
-    // Preload erste 20 Bilder (um nicht zu lange zu warten)
-    final imagesToPreload = allCards.take(20);
-
-    for (var card in imagesToPreload) {
-      try {
-        if (card["card_images"] != null &&
-            card["card_images"] is List &&
-            card["card_images"].isNotEmpty) {
-          final imageUrl = card["card_images"][0]["image_url"];
-          if (imageUrl != null && imageUrl.toString().isNotEmpty) {
-            await _cardData.getImgPath(imageUrl);
-          }
-        }
-      } catch (e) {
-        // Ignoriere Fehler einzelner Bilder
-        continue;
-      }
+    // Optimiertes Batch-Preloading (erste 100 Bilder)
+    try {
+      await _cardData.preloadCardImages(
+        allCards.cast<Map<String, dynamic>>(),
+        maxCards: 100,
+      );
+    } catch (e) {
+      print('Fehler beim Preload der Bilder: $e');
     }
   }
 
@@ -222,17 +213,20 @@ class _MainAppState extends State<MainApp> {
             ? ThemeMode.system
             : (isDarkMode! ? ThemeMode.dark : ThemeMode.light),
         home: Scaffold(
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const CircularProgressIndicator(),
-                const SizedBox(height: 24),
-                Text(
-                  _loadingMessage,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ],
+          body: Container(
+            color: Color(0xFF0d1421),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 24),
+                  Text(
+                    _loadingMessage,
+                    style: const TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

@@ -1,8 +1,9 @@
-// meta.dart (MIT PRELOADING SUPPORT)
+// meta.dart (MIT LEVEL-OPERATOR SUPPORT UND IMAGE CACHING)
 
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 import 'package:tcg_app/class/common/buildCards.dart';
+import 'package:tcg_app/class//Imageloader.dart';
 
 class Meta extends StatefulWidget {
   final List<String>? preloadedTypes;
@@ -35,7 +36,6 @@ class _MetaState extends State<Meta> {
   String? _selectedRace;
   String? _selectedAttribute;
   String? _selectedArchetype;
-  int? _selectedLevel;
   String? _selectedBanlistTCG;
   String? _selectedBanlistOCG;
 
@@ -51,11 +51,13 @@ class _MetaState extends State<Meta> {
   final TextEditingController _defController = TextEditingController();
   final TextEditingController _scaleController = TextEditingController();
   final TextEditingController _linkRatingController = TextEditingController();
+  final TextEditingController _levelController = TextEditingController();
 
   String _atkOperator = '=';
   String _defOperator = '=';
   String _scaleOperator = '=';
   String _linkRatingOperator = '=';
+  String _levelOperator = '=';
 
   @override
   void initState() {
@@ -120,6 +122,7 @@ class _MetaState extends State<Meta> {
     _defController.dispose();
     _scaleController.dispose();
     _linkRatingController.dispose();
+    _levelController.dispose();
     super.dispose();
   }
 
@@ -129,14 +132,13 @@ class _MetaState extends State<Meta> {
     'Semi-Limited',
   ];
 
-  final List<String> _operators = ['=', '>=', '<='];
+  final List<String> _operators = ['min', '=', 'max'];
 
   void _resetFiltersState() {
     _selectedType = null;
     _selectedRace = null;
     _selectedAttribute = null;
     _selectedArchetype = null;
-    _selectedLevel = null;
     _selectedBanlistTCG = null;
     _selectedBanlistOCG = null;
     _suchfeld.clear();
@@ -144,10 +146,12 @@ class _MetaState extends State<Meta> {
     _defController.clear();
     _scaleController.clear();
     _linkRatingController.clear();
+    _levelController.clear();
     _atkOperator = '=';
     _defOperator = '=';
     _scaleOperator = '=';
     _linkRatingOperator = '=';
+    _levelOperator = '=';
   }
 
   void _performSearch() {
@@ -155,7 +159,7 @@ class _MetaState extends State<Meta> {
         _selectedRace == null &&
         _selectedAttribute == null &&
         _selectedArchetype == null &&
-        _selectedLevel == null &&
+        _levelController.text.trim().isEmpty &&
         _atkController.text.trim().isEmpty &&
         _defController.text.trim().isEmpty &&
         _scaleController.text.trim().isEmpty &&
@@ -178,12 +182,24 @@ class _MetaState extends State<Meta> {
     String? scaleOperatorValue;
     int? linkRatingValue;
     String? linkRatingOperatorValue;
+    int? levelValue;
+    String? levelOperatorValue;
 
     if (_atkController.text.trim().isNotEmpty) {
-      atkFilter = '${_atkOperator}${_atkController.text.trim()}';
+      final atkOp = _atkOperator == 'min'
+          ? '>='
+          : _atkOperator == 'max'
+          ? '<='
+          : '=';
+      atkFilter = '$atkOp${_atkController.text.trim()}';
     }
     if (_defController.text.trim().isNotEmpty) {
-      defFilter = '${_defOperator}${_defController.text.trim()}';
+      final defOp = _defOperator == 'min'
+          ? '>='
+          : _defOperator == 'max'
+          ? '<='
+          : '=';
+      defFilter = '$defOp${_defController.text.trim()}';
     }
     if (_scaleController.text.trim().isNotEmpty) {
       scaleValue = int.tryParse(_scaleController.text.trim());
@@ -193,6 +209,10 @@ class _MetaState extends State<Meta> {
       linkRatingValue = int.tryParse(_linkRatingController.text.trim());
       linkRatingOperatorValue = _linkRatingOperator;
     }
+    if (_levelController.text.trim().isNotEmpty) {
+      levelValue = int.tryParse(_levelController.text.trim());
+      levelOperatorValue = _levelOperator;
+    }
 
     setState(() {
       _searchFuture = _cardData.searchWithFilters(
@@ -200,7 +220,8 @@ class _MetaState extends State<Meta> {
         race: _selectedRace,
         attribute: _selectedAttribute,
         archetype: _selectedArchetype,
-        level: _selectedLevel,
+        level: levelValue,
+        levelOperator: levelOperatorValue,
         linkRating: linkRatingValue,
         linkRatingOperator: linkRatingOperatorValue,
         scale: scaleValue,
@@ -231,7 +252,16 @@ class _MetaState extends State<Meta> {
     }
 
     if (_filtersLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: Text(
+          'Filter werden geladen...',
+          style: TextStyle(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : Theme.of(context).textTheme.bodyMedium?.color,
+          ),
+        ),
+      );
     }
 
     return Padding(
@@ -292,42 +322,40 @@ class _MetaState extends State<Meta> {
             ),
 
           Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (_showFilters) ...[
-                    _buildFilterGrid(),
-
-                    SizedBox(height: MediaQuery.of(context).size.height / 40),
-
-                    Row(
+            child: _showFilters
+                ? SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: _performSearch,
-                            icon: const Icon(Icons.search),
-                            label: const Text('Suchen'),
-                          ),
+                        _buildFilterGrid(),
+
+                        SizedBox(
+                          height: MediaQuery.of(context).size.height / 40,
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: _resetFilters,
-                            icon: const Icon(Icons.clear),
-                            label: const Text('Zurücksetzen'),
-                          ),
+
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: _performSearch,
+                                icon: const Icon(Icons.search),
+                                label: const Text('Suchen'),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: _resetFilters,
+                                icon: const Icon(Icons.clear),
+                                label: const Text('Zurücksetzen'),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-
-                    SizedBox(height: MediaQuery.of(context).size.height / 40),
-                  ],
-
-                  if (!_showFilters) _buildSearchResults(),
-                ],
-              ),
-            ),
+                  )
+                : SingleChildScrollView(child: _buildSearchResults()),
           ),
         ],
       ),
@@ -380,15 +408,23 @@ class _MetaState extends State<Meta> {
         ),
         const SizedBox(height: spacing),
 
-        _buildDropdown(
+        _buildDropdownWithOperator(
           label: 'Level',
-          value: _selectedLevel?.toString(),
+          value: _levelController.text.isEmpty ? null : _levelController.text,
           items: List.generate(13, (index) => index.toString()),
-          onChanged: (value) => setState(
-            () => _selectedLevel = value != null && value.isNotEmpty
-                ? int.tryParse(value)
-                : null,
-          ),
+          operator: _levelOperator,
+          onChanged: (value) {
+            setState(() {
+              if (value != null && value.isNotEmpty) {
+                _levelController.text = value;
+              } else {
+                _levelController.clear();
+              }
+            });
+          },
+          onOperatorChanged: (value) {
+            setState(() => _levelOperator = value!);
+          },
         ),
         const SizedBox(height: spacing),
 
@@ -494,6 +530,7 @@ class _MetaState extends State<Meta> {
         SizedBox(
           width: 70,
           child: DropdownButtonFormField<String>(
+            isExpanded: true,
             decoration: const InputDecoration(
               border: OutlineInputBorder(),
               contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -550,6 +587,7 @@ class _MetaState extends State<Meta> {
         SizedBox(
           width: 70,
           child: DropdownButtonFormField<String>(
+            isExpanded: true,
             decoration: const InputDecoration(
               border: OutlineInputBorder(),
               contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -617,30 +655,46 @@ class _MetaState extends State<Meta> {
       future: _searchFuture,
       builder: (context, snapshot) {
         if (_searchFuture == null) {
-          return const Center(
+          return Center(
             child: Text(
               'Geben Sie einen Suchbegriff ein oder wählen Sie Filter aus.',
+              style: const TextStyle(color: Colors.white),
             ),
           );
         }
 
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                const Text('Laden...', style: TextStyle(color: Colors.white)),
+              ],
+            ),
+          );
         }
 
         if (snapshot.hasError) {
-          return Center(child: Text('Fehler beim Laden: ${snapshot.error}'));
+          return Center(
+            child: Text(
+              'Fehler beim Laden: ${snapshot.error}',
+              style: const TextStyle(color: Colors.white),
+            ),
+          );
         }
 
         final cards = snapshot.data;
 
         if (cards == null || cards.isEmpty) {
-          return const Center(
+          return Center(
             child: Padding(
-              padding: EdgeInsets.all(20.0),
-              child: Text(
+              padding: const EdgeInsets.all(20.0),
+              child: const Text(
                 'Keine Karten gefunden.',
                 textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white),
               ),
             ),
           );
@@ -649,7 +703,13 @@ class _MetaState extends State<Meta> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('${cards.length} Karte(n) gefunden'),
+            Text(
+              '${cards.length} Karte(n) gefunden',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 10),
             ListView.builder(
               shrinkWrap: true,
@@ -660,25 +720,13 @@ class _MetaState extends State<Meta> {
                 final cardName = card["name"] ?? 'Unbekannte Karte';
 
                 final List<dynamic>? cardImagesDynamic = card["card_images"];
-                final List<String> cardImages = [];
+                String imageUrl = '';
 
-                if (cardImagesDynamic != null) {
-                  for (var imageObj in cardImagesDynamic) {
-                    if (imageObj is Map<String, dynamic>) {
-                      final imageUrl =
-                          imageObj['image_url'] ??
-                          imageObj['image_url_cropped'] ??
-                          '';
-                      if (imageUrl.isNotEmpty) {
-                        cardImages.add(imageUrl.toString());
-                      }
-                    }
+                if (cardImagesDynamic != null && cardImagesDynamic.isNotEmpty) {
+                  if (cardImagesDynamic[0] is Map<String, dynamic>) {
+                    imageUrl = cardImagesDynamic[0]['image_url'] ?? '';
                   }
                 }
-
-                Future<String> imageUrlFuture = _cardData.getCorrectImgPath(
-                  cardImages,
-                );
 
                 return GestureDetector(
                   onTap: () {
@@ -691,47 +739,23 @@ class _MetaState extends State<Meta> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        FutureBuilder<String>(
-                          future: imageUrlFuture,
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              return const SizedBox(
-                                width: 50,
-                                height: 70,
-                                child: Center(
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                ),
-                              );
-                            } else if (snapshot.hasError ||
-                                !snapshot.hasData ||
-                                snapshot.data!.isEmpty) {
-                              return const SizedBox(
-                                width: 50,
-                                height: 70,
-                                child: Icon(Icons.broken_image),
-                              );
-                            } else {
-                              return Image.network(
-                                snapshot.data!,
-                                height: 70,
-                                width: 50,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const SizedBox(
-                                    width: 50,
-                                    height: 70,
-                                    child: Icon(Icons.broken_image),
-                                  );
-                                },
-                              );
-                            }
-                          },
+                        CachedNetworkImage(
+                          imageUrl: imageUrl,
+                          width: 50,
+                          height: 70,
+                          borderRadius: BorderRadius.circular(4),
                         ),
                         const SizedBox(width: 15),
-                        Expanded(child: Text(cardName)),
+                        Expanded(
+                          child: Text(
+                            cardName,
+                            style: TextStyle(
+                              color: Theme.of(
+                                context,
+                              ).textTheme.bodyMedium?.color,
+                            ),
+                          ),
+                        ),
                         Icon(
                           Icons.chevron_right,
                           color: Theme.of(context).textTheme.bodyMedium!.color,

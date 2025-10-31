@@ -1,4 +1,4 @@
-// getCardData.dart (KORRIGIERT für flexible Typ-Suche mit OR-Klauseln + Operatoren + Archetype)
+// getCardData.dart - OPTIMIERT MIT IMAGE CACHING UND LEVEL-OPERATOR
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -14,7 +14,168 @@ class CardData implements Dbrepo {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseStorage storage = FirebaseStorage.instance;
 
-  // --- HILFSMETHODE FÜR ALGOILA SUCHE (Basis) ---
+  // NEU: Image URL Cache
+  static final Map<String, String> _imageUrlCache = {};
+
+  // NEU: Batch Loading Queue
+  static final Map<String, Future<String>> _loadingQueue = {};
+
+  // --- OPTIMIERTE IMAGE METHODEN ---
+
+  /// Optimierte getImgPath mit Caching und Batch-Loading
+  Future<String> getImgPath(String gsPath) async {
+    // 1. Prüfe Cache
+    if (_imageUrlCache.containsKey(gsPath)) {
+      return _imageUrlCache[gsPath]!;
+    }
+
+    // 2. Prüfe ob bereits geladen wird
+    if (_loadingQueue.containsKey(gsPath)) {
+      return await _loadingQueue[gsPath]!;
+    }
+
+    // 3. Starte neuen Ladevorgang
+    final Future<String> loadFuture = _loadImageUrl(gsPath);
+    _loadingQueue[gsPath] = loadFuture;
+
+    try {
+      final url = await loadFuture;
+      _imageUrlCache[gsPath] = url;
+      return url;
+    } finally {
+      _loadingQueue.remove(gsPath);
+    }
+  }
+
+  Future<String> _loadImageUrl(String gsPath) async {
+    try {
+      final uri = Uri.parse(gsPath);
+      final path = Uri.decodeComponent(uri.path.substring(1));
+
+      final Reference gsReference = storage.ref(path);
+      final String downloadUrl = await gsReference.getDownloadURL();
+
+      return downloadUrl;
+    } on FirebaseException catch (e) {
+      return '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  /// Batch-Load mehrerer Bilder parallel
+  Future<Map<String, String>> batchLoadImages(List<String> gsPaths) async {
+    final Map<String, String> results = {};
+
+    // Filtere bereits gecachte
+    final uncached = gsPaths
+        .where((p) => !_imageUrlCache.containsKey(p))
+        .toList();
+
+    if (uncached.isEmpty) {
+      for (var path in gsPaths) {
+        results[path] = _imageUrlCache[path]!;
+      }
+      return results;
+    }
+
+    // Lade parallel (max 10 gleichzeitig)
+    for (int i = 0; i < uncached.length; i += 10) {
+      final batch = uncached.skip(i).take(10).toList();
+      final futures = batch.map((path) => getImgPath(path)).toList();
+      final urls = await Future.wait(futures);
+
+      for (int j = 0; j < batch.length; j++) {
+        results[batch[j]] = urls[j];
+      }
+    }
+
+    // Füge gecachte hinzu
+    for (var path in gsPaths) {
+      if (_imageUrlCache.containsKey(path)) {
+        results[path] = _imageUrlCache[path]!;
+      }
+    }
+
+    return results;
+  }
+
+  /// Preload für Listen von Karten
+  Future<void> preloadCardImages(
+    List<Map<String, dynamic>> cards, {
+    int maxCards = 50,
+  }) async {
+    final imagePaths = <String>[];
+
+    for (var card in cards.take(maxCards)) {
+      if (card["card_images"] != null &&
+          card["card_images"] is List &&
+          (card["card_images"] as List).isNotEmpty) {
+        final imageUrl = card["card_images"][0]["image_url"];
+        if (imageUrl != null && imageUrl.toString().isNotEmpty) {
+          imagePaths.add(imageUrl.toString());
+        }
+      }
+    }
+
+    if (imagePaths.isNotEmpty) {
+      await batchLoadImages(imagePaths);
+    }
+  }
+
+  /// Cache-Verwaltung
+  void clearImageCache() {
+    _imageUrlCache.clear();
+  }
+
+  int getImageCacheSize() => _imageUrlCache.length;
+
+  // --- OPTIMIERTE getCorrectImgPath ---
+
+  Future<String> getCorrectImgPath(List<String> imageUrls) async {
+    const String storageFolder = 'hohe auflösung/';
+
+    for (var imageUrl in imageUrls) {
+      if (imageUrl.isEmpty) continue;
+
+      // Prüfe Cache zuerst
+      final cacheKey = storageFolder + imageUrl;
+      if (_imageUrlCache.containsKey(cacheKey)) {
+        return _imageUrlCache[cacheKey]!;
+      }
+
+      try {
+        final uri = Uri.parse(imageUrl);
+        final fileName = uri.pathSegments.last;
+        final storagePath = storageFolder + fileName;
+
+        final ref = storage.ref().child(storagePath);
+        await ref.getMetadata();
+
+        final downloadUrl = await ref.getDownloadURL();
+
+        // Cache speichern
+        _imageUrlCache[cacheKey] = downloadUrl;
+
+        return downloadUrl;
+      } on FirebaseException catch (e) {
+        if (e.code == 'object-not-found') {
+          continue;
+        }
+        continue;
+      } catch (e) {
+        continue;
+      }
+    }
+
+    if (imageUrls.isNotEmpty) {
+      return imageUrls.first;
+    }
+
+    return '';
+  }
+
+  // --- RESTLICHER CODE BLEIBT GLEICH ---
 
   Future<List<Map<String, dynamic>>> _searchAlgolia(
     String? query,
@@ -57,7 +218,19 @@ class CardData implements Dbrepo {
     }
   }
 
-  // --- HILFSMETHODE ZUR TYP-NORMALISIERUNG (UNVERÄNDERT) ---
+  // --- HELPER METHODEN ---
+
+  String _convertOperator(String operator) {
+    switch (operator) {
+      case 'min':
+        return '>=';
+      case 'max':
+        return '<=';
+      case '=':
+      default:
+        return '=';
+    }
+  }
 
   String? _normalizeType(String? type) {
     if (type == null || type.isEmpty) {
@@ -66,30 +239,12 @@ class CardData implements Dbrepo {
 
     final lowerType = type.toLowerCase();
 
-    if (lowerType.contains('pendulum')) {
-      return 'Pendulum';
-    }
-
-    if (lowerType.contains('ritual')) {
-      return 'Ritual Monster';
-    }
-
-    if (lowerType.contains('fusion')) {
-      return 'Fusion Monster';
-    }
-
-    if (lowerType.contains('synchro')) {
-      return 'Synchro Monster';
-    }
-
-    if (lowerType.contains('xyz')) {
-      return 'XYZ Monster';
-    }
-
-    if (lowerType.contains('link')) {
-      return 'Link Monster';
-    }
-
+    if (lowerType.contains('pendulum')) return 'Pendulum';
+    if (lowerType.contains('ritual')) return 'Ritual Monster';
+    if (lowerType.contains('fusion')) return 'Fusion Monster';
+    if (lowerType.contains('synchro')) return 'Synchro Monster';
+    if (lowerType.contains('xyz')) return 'XYZ Monster';
+    if (lowerType.contains('link')) return 'Link Monster';
     if (lowerType.contains('effect monster') ||
         lowerType.contains('tuner') ||
         lowerType.contains('flip') ||
@@ -103,8 +258,6 @@ class CardData implements Dbrepo {
     return type;
   }
 
-  // --- FIREBASE LESEN (NUR BEI BEDARF/MUSS) ---
-
   Future<List<Map<String, dynamic>>> getallChards() async {
     try {
       QuerySnapshot<Map<String, dynamic>> snapshot = await _db
@@ -117,8 +270,6 @@ class CardData implements Dbrepo {
       return [];
     }
   }
-
-  // --- BANNLISTE (JETZT ALGOILA) ---
 
   Future<List<Map<String, dynamic>>> getTCGBannedCards() async {
     final String filter =
@@ -193,22 +344,18 @@ class CardData implements Dbrepo {
     return getTCGBannedCards();
   }
 
-  // --- ALGOILA SUCHE ---
-
   Future<List<Map<String, dynamic>>> ergebniseAnzeigen(String suchfeld) async {
     if (suchfeld.isEmpty) return [];
-
     return _searchAlgolia(suchfeld, null);
   }
-
-  // --- HAUPSUCHE MIT FILTERN (AKTUALISIERT mit Operatoren + Archetype) ---
 
   Future<List<Map<String, dynamic>>> searchWithFilters({
     String? type,
     String? race,
     String? attribute,
-    String? archetype, // NEU: Archetype-Filter
+    String? archetype,
     int? level,
+    String? levelOperator,
     int? linkRating,
     String? linkRatingOperator,
     int? scale,
@@ -221,7 +368,6 @@ class CardData implements Dbrepo {
     List<String> facetFilters = [];
     List<String> numericFilters = [];
 
-    // 1. Typ-Filter
     if (type != null && type.isNotEmpty) {
       String searchKeyword = type;
 
@@ -268,8 +414,9 @@ class CardData implements Dbrepo {
         numericFilters,
         race,
         attribute,
-        archetype, // NEU: Archetype übergeben
+        archetype,
         level,
+        levelOperator,
         linkRating,
         linkRatingOperator,
         scale,
@@ -281,62 +428,43 @@ class CardData implements Dbrepo {
       );
     }
 
-    // 2. Weitere Facettenfilter
-    if (race != null && race.isNotEmpty) {
-      facetFilters.add('race:$race');
-    }
-    if (attribute != null && attribute.isNotEmpty) {
+    // Facet Filters
+    if (race != null && race.isNotEmpty) facetFilters.add('race:$race');
+    if (attribute != null && attribute.isNotEmpty)
       facetFilters.add('attribute:$attribute');
-    }
-    // NEU: Archetype-Filter
-    if (archetype != null && archetype.isNotEmpty) {
+    if (archetype != null && archetype.isNotEmpty)
       facetFilters.add('archetype:$archetype');
-    }
-    if (banlistTCG != null && banlistTCG.isNotEmpty) {
+    if (banlistTCG != null && banlistTCG.isNotEmpty)
       facetFilters.add('banlist_info.ban_tcg:$banlistTCG');
-    }
-    if (banlistOCG != null && banlistOCG.isNotEmpty) {
+    if (banlistOCG != null && banlistOCG.isNotEmpty)
       facetFilters.add('banlist_info.ban_ocg:$banlistOCG');
-    }
 
-    // 3. Numerische Filter mit Operatoren
-    if (level != null) {
-      numericFilters.add('level=$level');
-    }
-
-    // LinkRating mit Operator
-    if (linkRating != null) {
-      final op = linkRatingOperator ?? '=';
-      numericFilters.add('linkval$op$linkRating');
-    }
-
-    // Scale mit Operator
-    if (scale != null) {
-      final op = scaleOperator ?? '=';
-      numericFilters.add('scale$op$scale');
-    }
-
-    // ATK - Format: "=1000" oder ">=2000" oder "<=500"
-    if (atk != null && atk.isNotEmpty && atk != '?') {
+    // Numeric Filters
+    if (level != null)
+      numericFilters.add(
+        'level${_convertOperator(levelOperator ?? '=')}$level',
+      );
+    if (linkRating != null)
+      numericFilters.add(
+        'linkval${_convertOperator(linkRatingOperator ?? '=')}$linkRating',
+      );
+    if (scale != null)
+      numericFilters.add(
+        'scale${_convertOperator(scaleOperator ?? '=')}$scale',
+      );
+    if (atk != null && atk.isNotEmpty && atk != '?')
       numericFilters.add('atk$atk');
-    }
-
-    // DEF - Format: "=1000" oder ">=2000" oder "<=500"
-    if (def != null && def.isNotEmpty && def != '?') {
+    if (def != null && def.isNotEmpty && def != '?')
       numericFilters.add('def$def');
-    }
 
-    final result = await _searchAlgoliaWithFilters(
+    return await _searchAlgoliaWithFilters(
       facetFilters,
       numericFilters,
       typeFilters: [],
       query: null,
     );
-
-    return result;
   }
 
-  // Neue Hilfsmethode für Typ-Suche mit Query (AKTUALISIERT mit Archetype)
   Future<List<Map<String, dynamic>>> _searchAlgoliaWithTypeQuery(
     String typeKeyword,
     List<String> facetFilters,
@@ -345,6 +473,7 @@ class CardData implements Dbrepo {
     String? attribute,
     String? archetype,
     int? level,
+    String? levelOperator,
     int? linkRating,
     String? linkRatingOperator,
     int? scale,
@@ -355,44 +484,31 @@ class CardData implements Dbrepo {
     String? banlistOCG,
   ) async {
     try {
-      // 1. Facettenfilter (Dynamisch und kompakt)
       final List<String> newFacetFilters = [
-        // Einfache Facetten-Filter
         if (race != null && race.isNotEmpty) 'race:$race',
         if (attribute != null && attribute.isNotEmpty) 'attribute:$attribute',
         if (archetype != null && archetype.isNotEmpty) 'archetype:$archetype',
-
-        // Bannlisten-Filter mit spezifischem Pfad
         if (banlistTCG != null && banlistTCG.isNotEmpty)
           'banlist_info.ban_tcg:$banlistTCG',
         if (banlistOCG != null && banlistOCG.isNotEmpty)
           'banlist_info.ban_ocg:$banlistOCG',
       ];
 
-      // Fügt die neu erstellten Filter zu der übergebenen Liste hinzu
       facetFilters.addAll(newFacetFilters);
 
-      // 2. Numerische Filter (Dynamisch und kompakt)
       final List<String> newNumericFilters = [
-        // Level
-        if (level != null) 'level=$level',
-
-        // Link Rating mit dynamischem Operator
+        if (level != null)
+          'level${_convertOperator(levelOperator ?? '=')}$level',
         if (linkRating != null)
-          'linkval${linkRatingOperator ?? '='}$linkRating',
-
-        // Scale mit dynamischem Operator
-        if (scale != null) 'scale${scaleOperator ?? '='}$scale',
-
-        // ATK und DEF (enthalten den Operator bereits im String)
+          'linkval${_convertOperator(linkRatingOperator ?? '=')}$linkRating',
+        if (scale != null)
+          'scale${_convertOperator(scaleOperator ?? '=')}$scale',
         if (atk != null && atk.isNotEmpty && atk != '?') 'atk$atk',
         if (def != null && def.isNotEmpty && def != '?') 'def$def',
       ];
 
-      // Fügt die neu erstellten Filter zu der übergebenen Liste hinzu
       numericFilters.addAll(newNumericFilters);
 
-      // 3. Algolia Suche vorbereiten und ausführen
       final List<List<String>>? finalFacetFilters = facetFilters.isEmpty
           ? null
           : facetFilters.map((f) => [f]).toList();
@@ -400,11 +516,6 @@ class CardData implements Dbrepo {
       final String? finalFilters = numericFilters.isEmpty
           ? null
           : numericFilters.join(' AND ');
-
-      print('🔍 Algolia Type Search Debug:');
-      print('Type Keyword (Query auf type-Attribut): $typeKeyword');
-      print('Facet Filters: $finalFacetFilters');
-      print('Numeric Filters: $finalFilters');
 
       final response = await client.search(
         searchMethodParams: algolia_lib.SearchMethodParams(
@@ -424,7 +535,6 @@ class CardData implements Dbrepo {
       final dynamic hitsData = (response.results.first as Map)['hits'];
 
       if (hitsData == null || hitsData is! List) {
-        print('❌ Keine Hits gefunden');
         return [];
       }
 
@@ -439,17 +549,11 @@ class CardData implements Dbrepo {
             (a['name'] as String? ?? '').compareTo(b['name'] as String? ?? ''),
       );
 
-      print('✅ ${cards.length} Karten gefunden');
-
       return cards;
     } catch (e, stacktrace) {
-      print('❌ Algolia Fehler: $e');
-      print('Stacktrace: $stacktrace');
       return [];
     }
   }
-
-  // --- HILFSMETHODE FÜR ALGOILA SUCHE MIT FILTERN (ANGEPASST) ---
 
   Future<List<Map<String, dynamic>>> _searchAlgoliaWithFilters(
     List<String> facetFilters,
@@ -476,13 +580,6 @@ class CardData implements Dbrepo {
 
       final String finalQuery = query ?? '';
 
-      print('🔍 Algolia Search Debug:');
-      print('Query (Textsuche): $finalQuery');
-      print(
-        'Facet Filters (Rasse/Attribut/Archetype/Bannliste): $finalFacetFilters',
-      );
-      print('Filters (Numerisch/Typ): $finalFilters');
-
       final response = await client.search(
         searchMethodParams: algolia_lib.SearchMethodParams(
           requests: [
@@ -500,7 +597,6 @@ class CardData implements Dbrepo {
       final dynamic hitsData = (response.results.first as Map)['hits'];
 
       if (hitsData == null || hitsData is! List) {
-        print('❌ Keine Hits gefunden');
         return [];
       }
 
@@ -515,72 +611,11 @@ class CardData implements Dbrepo {
             (a['name'] as String? ?? '').compareTo(b['name'] as String? ?? ''),
       );
 
-      print('✅ ${cards.length} Karten gefunden');
-
       return cards;
     } catch (e, stacktrace) {
-      print('❌ Algolia Fehler: $e');
-      print('Stacktrace: $stacktrace');
       return [];
     }
   }
-
-  // --- FIREBASE SPEICHER/HELPER ---
-
-  Future<String> getImgPath(String gsPath) async {
-    try {
-      final storage = FirebaseStorage.instance;
-
-      final uri = Uri.parse(gsPath);
-      final path = Uri.decodeComponent(uri.path.substring(1));
-
-      final Reference gsReference = storage.ref(path);
-      final String downloadUrl = await gsReference.getDownloadURL();
-
-      return downloadUrl;
-    } on FirebaseException catch (e) {
-      return '';
-    } catch (e) {
-      return '';
-    }
-  }
-
-  Future<String> getCorrectImgPath(List<String> imageUrls) async {
-    const String storageFolder = 'hohe auflösung/';
-
-    for (var imageUrl in imageUrls) {
-      if (imageUrl.isEmpty) continue;
-
-      try {
-        final uri = Uri.parse(imageUrl);
-        final fileName = uri.pathSegments.last;
-
-        final storagePath = storageFolder + fileName;
-
-        final ref = storage.ref().child(storagePath);
-
-        await ref.getMetadata();
-
-        final downloadUrl = await ref.getDownloadURL();
-        return downloadUrl;
-      } on FirebaseException catch (e) {
-        if (e.code == 'object-not-found') {
-          continue;
-        }
-        continue;
-      } catch (e) {
-        continue;
-      }
-    }
-
-    if (imageUrls.isNotEmpty) {
-      return imageUrls.first;
-    }
-
-    return '';
-  }
-
-  // --- ALGOLIA WRITE (ADMIN) ---
 
   Future<void> updateAlgoliaWithImages() async {
     final db = FirebaseFirestore.instance;
@@ -627,7 +662,6 @@ class CardData implements Dbrepo {
             'archetype': data['archetype'],
             'scale': data['scale'],
             'linkval': data['linkval'],
-
             'banlist_info': data['banlist_info'] as Map<String, dynamic>? ?? {},
             'card_images': (data['card_images'] as List?)?.toList() ?? [],
           };
@@ -659,8 +693,6 @@ class CardData implements Dbrepo {
     }
   }
 
-  // --- UNIMPLEMENTED METHODS ---
-
   @override
   Future<void> createDeck() {
     throw UnimplementedError();
@@ -681,17 +713,8 @@ class CardData implements Dbrepo {
     throw UnimplementedError();
   }
 
-  // In getCardData.dart diese Methode hinzufügen:
-
-  // getCardData.dart - Verbesserte getAllArchetypes Methode
-
-  // getCardData.dart - Vollständige getAllArchetypes Methode mit Pagination
-
   Future<List<String>> getFacetValues(String fieldName) async {
     try {
-      print('[v0] Lade Facetten für Feld: $fieldName...');
-
-      // 1. Versuche zuerst Facetten zu laden (Algolia Facet Search)
       try {
         final response = await client.search(
           searchMethodParams: algolia_lib.SearchMethodParams(
@@ -699,7 +722,7 @@ class CardData implements Dbrepo {
               algolia_lib.SearchForHits(
                 indexName: 'cards',
                 query: '',
-                facets: [fieldName], // Dynamischer Feldname
+                facets: [fieldName],
                 hitsPerPage: 0,
               ),
             ],
@@ -712,7 +735,6 @@ class CardData implements Dbrepo {
           final Map<String, dynamic> facets = Map<String, dynamic>.from(
             facetsData,
           );
-          // Nutze den übergebenen fieldName, um die Facettenwerte abzurufen
           final facetValuesMap = facets[fieldName];
 
           if (facetValuesMap != null && facetValuesMap is Map) {
@@ -724,16 +746,13 @@ class CardData implements Dbrepo {
 
             if (values.isNotEmpty) {
               values.sort();
-              print('[v0] Facetten für $fieldName erfolgreich geladen.');
               return values;
             }
           }
         }
       } catch (e) {
-        print('[v0] Facetten-Laden für $fieldName fehlgeschlagen: $e');
+        print('[Algolia] Facetten-Laden fehlgeschlagen: $e');
       }
-
-      // 2. Fallback: Lade ALLE Karten mit Pagination und extrahiere Werte
 
       final Set<String> valuesSet = {};
       int page = 0;
@@ -749,7 +768,7 @@ class CardData implements Dbrepo {
                 query: '',
                 hitsPerPage: hitsPerPage,
                 page: page,
-                attributesToRetrieve: [fieldName], // Dynamischer Feldname
+                attributesToRetrieve: [fieldName],
               ),
             ],
           ),
@@ -767,14 +786,13 @@ class CardData implements Dbrepo {
 
         for (var hit in hits) {
           if (hit is Map<String, dynamic>) {
-            final value = hit[fieldName]; // Dynamischer Feldname
+            final value = hit[fieldName];
             if (value != null && value.toString().isNotEmpty) {
               valuesSet.add(value.toString());
             }
           }
         }
 
-        // Prüfe ob es weitere Seiten gibt
         if (nbPages != null && page >= nbPages - 1) {
           hasMorePages = false;
         } else if (hits.length < hitsPerPage) {
@@ -789,8 +807,7 @@ class CardData implements Dbrepo {
 
       return values;
     } catch (e, stacktrace) {
-      print('[v0] Fehler beim Laden der Facetten ($fieldName): $e');
-      print('[v0] Stacktrace: $stacktrace');
+      print('[Algolia] Fehler: $e');
       return [];
     }
   }
