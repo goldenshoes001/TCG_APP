@@ -1,4 +1,4 @@
-// getCardData.dart (KORRIGIERT für flexible Typ-Suche mit OR-Klauseln + Operatoren)
+// getCardData.dart (KORRIGIERT für flexible Typ-Suche mit OR-Klauseln + Operatoren + Archetype)
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -201,12 +201,13 @@ class CardData implements Dbrepo {
     return _searchAlgolia(suchfeld, null);
   }
 
-  // --- HAUPSUCHE MIT FILTERN (AKTUALISIERT mit Operatoren) ---
+  // --- HAUPSUCHE MIT FILTERN (AKTUALISIERT mit Operatoren + Archetype) ---
 
   Future<List<Map<String, dynamic>>> searchWithFilters({
     String? type,
     String? race,
     String? attribute,
+    String? archetype, // NEU: Archetype-Filter
     int? level,
     int? linkRating,
     String? linkRatingOperator,
@@ -267,6 +268,7 @@ class CardData implements Dbrepo {
         numericFilters,
         race,
         attribute,
+        archetype, // NEU: Archetype übergeben
         level,
         linkRating,
         linkRatingOperator,
@@ -285,6 +287,10 @@ class CardData implements Dbrepo {
     }
     if (attribute != null && attribute.isNotEmpty) {
       facetFilters.add('attribute:$attribute');
+    }
+    // NEU: Archetype-Filter
+    if (archetype != null && archetype.isNotEmpty) {
+      facetFilters.add('archetype:$archetype');
     }
     if (banlistTCG != null && banlistTCG.isNotEmpty) {
       facetFilters.add('banlist_info.ban_tcg:$banlistTCG');
@@ -312,13 +318,11 @@ class CardData implements Dbrepo {
 
     // ATK - Format: "=1000" oder ">=2000" oder "<=500"
     if (atk != null && atk.isNotEmpty && atk != '?') {
-      // atk kommt bereits formatiert vom Frontend (z.B. "=1000")
       numericFilters.add('atk$atk');
     }
 
     // DEF - Format: "=1000" oder ">=2000" oder "<=500"
     if (def != null && def.isNotEmpty && def != '?') {
-      // def kommt bereits formatiert vom Frontend (z.B. "=1000")
       numericFilters.add('def$def');
     }
 
@@ -332,13 +336,14 @@ class CardData implements Dbrepo {
     return result;
   }
 
-  // Neue Hilfsmethode für Typ-Suche mit Query (AKTUALISIERT)
+  // Neue Hilfsmethode für Typ-Suche mit Query (AKTUALISIERT mit Archetype)
   Future<List<Map<String, dynamic>>> _searchAlgoliaWithTypeQuery(
     String typeKeyword,
     List<String> facetFilters,
     List<String> numericFilters,
     String? race,
     String? attribute,
+    String? archetype, // NEU: Archetype-Parameter
     int? level,
     int? linkRating,
     String? linkRatingOperator,
@@ -356,6 +361,10 @@ class CardData implements Dbrepo {
       }
       if (attribute != null && attribute.isNotEmpty) {
         facetFilters.add('attribute:$attribute');
+      }
+      // NEU: Archetype-Filter
+      if (archetype != null && archetype.isNotEmpty) {
+        facetFilters.add('archetype:$archetype');
       }
       if (banlistTCG != null && banlistTCG.isNotEmpty) {
         facetFilters.add('banlist_info.ban_tcg:$banlistTCG');
@@ -472,7 +481,9 @@ class CardData implements Dbrepo {
 
       print('🔍 Algolia Search Debug:');
       print('Query (Textsuche): $finalQuery');
-      print('Facet Filters (Rasse/Attribut/Bannliste): $finalFacetFilters');
+      print(
+        'Facet Filters (Rasse/Attribut/Archetype/Bannliste): $finalFacetFilters',
+      );
       print('Filters (Numerisch/Typ): $finalFilters');
 
       final response = await client.search(
@@ -671,5 +682,119 @@ class CardData implements Dbrepo {
   @override
   Future<Map<String, dynamic>> readUser(String userId) {
     throw UnimplementedError();
+  }
+
+  // In getCardData.dart diese Methode hinzufügen:
+
+  // getCardData.dart - Verbesserte getAllArchetypes Methode
+
+  // getCardData.dart - Vollständige getAllArchetypes Methode mit Pagination
+
+  Future<List<String>> getAllArchetypes() async {
+    try {
+      print('[v0] Lade Archetypen...');
+
+      // Versuche zuerst Facetten zu laden
+      try {
+        final response = await client.search(
+          searchMethodParams: algolia_lib.SearchMethodParams(
+            requests: [
+              algolia_lib.SearchForHits(
+                indexName: 'cards',
+                query: '',
+                facets: ['archetype'],
+                hitsPerPage: 0,
+              ),
+            ],
+          ),
+        );
+
+        final dynamic facetsData = (response.results.first as Map)['facets'];
+
+        if (facetsData != null && facetsData is Map) {
+          final Map<String, dynamic> facets = Map<String, dynamic>.from(
+            facetsData,
+          );
+          final archetypesFacet = facets['archetype'];
+
+          if (archetypesFacet != null && archetypesFacet is Map) {
+            final List<String> archetypes =
+                (archetypesFacet as Map<String, dynamic>).keys
+                    .where((key) => key != null && key.toString().isNotEmpty)
+                    .map((key) => key.toString())
+                    .toList();
+
+            if (archetypes.isNotEmpty) {
+              archetypes.sort();
+
+              return archetypes;
+            }
+          }
+        }
+      } catch (e) {
+        print('[v0] Facetten-Laden fehlgeschlagen: $e');
+      }
+
+      // Fallback: Lade ALLE Karten mit Pagination und extrahiere Archetypen
+
+      final Set<String> archetypesSet = {};
+      int page = 0;
+      int hitsPerPage = 1000;
+      bool hasMorePages = true;
+
+      while (hasMorePages) {
+        final response = await client.search(
+          searchMethodParams: algolia_lib.SearchMethodParams(
+            requests: [
+              algolia_lib.SearchForHits(
+                indexName: 'cards',
+                query: '',
+                hitsPerPage: hitsPerPage,
+                page: page,
+                attributesToRetrieve: ['archetype'],
+              ),
+            ],
+          ),
+        );
+
+        final dynamic hitsData = (response.results.first as Map)['hits'];
+        final int? nbHits = (response.results.first as Map)['nbHits'] as int?;
+        final int? nbPages = (response.results.first as Map)['nbPages'] as int?;
+
+        if (hitsData == null || hitsData is! List || hitsData.isEmpty) {
+          hasMorePages = false;
+          break;
+        }
+
+        final List<dynamic> hits = hitsData as List;
+
+        for (var hit in hits) {
+          if (hit is Map<String, dynamic>) {
+            final archetype = hit['archetype'];
+            if (archetype != null && archetype.toString().isNotEmpty) {
+              archetypesSet.add(archetype.toString());
+            }
+          }
+        }
+
+        // Prüfe ob es weitere Seiten gibt
+        if (nbPages != null && page >= nbPages - 1) {
+          hasMorePages = false;
+        } else if (hits.length < hitsPerPage) {
+          hasMorePages = false;
+        } else {
+          page++;
+        }
+      }
+
+      final List<String> archetypes = archetypesSet.toList();
+      archetypes.sort();
+
+      return archetypes;
+    } catch (e, stacktrace) {
+      print('[v0] Fehler beim Laden der Archetypen: $e');
+      print('[v0] Stacktrace: $stacktrace');
+      return [];
+    }
   }
 }

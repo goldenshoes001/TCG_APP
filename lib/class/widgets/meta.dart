@@ -21,20 +21,46 @@ class _MetaState extends State<Meta> {
   String? _selectedType;
   String? _selectedRace;
   String? _selectedAttribute;
+  String? _selectedArchetype;
   int? _selectedLevel;
   String? _selectedBanlistTCG;
   String? _selectedBanlistOCG;
 
-  // NEU: Controller und Operatoren für ATK/DEF/Scale/LinkRating
+  // NEU: Liste für dynamisch geladene Archetypen
+  List<String> _archetypes = [];
+  bool _archetypesLoading = true;
+
   final TextEditingController _atkController = TextEditingController();
   final TextEditingController _defController = TextEditingController();
   final TextEditingController _scaleController = TextEditingController();
   final TextEditingController _linkRatingController = TextEditingController();
 
-  String _atkOperator = '='; // '=', '>=', '<='
+  String _atkOperator = '=';
   String _defOperator = '=';
   String _scaleOperator = '=';
   String _linkRatingOperator = '=';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadArchetypes();
+  }
+
+  // NEU: Archetypen aus Algolia laden
+  Future<void> _loadArchetypes() async {
+    try {
+      final archetypes = await _cardData.getAllArchetypes();
+      setState(() {
+        _archetypes = archetypes;
+        _archetypesLoading = false;
+      });
+    } catch (e) {
+      print('Fehler beim Laden der Archetypen: $e');
+      setState(() {
+        _archetypesLoading = false;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -46,7 +72,6 @@ class _MetaState extends State<Meta> {
     super.dispose();
   }
 
-  // Alphabetisch sortierte Listen
   final List<String> _types = [
     'Effect Monster',
     'Flip Monster',
@@ -126,6 +151,7 @@ class _MetaState extends State<Meta> {
     _selectedType = null;
     _selectedRace = null;
     _selectedAttribute = null;
+    _selectedArchetype = null;
     _selectedLevel = null;
     _selectedBanlistTCG = null;
     _selectedBanlistOCG = null;
@@ -144,6 +170,7 @@ class _MetaState extends State<Meta> {
     if (_selectedType == null &&
         _selectedRace == null &&
         _selectedAttribute == null &&
+        _selectedArchetype == null &&
         _selectedLevel == null &&
         _atkController.text.trim().isEmpty &&
         _defController.text.trim().isEmpty &&
@@ -161,7 +188,6 @@ class _MetaState extends State<Meta> {
 
     _suchfeld.clear();
 
-    // Parse ATK/DEF/Scale/LinkRating mit Operatoren
     String? atkFilter;
     String? defFilter;
     int? scaleValue;
@@ -189,6 +215,7 @@ class _MetaState extends State<Meta> {
         type: _selectedType,
         race: _selectedRace,
         attribute: _selectedAttribute,
+        archetype: _selectedArchetype,
         level: _selectedLevel,
         linkRating: linkRatingValue,
         linkRatingOperator: linkRatingOperatorValue,
@@ -215,7 +242,6 @@ class _MetaState extends State<Meta> {
 
   @override
   Widget build(BuildContext context) {
-    // Wenn eine Karte ausgewählt ist, gib nur die CardDetailView zurück
     if (_selectedCard != null) {
       return _buildCardDetail();
     }
@@ -326,7 +352,6 @@ class _MetaState extends State<Meta> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Type (volle Breite)
         _buildDropdown(
           label: 'Type',
           value: _selectedType,
@@ -335,7 +360,6 @@ class _MetaState extends State<Meta> {
         ),
         const SizedBox(height: spacing),
 
-        // Race und Attribut (2 Spalten)
         Row(
           children: [
             Expanded(
@@ -360,7 +384,23 @@ class _MetaState extends State<Meta> {
         ),
         const SizedBox(height: spacing),
 
-        // Level (volle Breite)
+        // NEU: Archetype mit Loading-Indikator
+        _archetypesLoading
+            ? const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            : _buildDropdown(
+                label: 'Archetyp',
+                value: _selectedArchetype,
+                items: _archetypes,
+                onChanged: (value) =>
+                    setState(() => _selectedArchetype = value),
+              ),
+        const SizedBox(height: spacing),
+
         _buildDropdown(
           label: 'Level',
           value: _selectedLevel?.toString(),
@@ -373,7 +413,6 @@ class _MetaState extends State<Meta> {
         ),
         const SizedBox(height: spacing),
 
-        // Scale (volle Breite als Dropdown mit Operator)
         _buildDropdownWithOperator(
           label: 'Scale',
           value: _scaleController.text.isEmpty ? null : _scaleController.text,
@@ -394,7 +433,6 @@ class _MetaState extends State<Meta> {
         ),
         const SizedBox(height: spacing),
 
-        // Link Rating (volle Breite als Dropdown mit Operator)
         _buildDropdownWithOperator(
           label: 'Link Rating',
           value: _linkRatingController.text.isEmpty
@@ -417,7 +455,6 @@ class _MetaState extends State<Meta> {
         ),
         const SizedBox(height: spacing),
 
-        // ATK (volle Breite mit Operator)
         _buildNumericInputWithOperator(
           label: 'ATK',
           controller: _atkController,
@@ -428,7 +465,6 @@ class _MetaState extends State<Meta> {
         ),
         const SizedBox(height: spacing),
 
-        // DEF (volle Breite mit Operator)
         _buildNumericInputWithOperator(
           label: 'DEF',
           controller: _defController,
@@ -439,7 +475,6 @@ class _MetaState extends State<Meta> {
         ),
         const SizedBox(height: spacing),
 
-        // TCG und OCG Bannliste (2 Spalten)
         Row(
           children: [
             Expanded(
@@ -467,7 +502,6 @@ class _MetaState extends State<Meta> {
     );
   }
 
-  // Neues Widget für Dropdown mit Operator
   Widget _buildDropdownWithOperator({
     required String label,
     required String? value,
@@ -478,7 +512,6 @@ class _MetaState extends State<Meta> {
   }) {
     return Row(
       children: [
-        // Operator Dropdown (schmal)
         SizedBox(
           width: 70,
           child: DropdownButtonFormField<String>(
@@ -498,7 +531,6 @@ class _MetaState extends State<Meta> {
           ),
         ),
         const SizedBox(width: 8),
-        // Dropdown für Wert
         Expanded(
           child: DropdownButtonFormField<String>(
             decoration: InputDecoration(
@@ -528,7 +560,6 @@ class _MetaState extends State<Meta> {
     );
   }
 
-  // Neues Widget für numerische Eingabe mit Operator
   Widget _buildNumericInputWithOperator({
     required String label,
     required TextEditingController controller,
@@ -537,7 +568,6 @@ class _MetaState extends State<Meta> {
   }) {
     return Row(
       children: [
-        // Operator Dropdown (schmal)
         SizedBox(
           width: 70,
           child: DropdownButtonFormField<String>(
@@ -556,7 +586,6 @@ class _MetaState extends State<Meta> {
           ),
         ),
         const SizedBox(width: 8),
-        // Textfeld für Wert
         Expanded(
           child: TextField(
             controller: controller,
