@@ -1,4 +1,4 @@
-// meta.dart - MIT PERSISTENTEN FILTERN
+// meta.dart - MIT PERSISTENTEN FILTERN (VOLLSTÄNDIG KORRIGIERT)
 
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
@@ -39,6 +39,11 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
   String? _selectedBanlistTCG;
   String? _selectedBanlistOCG;
 
+  // Numerische Filter als String-Variablen (für Dropdowns)
+  String? _selectedLevel;
+  String? _selectedScale;
+  String? _selectedLinkRating;
+
   // Listen für dynamisch geladene Filter-Werte
   List<String> _types = [];
   List<String> _races = [];
@@ -47,11 +52,9 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
 
   bool _filtersLoading = true;
 
+  // Nur für ATK und DEF behalten wir TextController (manuelle Eingabe)
   final TextEditingController _atkController = TextEditingController();
   final TextEditingController _defController = TextEditingController();
-  final TextEditingController _scaleController = TextEditingController();
-  final TextEditingController _linkRatingController = TextEditingController();
-  final TextEditingController _levelController = TextEditingController();
 
   String _atkOperator = '=';
   String _defOperator = '=';
@@ -59,7 +62,6 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
   String _linkRatingOperator = '=';
   String _levelOperator = '=';
 
-  // WICHTIG: Behält den State beim Navigieren
   @override
   bool get wantKeepAlive => true;
 
@@ -70,7 +72,6 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
   }
 
   Future<void> _loadFilterData() async {
-    // Nutze vorgeladene Daten wenn verfügbar
     if (widget.preloadedTypes != null &&
         widget.preloadedRaces != null &&
         widget.preloadedAttributes != null &&
@@ -87,7 +88,6 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
       return;
     }
 
-    // Fallback: Lade Daten neu falls nicht vorgeladen
     if (mounted) {
       setState(() {
         _filtersLoading = true;
@@ -124,9 +124,6 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
     _suchfeld.dispose();
     _atkController.dispose();
     _defController.dispose();
-    _scaleController.dispose();
-    _linkRatingController.dispose();
-    _levelController.dispose();
     super.dispose();
   }
 
@@ -138,7 +135,6 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
 
   final List<String> _operators = ['min', '=', 'max'];
 
-  // NUR die State-Variablen zurücksetzen, NICHT die Controller
   void _resetFiltersState() {
     setState(() {
       _selectedType = null;
@@ -147,12 +143,12 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
       _selectedArchetype = null;
       _selectedBanlistTCG = null;
       _selectedBanlistOCG = null;
+      _selectedLevel = null;
+      _selectedScale = null;
+      _selectedLinkRating = null;
       _suchfeld.clear();
       _atkController.clear();
       _defController.clear();
-      _scaleController.clear();
-      _linkRatingController.clear();
-      _levelController.clear();
       _atkOperator = '=';
       _defOperator = '=';
       _scaleOperator = '=';
@@ -166,11 +162,11 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
         _selectedRace == null &&
         _selectedAttribute == null &&
         _selectedArchetype == null &&
-        _levelController.text.trim().isEmpty &&
+        _selectedLevel == null &&
         _atkController.text.trim().isEmpty &&
         _defController.text.trim().isEmpty &&
-        _scaleController.text.trim().isEmpty &&
-        _linkRatingController.text.trim().isEmpty &&
+        _selectedScale == null &&
+        _selectedLinkRating == null &&
         _selectedBanlistTCG == null &&
         _selectedBanlistOCG == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -208,16 +204,16 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
           : '=';
       defFilter = '$defOp${_defController.text.trim()}';
     }
-    if (_scaleController.text.trim().isNotEmpty) {
-      scaleValue = int.tryParse(_scaleController.text.trim());
+    if (_selectedScale != null) {
+      scaleValue = int.tryParse(_selectedScale!);
       scaleOperatorValue = _scaleOperator;
     }
-    if (_linkRatingController.text.trim().isNotEmpty) {
-      linkRatingValue = int.tryParse(_linkRatingController.text.trim());
+    if (_selectedLinkRating != null) {
+      linkRatingValue = int.tryParse(_selectedLinkRating!);
       linkRatingOperatorValue = _linkRatingOperator;
     }
-    if (_levelController.text.trim().isNotEmpty) {
-      levelValue = int.tryParse(_levelController.text.trim());
+    if (_selectedLevel != null) {
+      levelValue = int.tryParse(_selectedLevel!);
       levelOperatorValue = _levelOperator;
     }
 
@@ -254,7 +250,7 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); // WICHTIG für AutomaticKeepAliveClientMixin
+    super.build(context);
 
     if (_selectedCard != null) {
       return _buildCardDetail();
@@ -289,8 +285,6 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
             onSubmitted: (value) {
               final trimmedValue = _suchfeld.text.trim();
               if (trimmedValue.isNotEmpty) {
-                _resetFiltersState();
-
                 setState(() {
                   _searchFuture = _cardData
                       .ergebniseAnzeigen(trimmedValue)
@@ -319,7 +313,6 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
                     onPressed: () {
                       setState(() {
                         _showFilters = true;
-                        // Filter NICHT zurücksetzen, nur anzeigen
                       });
                     },
                     icon: const Icon(Icons.filter_list),
@@ -418,16 +411,12 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
 
         _buildDropdownWithOperator(
           label: 'Level',
-          value: _levelController.text.isEmpty ? null : _levelController.text,
+          value: _selectedLevel,
           items: List.generate(13, (index) => index.toString()),
           operator: _levelOperator,
           onChanged: (value) {
             setState(() {
-              if (value != null && value.isNotEmpty) {
-                _levelController.text = value;
-              } else {
-                _levelController.clear();
-              }
+              _selectedLevel = value;
             });
           },
           onOperatorChanged: (value) {
@@ -438,16 +427,12 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
 
         _buildDropdownWithOperator(
           label: 'Scale',
-          value: _scaleController.text.isEmpty ? null : _scaleController.text,
+          value: _selectedScale,
           items: List.generate(14, (index) => index.toString()),
           operator: _scaleOperator,
           onChanged: (value) {
             setState(() {
-              if (value != null && value.isNotEmpty) {
-                _scaleController.text = value;
-              } else {
-                _scaleController.clear();
-              }
+              _selectedScale = value;
             });
           },
           onOperatorChanged: (value) {
@@ -458,18 +443,12 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
 
         _buildDropdownWithOperator(
           label: 'Link Rating',
-          value: _linkRatingController.text.isEmpty
-              ? null
-              : _linkRatingController.text,
+          value: _selectedLinkRating,
           items: List.generate(8, (index) => (index + 1).toString()),
           operator: _linkRatingOperator,
           onChanged: (value) {
             setState(() {
-              if (value != null && value.isNotEmpty) {
-                _linkRatingController.text = value;
-              } else {
-                _linkRatingController.clear();
-              }
+              _selectedLinkRating = value;
             });
           },
           onOperatorChanged: (value) {
@@ -535,8 +514,8 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
   }) {
     return Row(
       children: [
-        SizedBox(
-          width: 70,
+        Expanded(
+          flex: 1,
           child: DropdownButtonFormField<String>(
             isExpanded: true,
             decoration: const InputDecoration(
@@ -592,8 +571,8 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
   }) {
     return Row(
       children: [
-        SizedBox(
-          width: 70,
+        Expanded(
+          flex: 1,
           child: DropdownButtonFormField<String>(
             isExpanded: true,
             decoration: const InputDecoration(
@@ -644,6 +623,7 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
         border: const OutlineInputBorder(),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
+      value: value,
       items: [
         DropdownMenuItem<String>(value: null, child: Text(label)),
         ...items.map(
