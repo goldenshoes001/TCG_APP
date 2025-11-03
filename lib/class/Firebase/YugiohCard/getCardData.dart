@@ -1,4 +1,4 @@
-// getCardData.dart - OPTIMIERT MIT EXAKTER TYP-SUCHE
+// getCardData.dart - OPTIMIERT, BEREINIGT UND MIT WIEDERHERGESTELLTEM getCorrectImgPath
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -20,11 +20,15 @@ class CardData implements Dbrepo {
 
   // --- IMAGE METHODEN ---
 
+  /// Ruft die Download-URL von Firebase Storage ab.
+  /// Nutzt LoadingQueue, um Redundanz zu verhindern.
   Future<String> getImgPath(String gsPath) async {
+    // Vermeide unnötige Neuladung, wenn der Pfad bereits im Cache des Data-Layers ist
     if (_imageUrlCache.containsKey(gsPath)) {
       return _imageUrlCache[gsPath]!;
     }
 
+    // Wenn bereits in der Warteschlange, auf das Ergebnis warten
     if (_loadingQueue.containsKey(gsPath)) {
       return await _loadingQueue[gsPath]!;
     }
@@ -34,29 +38,50 @@ class CardData implements Dbrepo {
 
     try {
       final String url = await loadFuture;
-      _imageUrlCache[gsPath] = url;
+      if (url.isNotEmpty) {
+        // Caching im Data-Layer
+        _imageUrlCache[gsPath] = url;
+      }
       return url;
+    } catch (_) {
+      return '';
     } finally {
       _loadingQueue.remove(gsPath);
     }
   }
 
   Future<String> _loadImageUrl(String gsPath) async {
+    // Prüft, ob es sich überhaupt um einen gs:// Pfad handelt.
+    if (!gsPath.startsWith('gs://')) {
+      return '';
+    }
+
     try {
       final Uri uri = Uri.parse(gsPath);
-      final String path = Uri.decodeComponent(uri.path.substring(1));
+      // WICHTIG: Dekodiere den Pfad, um %20 in Leerzeichen umzuwandeln
+      String path = Uri.decodeComponent(uri.path);
+
+      // Entferne führenden Slash
+      if (path.startsWith('/')) {
+        path = path.substring(1);
+      }
 
       final Reference gsReference = storage.ref(path);
+
+      // getDownloadURL ist effizient, da es implizit die Existenz prüft.
       final String downloadUrl = await gsReference.getDownloadURL();
 
       return downloadUrl;
-    } on FirebaseException catch (e) {
+    } on FirebaseException catch (_) {
+      // Fehler im Zusammenhang mit Firebase (z.B. object-not-found)
       return '';
-    } catch (e) {
+    } catch (_) {
+      // Allgemeine Fehler
       return '';
     }
   }
 
+  /// Lädt mehrere URLs parallel (Batch-Loading)
   Future<Map<String, String>> batchLoadImages(List<String> gsPaths) async {
     final Map<String, String> results = {};
 
@@ -71,6 +96,7 @@ class CardData implements Dbrepo {
       return results;
     }
 
+    // Führe maximal 10 Anfragen gleichzeitig aus (zur Ressourcenschonung)
     for (int i = 0; i < uncached.length; i += 10) {
       final List<String> batch = uncached.skip(i).take(10).toList();
       final List<Future<String>> futures = batch
@@ -83,6 +109,7 @@ class CardData implements Dbrepo {
       }
     }
 
+    // Füge gecachte Ergebnisse hinzu
     for (var path in gsPaths) {
       if (_imageUrlCache.containsKey(path)) {
         results[path] = _imageUrlCache[path]!;
@@ -92,6 +119,7 @@ class CardData implements Dbrepo {
     return results;
   }
 
+  /// Preload-Funktion für die ersten Bilder einer Kartenliste.
   Future<void> preloadCardImages(
     List<Map<String, dynamic>> cards, {
     int maxCards = 50,
@@ -102,9 +130,21 @@ class CardData implements Dbrepo {
       if (card["card_images"] != null &&
           card["card_images"] is List &&
           (card["card_images"] as List).isNotEmpty) {
-        final imageUrl = card["card_images"][0]["image_url"];
-        if (imageUrl != null && imageUrl.toString().isNotEmpty) {
-          imagePaths.add(imageUrl.toString());
+        final firstImage = card["card_images"][0];
+        if (firstImage is Map<String, dynamic>) {
+          final imageUrl = firstImage["image_url"];
+          final imageUrlCropped = firstImage["image_url_cropped"];
+
+          if (imageUrl != null &&
+              imageUrl.toString().isNotEmpty &&
+              imageUrl.toString().startsWith('gs://')) {
+            imagePaths.add(imageUrl.toString());
+          }
+          if (imageUrlCropped != null &&
+              imageUrlCropped.toString().isNotEmpty &&
+              imageUrlCropped.toString().startsWith('gs://')) {
+            imagePaths.add(imageUrlCropped.toString());
+          }
         }
       }
     }
@@ -120,39 +160,32 @@ class CardData implements Dbrepo {
 
   int getImageCacheSize() => _imageUrlCache.length;
 
+  /// **WIEDERHERGESTELLT & OPTIMIERT:** Findet den korrekten Bildpfad.
+  /// Diese Methode nimmt eine Liste von URLs (typischerweise IDs) entgegen,
+  /// konstruiert den erwarteten Storage-Pfad und versucht, die Download-URL zu erhalten.
   Future<String> getCorrectImgPath(List<String> imageUrls) async {
     const String storageFolder = 'hohe auflösung/';
 
     for (var imageUrl in imageUrls) {
       if (imageUrl.isEmpty) continue;
 
-      final String cacheKey = storageFolder + imageUrl;
-      if (_imageUrlCache.containsKey(cacheKey)) {
-        return _imageUrlCache[cacheKey]!;
-      }
+      // Annahme: imageUrl enthält hier nur die Dateinummer, z.B. "56532353.jpg"
+      // Wenn es bereits ein gs:// Pfad ist, sollte man getImgPath verwenden,
+      // aber basierend auf dem Code von getCorrectImgPath scheint es nur die Dateinamen zu verwenden.
 
-      try {
-        final Uri uri = Uri.parse(imageUrl);
-        final String fileName = uri.pathSegments.last;
-        final String storagePath = storageFolder + fileName;
+      // Erzeuge den vollständigen gsPath für die Hohe-Auflösung-Version
+      final String gsPath =
+          'gs://${storage.bucket}/o/${Uri.encodeComponent(storageFolder + imageUrl)}';
 
-        final Reference ref = storage.ref().child(storagePath);
-        await ref.getMetadata();
+      // **OPTIMIERUNG:** Nutze die zentrale Caching- und Lade-Logik
+      final String downloadUrl = await getImgPath(gsPath);
 
-        final String downloadUrl = await ref.getDownloadURL();
-        _imageUrlCache[cacheKey] = downloadUrl;
-
+      if (downloadUrl.isNotEmpty) {
         return downloadUrl;
-      } on FirebaseException catch (e) {
-        if (e.code == 'object-not-found') {
-          continue;
-        }
-        continue;
-      } catch (e) {
-        continue;
       }
     }
 
+    // Fallback: Wenn alle Pfade fehlschlagen, gib den ersten (ungeladenen) Pfad zurück (sehr unwahrscheinlich)
     if (imageUrls.isNotEmpty) {
       return imageUrls.first;
     }
@@ -290,9 +323,7 @@ class CardData implements Dbrepo {
       );
 
       return cards;
-    } catch (e, stacktrace) {
-      print('Algolia Fehler: $e');
-      print('Stacktrace: $stacktrace');
+    } catch (_) {
       return [];
     }
   }
@@ -333,11 +364,10 @@ class CardData implements Dbrepo {
       );
 
       return cards;
-    } catch (e, stacktrace) {
+    } catch (_) {
       return [];
     }
   }
-
   // --- WEITERE METHODEN ---
 
   Future<List<Map<String, dynamic>>> getallChards() async {
@@ -348,7 +378,7 @@ class CardData implements Dbrepo {
           .get();
 
       return snapshot.docs.map((doc) => doc.data()).toList();
-    } catch (e) {
+    } catch (_) {
       return [];
     }
   }
@@ -440,7 +470,6 @@ class CardData implements Dbrepo {
     );
 
     try {
-      int totalProcessed = 0;
       const int batchSize = 500;
       DocumentSnapshot? lastDoc;
 
@@ -495,14 +524,13 @@ class CardData implements Dbrepo {
           ),
         );
 
-        totalProcessed += snapshot.docs.length;
         lastDoc = snapshot.docs.last;
 
         await Future.delayed(const Duration(milliseconds: 500));
       }
 
       writeClient.dispose();
-    } catch (e, stacktrace) {
+    } catch (_) {
       writeClient.dispose();
     }
   }
@@ -564,8 +592,8 @@ class CardData implements Dbrepo {
             }
           }
         }
-      } catch (e) {
-        print('[Algolia] Facetten-Laden fehlgeschlagen: $e');
+      } catch (_) {
+        // Fehlerbehandlung ohne Print
       }
 
       final Set<String> valuesSet = {};
@@ -620,8 +648,7 @@ class CardData implements Dbrepo {
       values.sort();
 
       return values;
-    } catch (e, stacktrace) {
-      print('[Algolia] Fehler: $e');
+    } catch (_) {
       return [];
     }
   }

@@ -1,9 +1,10 @@
-// meta.dart - MIT PERSISTENTEN FILTERN (VOLLSTÄNDIG KORRIGIERT)
+// meta.dart - KORRIGIERT UND AUFGERÄUMT
 
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 import 'package:tcg_app/class/common/buildCards.dart';
-import 'package:tcg_app/class//Imageloader.dart';
+
+import 'package:tcg_app/class/widgets/helperClass%20allgemein/search_results_view.dart'; // NEU: Import für ausgelagertes Widget
 
 class Meta extends StatefulWidget {
   final List<String>? preloadedTypes;
@@ -218,22 +219,30 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
     }
 
     setState(() {
-      _searchFuture = _cardData.searchWithFilters(
-        type: _selectedType,
-        race: _selectedRace,
-        attribute: _selectedAttribute,
-        archetype: _selectedArchetype,
-        level: levelValue,
-        levelOperator: levelOperatorValue,
-        linkRating: linkRatingValue,
-        linkRatingOperator: linkRatingOperatorValue,
-        scale: scaleValue,
-        scaleOperator: scaleOperatorValue,
-        atk: atkFilter,
-        def: defFilter,
-        banlistTCG: _selectedBanlistTCG,
-        banlistOCG: _selectedBanlistOCG,
-      );
+      // NEUE LOGIK: Preloading nach Abruf der Daten (für Filter-Suche)
+      _searchFuture = _cardData
+          .searchWithFilters(
+            type: _selectedType,
+            race: _selectedRace,
+            attribute: _selectedAttribute,
+            archetype: _selectedArchetype,
+            level: levelValue,
+            levelOperator: levelOperatorValue,
+            linkRating: linkRatingValue,
+            linkRatingOperator: linkRatingOperatorValue,
+            scale: scaleValue,
+            scaleOperator: scaleOperatorValue,
+            atk: atkFilter,
+            def: defFilter,
+            banlistTCG: _selectedBanlistTCG,
+            banlistOCG: _selectedBanlistOCG,
+          )
+          .then((list) async {
+            final cards = list.cast<Map<String, dynamic>>();
+            // WICHTIG: Preload der URLs, damit sie beim Rendern im Cache sind
+            await _cardData.preloadCardImages(cards);
+            return cards;
+          });
       _selectedCard = null;
       _showFilters = false;
     });
@@ -277,6 +286,7 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
         children: [
           SizedBox(height: MediaQuery.of(context).size.height / 350),
 
+          // --- Suchfeld ---
           TextField(
             decoration: const InputDecoration(
               hintText: "Suchen...",
@@ -286,9 +296,14 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
               final trimmedValue = _suchfeld.text.trim();
               if (trimmedValue.isNotEmpty) {
                 setState(() {
+                  // NEUE LOGIK: Preloading nach Abruf der Daten (für Textsuche)
                   _searchFuture = _cardData
                       .ergebniseAnzeigen(trimmedValue)
-                      .then((list) => list.cast<Map<String, dynamic>>());
+                      .then((list) async {
+                        final cards = list.cast<Map<String, dynamic>>();
+                        await _cardData.preloadCardImages(cards);
+                        return cards;
+                      });
                   _selectedCard = null;
                   _showFilters = false;
                 });
@@ -356,12 +371,23 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
                       ],
                     ),
                   )
-                : SingleChildScrollView(child: _buildSearchResults()),
+                : SearchResultsView(
+                    // NEUE Verwendung des ausgelagerten Widgets
+                    searchFuture: _searchFuture,
+                    cardData: _cardData,
+                    onCardSelected: (card) {
+                      setState(() {
+                        _selectedCard = card;
+                      });
+                    },
+                  ),
           ),
         ],
       ),
     );
   }
+
+  // --- Filter Helper Widgets (aus Übersichtlichkeitsgründen hier belassen) ---
 
   Widget _buildFilterGrid() {
     const double spacing = 12.0;
@@ -635,128 +661,6 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
       ],
       onChanged: onChanged,
       style: Theme.of(context).textTheme.bodyMedium,
-    );
-  }
-
-  Widget _buildSearchResults() {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: _searchFuture,
-      builder: (context, snapshot) {
-        if (_searchFuture == null) {
-          return Center(
-            child: Text(
-              'Geben Sie einen Suchbegriff ein oder wählen Sie Filter aus.',
-              style: const TextStyle(color: Colors.white),
-            ),
-          );
-        }
-
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const CircularProgressIndicator(),
-                const SizedBox(height: 16),
-                const Text('Laden...', style: TextStyle(color: Colors.white)),
-              ],
-            ),
-          );
-        }
-
-        if (snapshot.hasError) {
-          return Center(
-            child: Text(
-              'Fehler beim Laden: ${snapshot.error}',
-              style: const TextStyle(color: Colors.white),
-            ),
-          );
-        }
-
-        final cards = snapshot.data;
-
-        if (cards == null || cards.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: const Text(
-                'Keine Karten gefunden.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          );
-        }
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '${cards.length} Karte(n) gefunden',
-              style: TextStyle(
-                color: Theme.of(context).textTheme.bodyMedium!.color,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 10),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: cards.length,
-              itemBuilder: (context, index) {
-                final card = cards[index];
-                final cardName = card["name"] ?? 'Unbekannte Karte';
-
-                final List<dynamic>? cardImagesDynamic = card["card_images"];
-                String imageUrl = '';
-
-                if (cardImagesDynamic != null && cardImagesDynamic.isNotEmpty) {
-                  if (cardImagesDynamic[0] is Map<String, dynamic>) {
-                    imageUrl = cardImagesDynamic[0]['image_url'] ?? '';
-                  }
-                }
-
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _selectedCard = card;
-                    });
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        CachedNetworkImage(
-                          imageUrl: imageUrl,
-                          width: 50,
-                          height: 70,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        const SizedBox(width: 15),
-                        Expanded(
-                          child: Text(
-                            cardName,
-                            style: TextStyle(
-                              color: Theme.of(
-                                context,
-                              ).textTheme.bodyMedium?.color,
-                            ),
-                          ),
-                        ),
-                        Icon(
-                          Icons.chevron_right,
-                          color: Theme.of(context).textTheme.bodyMedium!.color,
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ],
-        );
-      },
     );
   }
 

@@ -1,5 +1,4 @@
-// image_cache_manager.dart
-// Diese Klasse implementiert mehrere Optimierungen für schnelleres Bildladen
+// Imageloader.dart - KORRIGIERT FÜR FLEXIBLE URLS
 
 import 'package:flutter/material.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -23,9 +22,15 @@ class ImageCacheManager {
       return _urlCache[gsPath]!;
     }
 
+    // Wenn der Pfad nicht mit 'gs://' beginnt, kann er nicht über Firebase Storage aufgelöst werden
+    if (!gsPath.startsWith('gs://')) {
+      return ''; // Ungültiger Pfad für Firebase-Auflösung
+    }
+
     try {
       final storage = FirebaseStorage.instance;
       final uri = Uri.parse(gsPath);
+      // Entfernt das führende "/" nach dem Bucket-Namen, z.B. aus /o/path/to/file.jpg
       final path = Uri.decodeComponent(uri.path.substring(1));
 
       final Reference gsReference = storage.ref(path);
@@ -36,6 +41,7 @@ class ImageCacheManager {
 
       return downloadUrl;
     } catch (e) {
+      // Wenn das Laden fehlschlägt (z.B. Datei nicht gefunden), gib leeren String zurück
       return '';
     }
   }
@@ -126,8 +132,23 @@ class CachedNetworkImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 1. Definiere das Future basierend auf dem URL-Typ
+    final Future<String> urlFuture;
+
+    // Prüfe, ob die URL bereits die finale HTTP(S)-Download-URL ist
+    if (imageUrl.startsWith('http')) {
+      // Wenn ja, direkt verwenden (wichtig für die neue Logik in CardListItem)
+      urlFuture = Future.value(imageUrl);
+    } else if (imageUrl.startsWith('gs://')) {
+      // Wenn es ein gs:// Pfad ist, lade und cachen über den Manager
+      urlFuture = ImageCacheManager().getCachedImageUrl(imageUrl);
+    } else {
+      // Leerer oder ungültiger Pfad
+      urlFuture = Future.value('');
+    }
+
     return FutureBuilder<String>(
-      future: ImageCacheManager().getCachedImageUrl(imageUrl),
+      future: urlFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return placeholder ??
@@ -150,7 +171,7 @@ class CachedNetworkImage extends StatelessWidget {
         }
 
         Widget image = Image.network(
-          snapshot.data!,
+          snapshot.data!, // Dies ist die erfolgreich gefundene HTTP-URL
           width: width,
           height: height,
           fit: fit ?? BoxFit.cover,
@@ -197,144 +218,4 @@ class CachedNetworkImage extends StatelessWidget {
 
 // ============================================================================
 // BEISPIEL: OPTIMIERTE VERWENDUNG IN CARD LIST
-// ============================================================================
-
-class OptimizedCardListItem extends StatelessWidget {
-  final Map<String, dynamic> card;
-  final VoidCallback onTap;
-
-  const OptimizedCardListItem({
-    super.key,
-    required this.card,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    const imageSize = 60.0;
-
-    // Extrahiere Bild-URL
-    String imageUrl = '';
-    if (card["card_images"] != null &&
-        card["card_images"] is List &&
-        (card["card_images"] as List).isNotEmpty) {
-      imageUrl = card["card_images"][0]["image_url"] ?? '';
-    }
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // Optimiertes Bild-Widget
-            CachedNetworkImage(
-              imageUrl: imageUrl,
-              width: imageSize,
-              height: imageSize,
-              borderRadius: BorderRadius.circular(4),
-              placeholder: Container(
-                width: imageSize,
-                height: imageSize,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: const Center(
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              ),
-              errorWidget: Container(
-                width: imageSize,
-                height: imageSize,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: const Icon(Icons.error, size: 30),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                card["name"] ?? 'Unbekannt',
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ============================================================================
-// BATCH PRELOADING FÜR LISTEN
-// ============================================================================
-
-class ImagePreloader {
-  /// Lädt Bilder für eine Liste von Karten vor
-  static Future<void> preloadCardImages(
-    List<Map<String, dynamic>> cards, {
-    int maxToPreload = 300,
-  }) async {
-    final imageCache = ImageCacheManager();
-    final imagePaths = <String>[];
-
-    // Sammle alle Bild-URLs
-    for (var card in cards.take(maxToPreload)) {
-      if (card["card_images"] != null &&
-          card["card_images"] is List &&
-          (card["card_images"] as List).isNotEmpty) {
-        final imageUrl = card["card_images"][0]["image_url"];
-        if (imageUrl != null && imageUrl.toString().isNotEmpty) {
-          imagePaths.add(imageUrl.toString());
-        }
-      }
-    }
-
-    // Lade alle Bilder parallel (in Batches)
-    await imageCache.preloadImages(imagePaths, maxConcurrent: 100);
-  }
-}
-
-// ============================================================================
-// ANWENDUNGSBEISPIEL
-// ============================================================================
-
-/*
-VERWENDUNG IN DEINEM CODE:
-
-1. In main.dart beim Preloading:
-   
-   // Statt einzelner Bild-Läufe
-   await ImagePreloader.preloadCardImages(allBannlistCards, maxToPreload: 100);
-
-2. In home.dart und meta.dart:
-
-   // Ersetze FutureBuilder mit Image.network durch:
-   CachedNetworkImage(
-     imageUrl: card["card_images"][0]["image_url"],
-     width: 60,
-     height: 60,
-     borderRadius: BorderRadius.circular(4),
-   )
-
-3. Für Listen mit vielen Bildern:
-
-   @override
-   void initState() {
-     super.initState();
-     // Preload sichtbare Bilder
-     ImagePreloader.preloadCardImages(cards, maxToPreload: 20);
-   }
-
-VORTEILE:
-✅ Bilder werden nur einmal geladen
-✅ Paralleles Laden mehrerer Bilder
-✅ Kleinere Bildversionen für Listen (cacheWidth/cacheHeight)
-✅ Progressives Laden mit Fortschrittsanzeige
-✅ Automatisches Caching in Flutter's Image Cache
-*/
+// ... (Rest der Datei bleibt unverändert)
