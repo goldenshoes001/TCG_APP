@@ -1,4 +1,4 @@
-// getCardData.dart - OPTIMIERT, BEREINIGT UND MIT WIEDERHERGESTELLTEM getCorrectImgPath
+// getCardData.dart - OPTIMIERT MIT QUERY-CACHING
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -18,17 +18,50 @@ class CardData implements Dbrepo {
   static final Map<String, String> _imageUrlCache = {};
   static final Map<String, Future<String>> _loadingQueue = {};
 
-  // --- IMAGE METHODEN ---
+  // ===== NEUE QUERY-CACHES =====
+  // Cache für Suchergebnisse (Query -> Ergebnisse)
+  static final Map<String, List<Map<String, dynamic>>> _searchResultsCache = {};
 
-  /// Ruft die Download-URL von Firebase Storage ab.
-  /// Nutzt LoadingQueue, um Redundanz zu verhindern.
+  // Cache für Filter-Suchen (FilterKey -> Ergebnisse)
+  static final Map<String, List<Map<String, dynamic>>> _filterResultsCache = {};
+
+  // Cache für Facet Values (FieldName -> Values)
+  static final Map<String, List<String>> _facetValuesCache = {};
+
+  // Cache für Bannlist-Daten
+  static Map<String, List<dynamic>>? _tcgBannlistCache;
+  static Map<String, List<dynamic>>? _ocgBannlistCache;
+
+  // Timestamps für Cache-Invalidierung (optional)
+  static DateTime? _lastCacheClear;
+  static const Duration _cacheValidDuration = Duration(minutes: 30);
+
+  // --- CACHE MANAGEMENT ---
+
+  /// Löscht alle Caches (z.B. bei App-Start oder nach Timeout)
+  void clearAllCaches() {
+    _imageUrlCache.clear();
+    _searchResultsCache.clear();
+    _filterResultsCache.clear();
+    _facetValuesCache.clear();
+    _tcgBannlistCache = null;
+    _ocgBannlistCache = null;
+    _lastCacheClear = DateTime.now();
+  }
+
+  /// Prüft, ob Cache noch gültig ist
+  bool _isCacheValid() {
+    if (_lastCacheClear == null) return true;
+    return DateTime.now().difference(_lastCacheClear!) < _cacheValidDuration;
+  }
+
+  // --- IMAGE METHODEN (UNVERÄNDERT) ---
+
   Future<String> getImgPath(String gsPath) async {
-    // Vermeide unnötige Neuladung, wenn der Pfad bereits im Cache des Data-Layers ist
     if (_imageUrlCache.containsKey(gsPath)) {
       return _imageUrlCache[gsPath]!;
     }
 
-    // Wenn bereits in der Warteschlange, auf das Ergebnis warten
     if (_loadingQueue.containsKey(gsPath)) {
       return await _loadingQueue[gsPath]!;
     }
@@ -39,7 +72,6 @@ class CardData implements Dbrepo {
     try {
       final String url = await loadFuture;
       if (url.isNotEmpty) {
-        // Caching im Data-Layer
         _imageUrlCache[gsPath] = url;
       }
       return url;
@@ -51,37 +83,29 @@ class CardData implements Dbrepo {
   }
 
   Future<String> _loadImageUrl(String gsPath) async {
-    // Prüft, ob es sich überhaupt um einen gs:// Pfad handelt.
     if (!gsPath.startsWith('gs://')) {
       return '';
     }
 
     try {
       final Uri uri = Uri.parse(gsPath);
-      // WICHTIG: Dekodiere den Pfad, um %20 in Leerzeichen umzuwandeln
       String path = Uri.decodeComponent(uri.path);
 
-      // Entferne führenden Slash
       if (path.startsWith('/')) {
         path = path.substring(1);
       }
 
       final Reference gsReference = storage.ref(path);
-
-      // getDownloadURL ist effizient, da es implizit die Existenz prüft.
       final String downloadUrl = await gsReference.getDownloadURL();
 
       return downloadUrl;
     } on FirebaseException catch (_) {
-      // Fehler im Zusammenhang mit Firebase (z.B. object-not-found)
       return '';
     } catch (_) {
-      // Allgemeine Fehler
       return '';
     }
   }
 
-  /// Lädt mehrere URLs parallel (Batch-Loading)
   Future<Map<String, String>> batchLoadImages(List<String> gsPaths) async {
     final Map<String, String> results = {};
 
@@ -96,7 +120,6 @@ class CardData implements Dbrepo {
       return results;
     }
 
-    // Führe maximal 10 Anfragen gleichzeitig aus (zur Ressourcenschonung)
     for (int i = 0; i < uncached.length; i += 10) {
       final List<String> batch = uncached.skip(i).take(10).toList();
       final List<Future<String>> futures = batch
@@ -109,7 +132,6 @@ class CardData implements Dbrepo {
       }
     }
 
-    // Füge gecachte Ergebnisse hinzu
     for (var path in gsPaths) {
       if (_imageUrlCache.containsKey(path)) {
         results[path] = _imageUrlCache[path]!;
@@ -119,7 +141,6 @@ class CardData implements Dbrepo {
     return results;
   }
 
-  /// Preload-Funktion für die ersten Bilder einer Kartenliste.
   Future<void> preloadCardImages(
     List<Map<String, dynamic>> cards, {
     int maxCards = 50,
@@ -160,18 +181,10 @@ class CardData implements Dbrepo {
 
   int getImageCacheSize() => _imageUrlCache.length;
 
-  /// **WIEDERHERGESTELLT & OPTIMIERT:** Findet den korrekten Bildpfad.
-  /// Diese Methode nimmt eine Liste von URLs (typischerweise IDs) entgegen,
-  /// konstruiert den erwarteten Storage-Pfad und versucht, die Download-URL zu erhalten.
-  /// **KORRIGIERT:** Findet den korrekten Bildpfad.
-  /// Diese Methode nimmt eine Liste von URLs entgegen (bereits vollständige gs:// Pfade)
-  /// und versucht, die Download-URL zu erhalten.
   Future<String> getCorrectImgPath(List<String> imageUrls) async {
     for (var imageUrl in imageUrls) {
       if (imageUrl.isEmpty) continue;
 
-      // Die imageUrls sind bereits vollständige gs:// Pfade
-      // Verwende sie direkt mit getImgPath
       final String downloadUrl = await getImgPath(imageUrl);
 
       if (downloadUrl.isNotEmpty) {
@@ -179,7 +192,6 @@ class CardData implements Dbrepo {
       }
     }
 
-    // Fallback: Wenn alle Pfade fehlschlagen, gib einen leeren String zurück
     return '';
   }
 
@@ -197,7 +209,31 @@ class CardData implements Dbrepo {
     }
   }
 
-  // --- HAUPTSUCHE MIT EXAKTER TYP-SUCHE UND AND-LOGIK ---
+  /// Erstellt einen eindeutigen Cache-Key für Filter-Suchen
+  String _createFilterCacheKey({
+    String? type,
+    String? race,
+    String? attribute,
+    String? archetype,
+    int? level,
+    String? levelOperator,
+    int? linkRating,
+    String? linkRatingOperator,
+    int? scale,
+    String? scaleOperator,
+    String? atk,
+    String? def,
+    String? banlistTCG,
+    String? banlistOCG,
+  }) {
+    return 'filter_${type ?? ''}_${race ?? ''}_${attribute ?? ''}_'
+        '${archetype ?? ''}_${level ?? ''}_${levelOperator ?? ''}_'
+        '${linkRating ?? ''}_${linkRatingOperator ?? ''}_'
+        '${scale ?? ''}_${scaleOperator ?? ''}_'
+        '${atk ?? ''}_${def ?? ''}_${banlistTCG ?? ''}_${banlistOCG ?? ''}';
+  }
+
+  // --- HAUPTSUCHE MIT CACHING ---
 
   Future<List<Map<String, dynamic>>> searchWithFilters({
     String? type,
@@ -215,15 +251,38 @@ class CardData implements Dbrepo {
     String? banlistTCG,
     String? banlistOCG,
   }) async {
+    // Prüfe Cache
+    if (_isCacheValid()) {
+      final cacheKey = _createFilterCacheKey(
+        type: type,
+        race: race,
+        attribute: attribute,
+        archetype: archetype,
+        level: level,
+        levelOperator: levelOperator,
+        linkRating: linkRating,
+        linkRatingOperator: linkRatingOperator,
+        scale: scale,
+        scaleOperator: scaleOperator,
+        atk: atk,
+        def: def,
+        banlistTCG: banlistTCG,
+        banlistOCG: banlistOCG,
+      );
+
+      if (_filterResultsCache.containsKey(cacheKey)) {
+        print('Cache HIT für Filter-Suche');
+        return _filterResultsCache[cacheKey]!;
+      }
+    }
+
     final List<List<String>> facetFilters = [];
     final List<String> numericFilters = [];
 
-    // EXAKTE TYP-SUCHE MIT AND-LOGIK
     if (type != null && type.isNotEmpty) {
       facetFilters.add(['type:$type']);
     }
 
-    // Weitere Facet Filters (alle mit AND-Logik verknüpft)
     if (race != null && race.isNotEmpty) {
       facetFilters.add(['race:$race']);
     }
@@ -240,7 +299,6 @@ class CardData implements Dbrepo {
       facetFilters.add(['banlist_info.ban_ocg:$banlistOCG']);
     }
 
-    // Numeric Filters (ebenfalls mit AND verknüpft)
     if (level != null) {
       numericFilters.add(
         'level${_convertOperator(levelOperator ?? '=')}$level',
@@ -263,7 +321,31 @@ class CardData implements Dbrepo {
       numericFilters.add('def$def');
     }
 
-    return await _searchAlgoliaWithFilters(facetFilters, numericFilters);
+    final results = await _searchAlgoliaWithFilters(
+      facetFilters,
+      numericFilters,
+    );
+
+    // Cache speichern
+    final cacheKey = _createFilterCacheKey(
+      type: type,
+      race: race,
+      attribute: attribute,
+      archetype: archetype,
+      level: level,
+      levelOperator: levelOperator,
+      linkRating: linkRating,
+      linkRatingOperator: linkRatingOperator,
+      scale: scale,
+      scaleOperator: scaleOperator,
+      atk: atk,
+      def: def,
+      banlistTCG: banlistTCG,
+      banlistOCG: banlistOCG,
+    );
+    _filterResultsCache[cacheKey] = results;
+
+    return results;
   }
 
   // --- ALGOLIA SUCHE ---
@@ -359,7 +441,8 @@ class CardData implements Dbrepo {
       return [];
     }
   }
-  // --- WEITERE METHODEN ---
+
+  // --- WEITERE METHODEN MIT CACHING ---
 
   Future<List<Map<String, dynamic>>> getallChards() async {
     try {
@@ -387,6 +470,12 @@ class CardData implements Dbrepo {
   }
 
   Future<Map<String, List<dynamic>>> sortTCGBannCards() async {
+    // Cache-Check
+    if (_isCacheValid() && _tcgBannlistCache != null) {
+      print('Cache HIT für TCG Bannlist');
+      return _tcgBannlistCache!;
+    }
+
     final List<Map<String, dynamic>> liste = await getTCGBannedCards();
     final List<dynamic> banned = [];
     final List<dynamic> semiLimited = [];
@@ -411,10 +500,20 @@ class CardData implements Dbrepo {
     sortedList["limited"] = limited;
     sortedList["banned"] = banned;
     sortedList["semiLimited"] = semiLimited;
+
+    // Cache speichern
+    _tcgBannlistCache = sortedList;
+
     return sortedList;
   }
 
   Future<Map<String, List<dynamic>>> sortOCGBannCards() async {
+    // Cache-Check
+    if (_isCacheValid() && _ocgBannlistCache != null) {
+      print('Cache HIT für OCG Bannlist');
+      return _ocgBannlistCache!;
+    }
+
     final List<Map<String, dynamic>> liste = await getOCGBannedCards();
     final List<dynamic> banned = [];
     final List<dynamic> semiLimited = [];
@@ -439,6 +538,10 @@ class CardData implements Dbrepo {
     sortedList["limited"] = limited;
     sortedList["banned"] = banned;
     sortedList["semiLimited"] = semiLimited;
+
+    // Cache speichern
+    _ocgBannlistCache = sortedList;
+
     return sortedList;
   }
 
@@ -452,6 +555,12 @@ class CardData implements Dbrepo {
 
     final normalizedSearch = suchfeld.replaceAll(RegExp(r'\s+'), ' ').trim();
     if (normalizedSearch.isEmpty) return [];
+
+    // Cache-Check für Textsuche
+    if (_isCacheValid() && _searchResultsCache.containsKey(normalizedSearch)) {
+      print('Cache HIT für Suche: $normalizedSearch');
+      return _searchResultsCache[normalizedSearch]!;
+    }
 
     final searchPhrase = normalizedSearch.toLowerCase();
 
@@ -477,7 +586,6 @@ class CardData implements Dbrepo {
 
       final List<dynamic> hits = hitsData as List;
 
-      // FILTER: Behalte nur Karten, bei denen die EXAKTE PHRASE im Namen ODER Archetype ODER Kartentext vorkommt
       final List<Map<String, dynamic>> filteredCards = hits
           .map((hit) => Map<String, dynamic>.from(hit as Map))
           .where((card) {
@@ -486,18 +594,19 @@ class CardData implements Dbrepo {
             final archetype = (card['archetype'] as String? ?? '')
                 .toLowerCase();
 
-            // Prüfe ob die exakte Phrase in einem der Felder vorkommt
             return name.contains(searchPhrase) ||
                 archetype.contains(searchPhrase) ||
                 desc.contains(searchPhrase);
           })
           .toList();
 
-      // Einfach alphabetisch sortieren
       filteredCards.sort(
         (a, b) =>
             (a['name'] as String? ?? '').compareTo(b['name'] as String? ?? ''),
       );
+
+      // Cache speichern
+      _searchResultsCache[normalizedSearch] = filteredCards;
 
       return filteredCards;
     } catch (_) {
@@ -599,99 +708,55 @@ class CardData implements Dbrepo {
     throw UnimplementedError();
   }
 
+  /// OPTIMIERT: Lädt Facet-Werte mit Caching
   Future<List<String>> getFacetValues(String fieldName) async {
+    // Cache-Check
+    if (_isCacheValid() && _facetValuesCache.containsKey(fieldName)) {
+      print('Cache HIT für Facets: $fieldName');
+      return _facetValuesCache[fieldName]!;
+    }
+
     try {
-      try {
-        final response = await client.search(
-          searchMethodParams: algolia_lib.SearchMethodParams(
-            requests: [
-              algolia_lib.SearchForHits(
-                indexName: 'cards',
-                query: '',
-                facets: [fieldName],
-                hitsPerPage: 0,
-              ),
-            ],
-          ),
+      // Versuche zuerst, Facets direkt zu laden (effizienteste Methode)
+      final response = await client.search(
+        searchMethodParams: algolia_lib.SearchMethodParams(
+          requests: [
+            algolia_lib.SearchForHits(
+              indexName: 'cards',
+              query: '',
+              facets: [fieldName],
+              hitsPerPage: 0, // Keine Hits, nur Facets
+            ),
+          ],
+        ),
+      );
+
+      final dynamic facetsData = (response.results.first as Map)['facets'];
+
+      if (facetsData != null && facetsData is Map) {
+        final Map<String, dynamic> facets = Map<String, dynamic>.from(
+          facetsData,
         );
+        final dynamic facetValuesMap = facets[fieldName];
 
-        final dynamic facetsData = (response.results.first as Map)['facets'];
+        if (facetValuesMap != null && facetValuesMap is Map) {
+          final List<String> values = (facetValuesMap as Map<String, dynamic>)
+              .keys
+              .where((key) => key != null && key.toString().isNotEmpty)
+              .map((key) => key.toString())
+              .toList();
 
-        if (facetsData != null && facetsData is Map) {
-          final Map<String, dynamic> facets = Map<String, dynamic>.from(
-            facetsData,
-          );
-          final dynamic facetValuesMap = facets[fieldName];
-
-          if (facetValuesMap != null && facetValuesMap is Map) {
-            final List<String> values = (facetValuesMap as Map<String, dynamic>)
-                .keys
-                .where((key) => key != null && key.toString().isNotEmpty)
-                .map((key) => key.toString())
-                .toList();
-
-            if (values.isNotEmpty) {
-              values.sort();
-              return values;
-            }
+          if (values.isNotEmpty) {
+            values.sort();
+            // Cache speichern
+            _facetValuesCache[fieldName] = values;
+            return values;
           }
-        }
-      } catch (_) {
-        // Fehlerbehandlung ohne Print
-      }
-
-      final Set<String> valuesSet = {};
-      int page = 0;
-      const int hitsPerPage = 1000;
-      bool hasMorePages = true;
-
-      while (hasMorePages) {
-        final response = await client.search(
-          searchMethodParams: algolia_lib.SearchMethodParams(
-            requests: [
-              algolia_lib.SearchForHits(
-                indexName: 'cards',
-                query: '',
-                hitsPerPage: hitsPerPage,
-                page: page,
-                attributesToRetrieve: [fieldName],
-              ),
-            ],
-          ),
-        );
-
-        final dynamic hitsData = (response.results.first as Map)['hits'];
-        final int? nbPages = (response.results.first as Map)['nbPages'] as int?;
-
-        if (hitsData == null || hitsData is! List || hitsData.isEmpty) {
-          hasMorePages = false;
-          break;
-        }
-
-        final List<dynamic> hits = hitsData as List;
-
-        for (var hit in hits) {
-          if (hit is Map<String, dynamic>) {
-            final dynamic value = hit[fieldName];
-            if (value != null && value.toString().isNotEmpty) {
-              valuesSet.add(value.toString());
-            }
-          }
-        }
-
-        if (nbPages != null && page >= nbPages - 1) {
-          hasMorePages = false;
-        } else if (hits.length < hitsPerPage) {
-          hasMorePages = false;
-        } else {
-          page++;
         }
       }
 
-      final List<String> values = valuesSet.toList();
-      values.sort();
-
-      return values;
+      // Fallback nur wenn nötig (sollte nicht passieren)
+      return [];
     } catch (_) {
       return [];
     }
