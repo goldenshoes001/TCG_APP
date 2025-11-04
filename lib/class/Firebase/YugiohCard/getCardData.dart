@@ -163,33 +163,23 @@ class CardData implements Dbrepo {
   /// **WIEDERHERGESTELLT & OPTIMIERT:** Findet den korrekten Bildpfad.
   /// Diese Methode nimmt eine Liste von URLs (typischerweise IDs) entgegen,
   /// konstruiert den erwarteten Storage-Pfad und versucht, die Download-URL zu erhalten.
+  /// **KORRIGIERT:** Findet den korrekten Bildpfad.
+  /// Diese Methode nimmt eine Liste von URLs entgegen (bereits vollständige gs:// Pfade)
+  /// und versucht, die Download-URL zu erhalten.
   Future<String> getCorrectImgPath(List<String> imageUrls) async {
-    const String storageFolder = 'hohe auflösung/';
-
     for (var imageUrl in imageUrls) {
       if (imageUrl.isEmpty) continue;
 
-      // Annahme: imageUrl enthält hier nur die Dateinummer, z.B. "56532353.jpg"
-      // Wenn es bereits ein gs:// Pfad ist, sollte man getImgPath verwenden,
-      // aber basierend auf dem Code von getCorrectImgPath scheint es nur die Dateinamen zu verwenden.
-
-      // Erzeuge den vollständigen gsPath für die Hohe-Auflösung-Version
-      final String gsPath =
-          'gs://${storage.bucket}/o/${Uri.encodeComponent(storageFolder + imageUrl)}';
-
-      // **OPTIMIERUNG:** Nutze die zentrale Caching- und Lade-Logik
-      final String downloadUrl = await getImgPath(gsPath);
+      // Die imageUrls sind bereits vollständige gs:// Pfade
+      // Verwende sie direkt mit getImgPath
+      final String downloadUrl = await getImgPath(imageUrl);
 
       if (downloadUrl.isNotEmpty) {
         return downloadUrl;
       }
     }
 
-    // Fallback: Wenn alle Pfade fehlschlagen, gib den ersten (ungeladenen) Pfad zurück (sehr unwahrscheinlich)
-    if (imageUrls.isNotEmpty) {
-      return imageUrls.first;
-    }
-
+    // Fallback: Wenn alle Pfade fehlschlagen, gib einen leeren String zurück
     return '';
   }
 
@@ -338,6 +328,7 @@ class CardData implements Dbrepo {
           requests: [
             algolia_lib.SearchForHits(
               indexName: 'cards',
+              removeWordsIfNoResults: algolia_lib.RemoveWordsIfNoResults.none,
               query: query,
               filters: filter,
               hitsPerPage: 1000,
@@ -458,7 +449,60 @@ class CardData implements Dbrepo {
 
   Future<List<Map<String, dynamic>>> ergebniseAnzeigen(String suchfeld) async {
     if (suchfeld.isEmpty) return [];
-    return _searchAlgolia(suchfeld, null);
+
+    final normalizedSearch = suchfeld.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (normalizedSearch.isEmpty) return [];
+
+    final searchPhrase = normalizedSearch.toLowerCase();
+
+    try {
+      final response = await client.search(
+        searchMethodParams: algolia_lib.SearchMethodParams(
+          requests: [
+            algolia_lib.SearchForHits(
+              indexName: 'cards',
+              query: normalizedSearch,
+              removeWordsIfNoResults: algolia_lib.RemoveWordsIfNoResults.none,
+              hitsPerPage: 1000,
+            ),
+          ],
+        ),
+      );
+
+      final dynamic hitsData = (response.results.first as Map)['hits'];
+
+      if (hitsData == null || hitsData is! List) {
+        return [];
+      }
+
+      final List<dynamic> hits = hitsData as List;
+
+      // FILTER: Behalte nur Karten, bei denen die EXAKTE PHRASE im Namen ODER Archetype ODER Kartentext vorkommt
+      final List<Map<String, dynamic>> filteredCards = hits
+          .map((hit) => Map<String, dynamic>.from(hit as Map))
+          .where((card) {
+            final name = (card['name'] as String? ?? '').toLowerCase();
+            final desc = (card['desc'] as String? ?? '').toLowerCase();
+            final archetype = (card['archetype'] as String? ?? '')
+                .toLowerCase();
+
+            // Prüfe ob die exakte Phrase in einem der Felder vorkommt
+            return name.contains(searchPhrase) ||
+                archetype.contains(searchPhrase) ||
+                desc.contains(searchPhrase);
+          })
+          .toList();
+
+      // Einfach alphabetisch sortieren
+      filteredCards.sort(
+        (a, b) =>
+            (a['name'] as String? ?? '').compareTo(b['name'] as String? ?? ''),
+      );
+
+      return filteredCards;
+    } catch (_) {
+      return [];
+    }
   }
 
   Future<void> updateAlgoliaWithImages() async {
