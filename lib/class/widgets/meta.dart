@@ -438,7 +438,7 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
         _buildDropdownWithOperator(
           label: 'Level',
           value: _selectedLevel,
-          items: List.generate(13, (index) => index.toString()),
+          items: List.generate(14, (index) => index.toString()),
           operator: _levelOperator,
           onChanged: (value) {
             setState(() {
@@ -470,7 +470,7 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
         _buildDropdownWithOperator(
           label: 'Link Rating',
           value: _selectedLinkRating,
-          items: List.generate(8, (index) => (index + 1).toString()),
+          items: List.generate(6, (index) => (index + 1).toString()),
           operator: _linkRatingOperator,
           onChanged: (value) {
             setState(() {

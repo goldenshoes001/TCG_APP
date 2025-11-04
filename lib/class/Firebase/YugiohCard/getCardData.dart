@@ -726,6 +726,7 @@ class CardData implements Dbrepo {
               query: '',
               facets: [fieldName],
               hitsPerPage: 0, // Keine Hits, nur Facets
+              maxValuesPerFacet: 100000,
             ),
           ],
         ),
