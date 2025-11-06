@@ -241,22 +241,24 @@ class _MainAppState extends State<MainApp> {
       themeMode: isDarkMode == null
           ? ThemeMode.system
           : (isDarkMode! ? ThemeMode.dark : ThemeMode.light),
-      home: Scaffold(
-        appBar: PreferredSize(
-          preferredSize: Size.fromHeight(
-            MediaQuery.of(context).size.height / appbarSize,
+      home: SafeArea(
+        child: Scaffold(
+          appBar: PreferredSize(
+            preferredSize: Size.fromHeight(
+              MediaQuery.of(context).size.height / appbarSize,
+            ),
+            child: Barwidget(
+              title: "Cardbase",
+              titleFlow: MainAxisAlignment.start,
+              onThemeChanged: _toggleDarkMode,
+            ),
           ),
-          child: Barwidget(
-            title: "Cardbase",
-            titleFlow: MainAxisAlignment.start,
-            onThemeChanged: _toggleDarkMode,
+          body: _buildPage(),
+          bottomNavigationBar: Bottombar(
+            currentIndex: _selectedIndex,
+            valueChanged: _onItemTapped,
+            navigationItems: iconList,
           ),
-        ),
-        body: _buildPage(),
-        bottomNavigationBar: Bottombar(
-          currentIndex: _selectedIndex,
-          valueChanged: _onItemTapped,
-          navigationItems: iconList,
         ),
       ),
     );

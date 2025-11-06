@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:tcg_app/class/Firebase/interfaces/dbRepo.dart';
 
-
 class Userdata implements Dbrepo {
   static Userdata? _instance;
 
@@ -33,45 +32,51 @@ class Userdata implements Dbrepo {
   @override
   Future<Map<String, dynamic>> readUser(String userId) async {
     final userDoc = FirebaseFirestore.instance.collection("users").doc(userId);
-
     DocumentSnapshot<Map<String, dynamic>> snapshot = await userDoc.get();
 
     if (snapshot.exists) {
-      return snapshot.data()!;
+      final Map<String, dynamic> data = snapshot.data()!;
+
+      // *** FEHLENDER SCHRITT: Decks abrufen ***
+      // Holen Sie die Decks aus der 'decks'-Collection, die zu dieser 'userId' gehören
+      final decksSnapshot = await FirebaseFirestore.instance
+          .collection('decks')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      // Fügen Sie die Deck-Daten der Benutzer-Map hinzu (als Liste)
+      data['decks'] = decksSnapshot.docs.map((doc) => doc.data()).toList();
+
+      return data;
     } else {
       return {};
     }
   }
 
-  
   Future<void> deleteUser(String userId) async {
     final userDoc = FirebaseFirestore.instance.collection("users").doc(userId);
-    
+
     // Prüfen ob Dokument existiert
     final snapshot = await userDoc.get();
     if (!snapshot.exists) {
       throw Exception("Benutzer nicht gefunden");
     }
-    
+
     await userDoc.delete();
   }
 
-
   Future<void> deleteUserCompletely(String userId) async {
-   
     await deleteUser(userId);
-    
-  
+
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser != null && currentUser.uid == userId) {
       await currentUser.delete();
     }
   }
-  
+
   @override
   Future<void> getAllCardsFromBannlist() {
     // TODO: implement getAllCardsFromBannlist
     throw UnimplementedError();
   }
 }
-
