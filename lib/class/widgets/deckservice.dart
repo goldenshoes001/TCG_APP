@@ -1,12 +1,11 @@
-// ============================================================================
-// lib/class/Firebase/deck/deck_service.dart
-// KOMPLETTE DATEI - KORRIGIERT: Karten-Button hinzugefügt, State öffentlich
-// ============================================================================
-
+// deckservice.dart - VOLLSTÄNDIG ÜBERARBEITET MIT KOMMENTARFUNKTION
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
+import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
+import 'package:tcg_app/class/common/buildCards.dart';
+import 'card_search_dialog.dart';
 
 // ============================================================================
 // 1. DeckService - Firestore Service für Deck-Operationen
@@ -24,14 +23,28 @@ class DeckService {
       throw Exception('Deck mit ID $deckId nicht gefunden.');
     }
 
-    // Stellen Sie sicher, dass 'mainDeck', 'extraDeck' usw. enthalten sind.
     return docSnapshot.data()!;
   }
 
+  List<String> _extractArchetypes(
+    List<Map<String, dynamic>> mainDeck,
+    List<Map<String, dynamic>> extraDeck,
+  ) {
+    final Set<String> archetypes = {};
+
+    for (var card in [...mainDeck, ...extraDeck]) {
+      final archetype = card['archetype'] as String?;
+      if (archetype != null && archetype.isNotEmpty) {
+        archetypes.add(archetype);
+      }
+    }
+
+    return archetypes.toList()..sort();
+  }
+
   Future<void> updateDeck({
-    required String deckId, // Wichtig: ID des zu aktualisierenden Decks
+    required String deckId,
     required String deckName,
-    required String archetype,
     required String description,
     required List<Map<String, dynamic>> mainDeck,
     required List<Map<String, dynamic>> extraDeck,
@@ -42,31 +55,37 @@ class DeckService {
       throw Exception('Benutzer nicht angemeldet');
     }
 
-    final searchIndex = _generateSearchIndex(deckName, archetype, description);
+    final archetypes = _extractArchetypes(mainDeck, extraDeck);
+    final archetypeString = archetypes.join(', ');
+
+    final searchIndex = _generateSearchIndex(
+      deckName,
+      archetypeString,
+      description,
+    );
     final searchTokens = _generateSearchTokens(
       deckName,
-      archetype,
+      archetypeString,
       description,
     );
 
-    // Aktualisiert das Dokument mit der gegebenen deckId
     await _firestore.collection('decks').doc(deckId).update({
       'deckName': deckName,
-      'archetype': archetype,
+      'archetype': archetypeString,
       'description': description,
       'mainDeck': mainDeck,
       'extraDeck': extraDeck,
       'sideDeck': sideDeck,
       'searchIndex': searchIndex,
       'searchTokens': searchTokens,
-      'updatedAt': FieldValue.serverTimestamp(), // Aktualisiere Zeitstempel
+      'updatedAt': FieldValue.serverTimestamp(),
     });
   }
 
   Future<bool> isDeckNameDuplicate({
     required String deckName,
     required String deckNameLower,
-    String? excludeDeckId, // Die ID des zu ignorierenden Decks beim Bearbeiten
+    String? excludeDeckId,
   }) async {
     final user = _auth.currentUser;
     if (user == null) {
@@ -75,32 +94,26 @@ class DeckService {
 
     final decksRef = _firestore.collection('decks');
     deckName = deckName.trim().toLowerCase();
-    // 1. Suche nach allen Decks des Benutzers mit diesem Namen
+
     QuerySnapshot snapshot = await decksRef
         .where('deckName', isEqualTo: deckName)
         .where('littleName', isEqualTo: deckNameLower)
         .get();
 
-    // 2. Prüfe die Ergebnisse
     for (var doc in snapshot.docs) {
-      final deckData = doc.data() as Map<String, dynamic>; // Sicherer Cast
+      final deckData = doc.data() as Map<String, dynamic>;
       final foundDeckId = deckData['deckId'] as String;
 
-      // Wenn kein excludeDeckId gegeben ist (ERSTELLEN) ODER die gefundene
-      // ID NICHT der ausgeschlossenen ID entspricht (BEARBEITEN),
-      // dann ist es ein Duplikat.
       if (excludeDeckId == null || foundDeckId != excludeDeckId) {
-        return true; // Duplikat gefunden!
+        return true;
       }
     }
 
-    return false; // Kein Duplikat gefunden, oder nur das eigene Deck wurde gefunden.
+    return false;
   }
 
-  /// Erstellt ein neues Deck in Firestore
   Future<String> createDeck({
     required String deckName,
-    required String archetype,
     required String description,
     required List<Map<String, dynamic>> mainDeck,
     required List<Map<String, dynamic>> extraDeck,
@@ -108,24 +121,34 @@ class DeckService {
   }) async {
     final user = _auth.currentUser;
     final deckNameLower = deckName.trim().toLowerCase();
+
     if (user == null) {
       throw Exception('Benutzer nicht angemeldet');
     }
+
     final isDuplicate = await isDeckNameDuplicate(
       deckName: deckName,
       deckNameLower: deckNameLower,
     );
+
     if (isDuplicate) {
-      // WICHTIG: Wirft eine Exception, die in user_profile_side.dart abgefangen wird.
       throw Exception(
-        'A Deck with "$deckName" already exists. Please choose a different name.',
+        'Ein Deck mit dem Namen "$deckName" existiert bereits. Bitte wähle einen anderen Namen.',
       );
     }
+
     final deckId = _uuid.v4();
-    final searchIndex = _generateSearchIndex(deckName, archetype, description);
+    final archetypes = _extractArchetypes(mainDeck, extraDeck);
+    final archetypeString = archetypes.join(', ');
+
+    final searchIndex = _generateSearchIndex(
+      deckName,
+      archetypeString,
+      description,
+    );
     final searchTokens = _generateSearchTokens(
       deckName,
-      archetype,
+      archetypeString,
       description,
     );
 
@@ -135,7 +158,7 @@ class DeckService {
       'username': user.displayName ?? user.email,
       'littleName': deckNameLower,
       'deckName': deckName,
-      'archetype': archetype,
+      'archetype': archetypeString,
       'description': description,
       'mainDeck': mainDeck,
       'extraDeck': extraDeck,
@@ -149,7 +172,6 @@ class DeckService {
     return deckId;
   }
 
-  // Hilfsmethoden für die Suche
   String _generateSearchIndex(
     String deckName,
     String archetype,
@@ -170,7 +192,52 @@ class DeckService {
     return _generateSearchIndex(deckName, archetype, description).split(' ');
   }
 
-  // ANNAHME: Ihre readDeck und updateDeck Methoden existieren hier ebenfalls.
+  // Kommentar-Funktionen
+  Future<void> addComment({
+    required String deckId,
+    required String comment,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('Benutzer nicht angemeldet');
+    }
+
+    final commentId = _uuid.v4();
+
+    await _firestore
+        .collection('decks')
+        .doc(deckId)
+        .collection('comments')
+        .doc(commentId)
+        .set({
+          'commentId': commentId,
+          'userId': user.uid,
+          'username': user.displayName ?? user.email ?? 'Unbekannt',
+          'comment': comment,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+  }
+
+  Stream<QuerySnapshot> getComments(String deckId) {
+    return _firestore
+        .collection('decks')
+        .doc(deckId)
+        .collection('comments')
+        .orderBy('createdAt', descending: true)
+        .snapshots();
+  }
+
+  Future<void> deleteComment({
+    required String deckId,
+    required String commentId,
+  }) async {
+    await _firestore
+        .collection('decks')
+        .doc(deckId)
+        .collection('comments')
+        .doc(commentId)
+        .delete();
+  }
 }
 
 // ============================================================================
@@ -193,9 +260,7 @@ class DeckCreationScreen extends StatefulWidget {
 
 class DeckCreationScreenState extends State<DeckCreationScreen> {
   final _formKey = GlobalKey<FormState>();
-
   final _deckNameController = TextEditingController();
-  final _archetypeController = TextEditingController();
   final _descriptionController = TextEditingController();
 
   List<Map<String, dynamic>> _mainDeck = [];
@@ -203,9 +268,13 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
   List<Map<String, dynamic>> _sideDeck = [];
 
   final DeckService _deckService = DeckService();
+  final CardData _cardData = CardData();
+
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _addToSideDeck = false;
   String? _currentDeckId;
+  Map<String, dynamic>? _selectedCardForDetail;
 
   @override
   void initState() {
@@ -217,28 +286,22 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
   @override
   void dispose() {
     _deckNameController.dispose();
-    _archetypeController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
 
   Future<void> _loadDeckData() async {
     if (_currentDeckId == null) {
-      // Wenn keine ID vorhanden, sind wir im Erstellungsmodus
       setState(() => _isLoading = false);
       return;
     }
 
     try {
-      // Daten aus Firestore lesen
       final deck = await _deckService.readDeck(_currentDeckId!);
 
-      // Controller und Listen mit geladenen Daten füllen
       _deckNameController.text = deck['deckName'] as String;
-      _archetypeController.text = deck['archetype'] as String;
-      _descriptionController.text = deck['description'] as String;
+      _descriptionController.text = deck['description'] as String? ?? '';
 
-      // Decks listen (sichere Umwandlung)
       _mainDeck =
           (deck['mainDeck'] as List<dynamic>?)
               ?.map((item) => item as Map<String, dynamic>)
@@ -255,113 +318,462 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
               .toList() ??
           [];
 
-      // WICHTIG: UI aktualisieren
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
       }
     } catch (e) {
       if (mounted) {
-        // Fehler anzeigen
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Fehler beim Laden des Decks: $e')),
         );
-        // Zurück zur Profilansicht
-        // Da die Parent-Klasse keinen direkten Zugriff hat, muss dies über eine
-        // Callback-Funktion oder ein State-Management gelöst werden.
-        // Fürs Erste setzen wir isLoading, um den Ladekreis zu beenden
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
       }
     }
   }
 
-  /// ÖFFENTLICHE METHODE: Vom Parent aufrufbar, um Daten zu sammeln
   Map<String, dynamic>? collectDeckDataAndValidate() {
     if (_formKey.currentState!.validate() &&
         _deckNameController.text.trim().isNotEmpty) {
-      final deckData = {
+      return {
         'deckName': _deckNameController.text.trim(),
-        'archetype': _archetypeController.text.trim(),
         'description': _descriptionController.text.trim(),
         'mainDeck': _mainDeck,
         'extraDeck': _extraDeck,
         'sideDeck': _sideDeck,
       };
-
-      return deckData;
     } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('A Deck must have a Name.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Das Deck muss einen Namen haben.')),
+      );
     }
     return null;
   }
 
-  // Interne UI-Aktualisierung beim Speichern/Laden
   void setSaving(bool saving) {
     if (mounted) {
-      setState(() {
-        _isSaving = saving;
-      });
+      setState(() => _isSaving = saving);
     }
   }
 
-  // Hilfsmethode zum Bauen eines Textfeldes
+  void _showCardSearchDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return CardSearchDialog(
+          isSideDeck: _addToSideDeck,
+          onCardSelected: (card, count) {
+            _addCardToDeck(card, count);
+          },
+        );
+      },
+    );
+  }
 
-  // Hilfsmethode zum Bauen der Deck-Sektion (MIT KARTE HINZUFÜGEN BUTTON)
+  void _addCardToDeck(Map<String, dynamic> card, int count) {
+    final frameType = (card['frameType'] as String? ?? '').toLowerCase();
+    List<Map<String, dynamic>> targetDeck;
+
+    // Bestimme Ziel-Deck
+    if (_addToSideDeck) {
+      targetDeck = _sideDeck;
+    } else if (frameType == 'fusion' ||
+        frameType == 'synchro' ||
+        frameType == 'xyz' ||
+        frameType == 'link' ||
+        frameType == 'fusion_pendulum' ||
+        frameType == 'synchro_pendulum' ||
+        frameType == 'xyz_pendulum') {
+      targetDeck = _extraDeck;
+    } else {
+      targetDeck = _mainDeck;
+    }
+
+    // Prüfen ob Karte bereits existiert
+    final cardId = card['id']?.toString() ?? card['name'];
+    final existingIndex = targetDeck.indexWhere(
+      (c) => (c['id']?.toString() ?? c['name']) == cardId,
+    );
+
+    // Bannlisten-Check: Maximale erlaubte Anzahl
+    final banlistInfo = card['banlist_info'];
+    int maxAllowed = 3;
+    if (banlistInfo != null) {
+      final tcgBan = banlistInfo['ban_tcg'] as String?;
+      if (tcgBan == 'Forbidden')
+        maxAllowed = 0;
+      else if (tcgBan == 'Limited')
+        maxAllowed = 1;
+      else if (tcgBan == 'Semi-Limited')
+        maxAllowed = 2;
+    }
+
+    if (existingIndex != -1) {
+      // Karte existiert bereits - prüfe Limit
+      final existingCount = targetDeck[existingIndex]['count'] as int? ?? 0;
+      final newTotal = existingCount + count;
+
+      if (newTotal > maxAllowed) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Limit überschritten! ${card['name']} ist auf $maxAllowed Kopien limitiert.',
+            ),
+          ),
+        );
+        return;
+      }
+
+      targetDeck[existingIndex] = {
+        ...targetDeck[existingIndex],
+        'count': newTotal,
+      };
+    } else {
+      // Neue Karte hinzufügen - prüfe Limit
+      if (count > maxAllowed) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Limit überschritten! ${card['name']} ist auf $maxAllowed Kopien limitiert.',
+            ),
+          ),
+        );
+        return;
+      }
+
+      final cardToAdd = Map<String, dynamic>.from(card);
+      cardToAdd['count'] = count;
+      targetDeck.add(cardToAdd);
+    }
+
+    setState(() {});
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${card['name']} ${count}x hinzugefügt')),
+    );
+  }
+
+  void _removeCardFromDeck(
+    Map<String, dynamic> card,
+    List<Map<String, dynamic>> deck,
+  ) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        final currentCount = card['count'] as int? ?? 0;
+
+        return AlertDialog(
+          backgroundColor: Theme.of(context).cardColor,
+          title: const Text('Karte entfernen'),
+          content: Text('Wie viele Kopien von "${card['name']}" entfernen?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Abbrechen'),
+            ),
+            ...List.generate(currentCount, (index) {
+              final removeCount = index + 1;
+              return TextButton(
+                onPressed: () {
+                  setState(() {
+                    if (removeCount >= currentCount) {
+                      deck.remove(card);
+                    } else {
+                      card['count'] = currentCount - removeCount;
+                    }
+                  });
+                  Navigator.of(context).pop();
+                },
+                child: Text('$removeCount${removeCount == 1 ? 'x' : 'x'}'),
+              );
+            }),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showCardDetail(Map<String, dynamic> card) {
+    setState(() {
+      _selectedCardForDetail = card;
+    });
+  }
+
   Widget _buildDeckSection({
     required String title,
     required List<Map<String, dynamic>> deck,
-    required bool isMainDeck,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          // NEU: Row für Titel und Button
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(title, style: Theme.of(context).textTheme.bodyLarge),
-            TextButton.icon(
-              onPressed: () {
-                // !!! HIER STARTET DIE KARTE-HINZUFÜGEN-LOGIK !!!
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('TODO: Öffne Kartenauswahl für $title-Deck'),
-                  ),
-                );
-                // Sie müssten hier z.B. einen Dialog öffnen und die Ergebnisse
-                // der Kartenauswahl zu _mainDeck, _extraDeck oder _sideDeck hinzufügen
-              },
-              icon: const Icon(Icons.add),
-              label: const Text('Karte hinzufügen'),
+    if (deck.isEmpty) {
+      return Expanded(
+        child: Center(
+          child: Text(
+            'Keine Karten im $title',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ),
+      );
+    }
+
+    // Kategorisierung
+    final Map<String, List<Map<String, dynamic>>> categorized = {
+      'Monster': [],
+      'Spell': [],
+      'Trap': [],
+    };
+
+    for (var card in deck) {
+      final type = card['type'] as String? ?? '';
+      if (type.contains('Monster')) {
+        categorized['Monster']!.add(card);
+      } else if (type.contains('Spell')) {
+        categorized['Spell']!.add(card);
+      } else if (type.contains('Trap')) {
+        categorized['Trap']!.add(card);
+      }
+    }
+
+    int getTotalCount(List<Map<String, dynamic>> cards) {
+      return cards.fold(0, (sum, card) => sum + (card['count'] as int? ?? 0));
+    }
+
+    Widget buildCategory(
+      String categoryName,
+      List<Map<String, dynamic>> cards,
+    ) {
+      if (cards.isEmpty) return const SizedBox.shrink();
+
+      final totalCount = getTotalCount(cards);
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Text(
+              '$categoryName ($totalCount)',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
-          ],
+          ),
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: cards.length,
+            itemBuilder: (context, index) {
+              final card = cards[index];
+              final cardImages = card['card_images'] as List<dynamic>?;
+              final imageUrl = cardImages != null && cardImages.isNotEmpty
+                  ? (cardImages[0]
+                            as Map<String, dynamic>)['image_url_cropped'] ??
+                        ''
+                  : '';
+
+              final count = card['count'] as int? ?? 0;
+              final name = card['name'] as String? ?? 'Unbekannt';
+
+              return Card(
+                margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                child: InkWell(
+                  onTap: () => _showCardDetail(card),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 30,
+                          alignment: Alignment.center,
+                          child: Text(
+                            '${count}x',
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+
+                        if (imageUrl.isNotEmpty)
+                          FutureBuilder<String>(
+                            future: _cardData.getImgPath(imageUrl),
+                            builder: (context, snapshot) {
+                              if (snapshot.hasData &&
+                                  snapshot.data!.isNotEmpty) {
+                                return Image.network(
+                                  snapshot.data!,
+                                  width: 40,
+                                  height: 60,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return const Icon(
+                                      Icons.broken_image,
+                                      size: 40,
+                                    );
+                                  },
+                                );
+                              }
+                              return const SizedBox(
+                                width: 40,
+                                height: 60,
+                                child: Icon(Icons.image),
+                              );
+                            },
+                          )
+                        else
+                          const SizedBox(
+                            width: 40,
+                            height: 60,
+                            child: Icon(Icons.image),
+                          ),
+
+                        const SizedBox(width: 12),
+
+                        Expanded(
+                          child: Text(
+                            name,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+
+                        IconButton(
+                          icon: const Icon(
+                            Icons.remove_circle_outline,
+                            color: Colors.red,
+                          ),
+                          onPressed: () => _removeCardFromDeck(card, deck),
+                          iconSize: 20,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 8),
+        ],
+      );
+    }
+
+    final totalCards = getTotalCount(deck);
+
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              '$title ($totalCards Karten)',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            ),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  buildCategory('Monster', categorized['Monster']!),
+                  buildCategory('Spell', categorized['Spell']!),
+                  buildCategory('Trap', categorized['Trap']!),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSideDeck() {
+    if (_sideDeck.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Text('Keine Karten im Side Deck'),
         ),
-        const SizedBox(height: 8),
-        // WICHTIG: ListView.builder MUSS shrinkWrap: true und NeverScrollableScrollPhysics verwenden
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: deck.length,
-          itemBuilder: (context, index) {
-            final card = deck[index];
-            return ListTile(
-              title: Text(card['name'] ?? 'Unbekannte Karte'),
-              trailing: Text('x${card['count'] ?? 0}'),
-            );
-          },
-        ),
-        const SizedBox(height: 16),
-      ],
+      );
+    }
+
+    return SizedBox(
+      height: 120,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: _sideDeck.length,
+        itemBuilder: (context, index) {
+          final card = _sideDeck[index];
+          final cardImages = card['card_images'] as List<dynamic>?;
+          final imageUrl = cardImages != null && cardImages.isNotEmpty
+              ? (cardImages[0] as Map<String, dynamic>)['image_url_cropped'] ??
+                    ''
+              : '';
+
+          final count = card['count'] as int? ?? 0;
+          final name = card['name'] as String? ?? 'Unbekannt';
+
+          return Card(
+            margin: const EdgeInsets.all(4),
+            child: InkWell(
+              onTap: () => _showCardDetail(card),
+              child: Container(
+                width: 80,
+                padding: const EdgeInsets.all(4),
+                child: Column(
+                  children: [
+                    if (imageUrl.isNotEmpty)
+                      FutureBuilder<String>(
+                        future: _cardData.getImgPath(imageUrl),
+                        builder: (context, snapshot) {
+                          if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+                            return Image.network(
+                              snapshot.data!,
+                              width: 60,
+                              height: 80,
+                              fit: BoxFit.cover,
+                            );
+                          }
+                          return const Icon(Icons.image, size: 60);
+                        },
+                      )
+                    else
+                      const Icon(Icons.image, size: 60),
+
+                    Text('${count}x', style: const TextStyle(fontSize: 10)),
+
+                    IconButton(
+                      icon: const Icon(
+                        Icons.remove_circle_outline,
+                        color: Colors.red,
+                      ),
+                      onPressed: () => _removeCardFromDeck(card, _sideDeck),
+                      iconSize: 16,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_selectedCardForDetail != null) {
+      return CardDetailView(
+        cardData: _selectedCardForDetail!,
+        onBack: () {
+          setState(() {
+            _selectedCardForDetail = null;
+          });
+        },
+      );
+    }
+
     if (_isLoading || _isSaving) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -370,61 +782,77 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
       padding: const EdgeInsets.only(top: 0, bottom: 16, left: 16, right: 16),
       child: Form(
         key: _formKey,
-        // KORREKTUR: Der äußere Container muss eine Column bleiben
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(height: 10), // NEUE ROW FÜR DIE TEXTFELDER (nebeneinander)
+            const SizedBox(height: 10),
+
+            // Deck Name Feld
+            TextField(
+              controller: _deckNameController,
+              decoration: const InputDecoration(
+                labelText: 'Deck Name',
+                border: OutlineInputBorder(),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Karte hinzufügen Button mit Side Deck Toggle
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Textfeld
-                //1: Deck Name
                 Expanded(
-                  child: TextField(
-                    controller: _deckNameController,
-                    decoration: InputDecoration(
-                      labelText: 'Deck Name',
-                      border: const OutlineInputBorder(),
-                    ),
+                  child: ElevatedButton.icon(
+                    onPressed: _showCardSearchDialog,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Karte hinzufügen'),
                   ),
                 ),
-                const SizedBox(width: 16), // Horizontaler Abstand
-                // Textfeld 2: Archetyp
-                Expanded(
-                  child: TextField(
-                    controller: _archetypeController,
-                    decoration: InputDecoration(
-                      labelText: 'Archetyp',
-                      border: const OutlineInputBorder(),
+                const SizedBox(width: 8),
+                Row(
+                  children: [
+                    Checkbox(
+                      value: _addToSideDeck,
+                      onChanged: (value) {
+                        setState(() {
+                          _addToSideDeck = value ?? false;
+                        });
+                      },
                     ),
-                  ),
+                    const Text('Zum Side Deck'),
+                  ],
                 ),
               ],
             ),
 
-            const SizedBox(height: 16), // Vertikaler Abstand
-            // Textfeld 3: Beschreibung (Bleibt unterhalb der ersten zwei Felder)
-            const SizedBox(height: 24), // Vertikaler Abstand
-            // Deck Sektionen (Diese waren vorher in der äußeren Column und bleiben dort)
-            _buildDeckSection(
-              title: 'Main Deck',
-              deck: _mainDeck,
-              isMainDeck: true,
+            const SizedBox(height: 16),
+
+            // Main Deck und Extra Deck nebeneinander
+            SizedBox(
+              height: 400,
+              child: Row(
+                children: [
+                  _buildDeckSection(title: 'Main Deck', deck: _mainDeck),
+                  const SizedBox(width: 8),
+                  _buildDeckSection(title: 'Extra Deck', deck: _extraDeck),
+                ],
+              ),
             ),
-            _buildDeckSection(
-              title: 'Extra Deck',
-              deck: _extraDeck,
-              isMainDeck: false,
+
+            const SizedBox(height: 16),
+
+            // Side Deck
+            Text(
+              'Side Deck (${_sideDeck.fold(0, (sum, card) => sum + (card['count'] as int? ?? 0))} Karten)',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
-            _buildDeckSection(
-              title: 'Side Deck',
-              deck: _sideDeck,
-              isMainDeck: false,
-            ),
+            const SizedBox(height: 8),
+            _buildSideDeck(),
+
             const SizedBox(height: 24),
 
-            // CommentSection bleibt auch in der Column
             if (_currentDeckId != null) ...[
               CommentSection(deckId: _currentDeckId!),
               const SizedBox(height: 50),
@@ -440,25 +868,161 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
 // CommentSection
 // ============================================================================
 
-class CommentSection extends StatelessWidget {
+class CommentSection extends StatefulWidget {
   final String deckId;
   const CommentSection({super.key, required this.deckId});
 
   @override
+  State<CommentSection> createState() => _CommentSectionState();
+}
+
+class _CommentSectionState extends State<CommentSection> {
+  final DeckService _deckService = DeckService();
+  final TextEditingController _commentController = TextEditingController();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _addComment() async {
+    final comment = _commentController.text.trim();
+    if (comment.isEmpty) return;
+
+    try {
+      await _deckService.addComment(deckId: widget.deckId, comment: comment);
+      _commentController.clear();
+
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Kommentar hinzugefügt')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Fehler: $e')));
+      }
+    }
+  }
+
+  Future<void> _deleteComment(String commentId) async {
+    try {
+      await _deckService.deleteComment(
+        deckId: widget.deckId,
+        commentId: commentId,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Kommentar gelöscht')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Fehler: $e')));
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // ... Ihre Implementierung der CommentSection ...
+    final currentUserId = _auth.currentUser?.uid;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 120),
-        Text('Kommentare', style: Theme.of(context).textTheme.bodyLarge),
-        const SizedBox(height: 20),
-        Container(
-          height: 50,
-          color: Theme.of(context).textTheme.bodyMedium!.color,
-          child: const Center(
-            child: Text('Kommentarsektion für existierendes Deck'),
-          ),
+        Text('Kommentare', style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 16),
+
+        // Kommentar hinzufügen
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _commentController,
+                decoration: const InputDecoration(
+                  hintText: 'Kommentar schreiben...',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(icon: const Icon(Icons.send), onPressed: _addComment),
+          ],
+        ),
+
+        const SizedBox(height: 16),
+
+        // Kommentare anzeigen
+        StreamBuilder<QuerySnapshot>(
+          stream: _deckService.getComments(widget.deckId),
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return Text('Fehler: ${snapshot.error}');
+            }
+
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            final comments = snapshot.data?.docs ?? [];
+
+            if (comments.isEmpty) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Text('Noch keine Kommentare'),
+                ),
+              );
+            }
+
+            return ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: comments.length,
+              itemBuilder: (context, index) {
+                final comment = comments[index].data() as Map<String, dynamic>;
+                final commentId = comment['commentId'] as String;
+                final userId = comment['userId'] as String;
+                final username = comment['username'] as String;
+                final commentText = comment['comment'] as String;
+                final timestamp = comment['createdAt'] as Timestamp?;
+
+                final canDelete = currentUserId == userId;
+
+                return Card(
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  child: ListTile(
+                    title: Text(username),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(commentText),
+                        if (timestamp != null)
+                          Text(
+                            timestamp.toDate().toString(),
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                      ],
+                    ),
+                    trailing: canDelete
+                        ? IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () => _deleteComment(commentId),
+                          )
+                        : null,
+                  ),
+                );
+              },
+            );
+          },
         ),
       ],
     );

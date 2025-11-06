@@ -1,7 +1,4 @@
-// ============================================================================
-// user_profile_side.dart - KOMPLETT ÜBERARBEITET
-// ============================================================================
-
+// user_profile_side.dart - AKTUALISIERT MIT ARCHETYPES-ANZEIGE
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/Firebase/interfaces/FirebaseAuthRepository.dart';
 import 'package:tcg_app/class/Firebase/user/user.dart';
@@ -26,13 +23,8 @@ class UserProfileScreen extends StatefulWidget {
 }
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
-  // NEU: Zustand zur Steuerung der angezeigten Seite
   bool _showDeckCreation = false;
-
-  // NEU: Speichert die ID des zu bearbeitenden Decks (null für Erstellung)
   String? _editingDeckId;
-
-  // GlobalKey für den Zugriff auf die Methoden des Kind-Widgets
   final GlobalKey<DeckCreationScreenState> _deckCreationKey = GlobalKey();
 
   final Userdata userdb = Userdata();
@@ -55,23 +47,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     } else {
       uid = null;
       email = "Gast";
-      userData = Future.value({}); // Leere Map als Fallback
+      userData = Future.value({});
     }
   }
 
   void _saveDeck() {
-    // 1. Ruft die Validierung und Datensammlung im Kind-Widget auf
     final deckData = _deckCreationKey.currentState
         ?.collectDeckDataAndValidate();
 
-    // 2. WICHTIG: Prüft, ob die Daten gesammelt (und validiert) wurden
     if (deckData != null) {
-      // 3. Wenn die Validierung erfolgreich war, starte den Speichervorgang
       _handleDeckSave(deckData);
     }
   }
 
-  // Logik für Abmeldung
   Future<void> _handleLogout() async {
     try {
       await authRepo.signOut();
@@ -90,7 +78,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
   }
 
-  // Logik für Benutzer löschen
   Future<void> _deleteUser() async {
     final currentUid = uid;
     if (currentUid == null) return;
@@ -112,35 +99,26 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
   }
 
-  // Hilfsfunktion zum Zählen der Karten
-  // Nimmt List<Map<String, dynamic>> entgegen
   int _getDeckCardCount(List<Map<String, dynamic>> deck) {
     return deck.fold(0, (sum, card) => sum + (card['count'] as int? ?? 0));
   }
-
-  // Logik für den eigentlichen Speichervorgang in Firestore
 
   Future<void> _handleDeckSave(Map<String, dynamic> deckData) async {
     try {
       _deckCreationKey.currentState?.setSaving(true);
 
-      // Logik, um zwischen Erstellen und Bearbeiten zu unterscheiden
       if (_editingDeckId == null) {
-        // ERSTELLEN
         await _deckService.createDeck(
           deckName: deckData['deckName'],
-          archetype: deckData['archetype'],
           description: deckData['description'],
           mainDeck: deckData['mainDeck'],
           extraDeck: deckData['extraDeck'],
           sideDeck: deckData['sideDeck'],
         );
       } else {
-        // *** HIER: IMPLEMENTIERUNG DER BEARBEITUNG ***
         await _deckService.updateDeck(
-          deckId: _editingDeckId!, // Die ID des zu bearbeitenden Decks
+          deckId: _editingDeckId!,
           deckName: deckData['deckName'],
-          archetype: deckData['archetype'],
           description: deckData['description'],
           mainDeck: deckData['mainDeck'],
           extraDeck: deckData['extraDeck'],
@@ -148,14 +126,16 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         );
       }
 
-      // Nach dem Speichern zur Profil-Ansicht zurückkehren
       if (mounted) {
         setState(() {
           _showDeckCreation = false;
-          _editingDeckId = null; // ID zurücksetzen
-          // *** WICHTIG: Benutzerdaten neu laden, um die aktualisierte Liste anzuzeigen ***
+          _editingDeckId = null;
           userData = userdb.readUser(uid!);
         });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Deck erfolgreich gespeichert!')),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -168,19 +148,16 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
   }
 
-  // NEU: Methode zum Öffnen eines bestehenden Decks
   void _openDeckForEdit(String deckId) {
     setState(() {
       _editingDeckId = deckId;
-      _showDeckCreation = true; // Umschalten zur Bearbeitungsansicht
+      _showDeckCreation = true;
     });
   }
 
-  // NEU: Methode zum Bauen der Deck-Erstellungs-Ansicht (Header + Body)
   Widget _buildDeckCreationView() {
     return Column(
       children: [
-        // KORRIGIERTE KOPFZEILE (Simuliert AppBar)
         Padding(
           padding: const EdgeInsets.only(
             left: 16.0,
@@ -195,36 +172,27 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const Spacer(),
-              // ABBRECHEN-Button
               TextButton(
                 onPressed: () {
                   setState(() {
-                    _showDeckCreation = false; // Zurück zur Profilansicht
-                    _editingDeckId = null; // ID zurücksetzen
+                    _showDeckCreation = false;
+                    _editingDeckId = null;
                   });
                 },
                 child: const Text('Abbrechen'),
               ),
               const SizedBox(width: 8),
-              // SPEICHERN-Button
               ElevatedButton(
-                onPressed: () {
-                  // Ruft die öffentliche Methode im Kind-Widget auf
-
-                  _saveDeck();
-                },
+                onPressed: _saveDeck,
                 child: const Text('Speichern'),
               ),
             ],
           ),
         ),
-
-        // EINGEBETTETER DECK CREATION SCREEN (Body)
         Expanded(
           child: DeckCreationScreen(
             key: _deckCreationKey,
-            initialDeckId:
-                _editingDeckId, // Hier wird die ID (oder null) übergeben
+            initialDeckId: _editingDeckId,
             onDataCollected: (data) {},
           ),
         ),
@@ -233,7 +201,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Future<void> _handleDeckDelete(String deckId, String deckName) async {
-    // 1. Bestätigungsdialog anzeigen
     final confirm = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
@@ -265,7 +232,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Deck "$deckName" erfolgreich gelöscht!')),
           );
-          // Deck-Liste neu laden, um das gelöschte Deck zu entfernen
           setState(() {
             userData = userdb.readUser(uid!);
           });
@@ -280,12 +246,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
   }
 
-  // Methode für die Deck-Listen-Anzeige (Korrigierter Typ-Fehler)
   Widget _buildDeckList(Map<String, dynamic> userMap) {
-    // Sicherer Abruf: Holen Sie die Liste als List<dynamic>
     final List<dynamic> dynamicDecks = userMap['decks'] as List<dynamic>? ?? [];
-
-    // Konvertieren Sie jeden Eintrag sicher in den erwarteten Typ Map<String, dynamic>
     final List<Map<String, dynamic>> decks = dynamicDecks
         .whereType<Map<String, dynamic>>()
         .toList();
@@ -306,7 +268,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       itemBuilder: (context, index) {
         final deck = decks[index];
 
-        // Innere Listen-Konvertierung muss ebenfalls sicher sein!
         final mainDeckData = deck['mainDeck'] as List<dynamic>? ?? [];
         final mainDeckList = mainDeckData
             .whereType<Map<String, dynamic>>()
@@ -321,7 +282,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           color: Theme.of(context).cardColor,
           padding: const EdgeInsets.all(12.0),
           margin: const EdgeInsets.symmetric(vertical: 4.0),
-
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -334,25 +294,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         "Deckname: $deckName",
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
-
                     if (archetype != null && archetype.isNotEmpty)
                       Text(
-                        'Archetyp: $archetype',
-                        style: Theme.of(context).textTheme.bodyMedium,
+                        'Archetypen: $archetype',
+                        style: Theme.of(context).textTheme.bodySmall,
                       ),
                   ],
                 ),
               ),
-
-              // INNERE ROW ZUR ABSTANDSKONTROLLE MIT INKWELLS
               Row(
-                mainAxisSize:
-                    MainAxisSize.min, // Nimmt nur den benötigten Platz ein
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text('${cardCount} Karten'),
                   const SizedBox(width: 128),
-                  // Abstand zum Text (Kartenanzahl)
-                  // 1. BEARBEITEN-ICON mit InkWell
                   InkWell(
                     onTap: () {
                       if (deckId != null) {
@@ -367,18 +321,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         );
                       }
                     },
-                    child: Icon(Icons.edit, color: Colors.blue),
+                    child: const Icon(Icons.edit, color: Colors.blue),
                   ),
-
-                  // 2. LÖSCHEN-ICON mit InkWell
+                  const SizedBox(width: 16),
                   InkWell(
                     customBorder: const CircleBorder(),
                     onTap: () {
                       if (deckId != null) {
-                        _handleDeckDelete(deckId, deckName!);
+                        _handleDeckDelete(deckId, deckName);
                       }
                     },
-                    child: Icon(Icons.delete, color: Colors.red),
+                    child: const Icon(Icons.delete, color: Colors.red),
                   ),
                 ],
               ),
@@ -389,7 +342,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
-  // Methode für die Standard-Profilansicht
   Widget _buildProfileContent(Map<String, dynamic> userMap) {
     return SingleChildScrollView(
       child: Padding(
@@ -397,32 +349,25 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Benutzerinformationen
             Text(
               'Willkommen, ${userMap['username'] ?? email}',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 24),
-
-            // Button zum Umschalten zum Deck-Erstellen-Screen
             ElevatedButton(
               onPressed: () {
                 setState(() {
-                  _editingDeckId = null; // WICHTIG: null für neues Deck setzen
+                  _editingDeckId = null;
                   _showDeckCreation = true;
                 });
               },
               child: const Text('Neues Deck erstellen'),
             ),
             const SizedBox(height: 24),
-
-            // Deck-Liste
             Text('Deine Decks', style: Theme.of(context).textTheme.bodyLarge),
             const SizedBox(height: 16),
-            _buildDeckList(userMap), // Der korrigierte Listen-Aufruf
+            _buildDeckList(userMap),
             const SizedBox(height: 24),
-
-            // Account-Einstellungen
             Text(
               'Account-Einstellungen',
               style: Theme.of(context).textTheme.bodyLarge,
@@ -467,12 +412,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
         final userMap = snapshot.data ?? {};
 
-        // KONDITIONALE RÜCKGABE
         if (_showDeckCreation) {
-          // Zeigt den Header und das Formular
           return _buildDeckCreationView();
         } else {
-          // Zeigt die Profilansicht
           return _buildProfileContent(userMap);
         }
       },
