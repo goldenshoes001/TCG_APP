@@ -1,4 +1,4 @@
-// card_search_dialog.dart - Dialog zur Kartensuche beim Deck-Erstellen
+// card_search_dialog.dart - Dialog zur Kartensuche mit Filtern
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 
@@ -20,7 +20,36 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
   final CardData _cardData = CardData();
   final TextEditingController _searchController = TextEditingController();
   Future<List<Map<String, dynamic>>>? _searchFuture;
-  Map<String, dynamic>? _selectedCard;
+
+  bool _showFilters = false;
+  bool _filtersLoading = true;
+
+  // Filter-Werte
+  String? _selectedType;
+  String? _selectedRace;
+  String? _selectedAttribute;
+  String? _selectedArchetype;
+  String? _selectedLevel;
+  String? _selectedScale;
+  String? _selectedLinkRating;
+
+  // Listen für Filter
+  List<String> _types = [];
+  List<String> _races = [];
+  List<String> _attributes = [];
+  List<String> _archetypes = [];
+
+  // Operatoren
+  String _levelOperator = '=';
+  String _scaleOperator = '=';
+  String _linkRatingOperator = '=';
+  final List<String> _operators = ['min', '=', 'max'];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFilterData();
+  }
 
   @override
   void dispose() {
@@ -28,7 +57,31 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
     super.dispose();
   }
 
-  void _performSearch(String query) {
+  Future<void> _loadFilterData() async {
+    try {
+      final loadedTypes = await _cardData.getFacetValues('type');
+      final loadedRaces = await _cardData.getFacetValues('race');
+      final loadedAttributes = await _cardData.getFacetValues('attribute');
+      final loadedArchetypes = await _cardData.getFacetValues('archetype');
+
+      if (mounted) {
+        setState(() {
+          _types = loadedTypes;
+          _races = loadedRaces;
+          _attributes = loadedAttributes;
+          _archetypes = loadedArchetypes;
+          _filtersLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Fehler beim Laden der Filterdaten: $e');
+      if (mounted) {
+        setState(() => _filtersLoading = false);
+      }
+    }
+  }
+
+  void _performTextSearch(String query) {
     final trimmedValue = query.trim();
     if (trimmedValue.isNotEmpty) {
       setState(() {
@@ -36,7 +89,6 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
           list,
         ) async {
           final cards = list.cast<Map<String, dynamic>>();
-          // Filter: token und skill Karten ausschließen
           final filteredCards = cards.where((card) {
             final frameType = (card['frameType'] as String? ?? '')
                 .toLowerCase();
@@ -45,12 +97,92 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
           await _cardData.preloadCardImages(filteredCards);
           return filteredCards;
         });
+        _showFilters = false;
       });
     } else {
       setState(() {
         _searchFuture = Future.value([]);
       });
     }
+  }
+
+  void _performFilterSearch() {
+    if (_selectedType == null &&
+        _selectedRace == null &&
+        _selectedAttribute == null &&
+        _selectedArchetype == null &&
+        _selectedLevel == null &&
+        _selectedScale == null &&
+        _selectedLinkRating == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Bitte wählen Sie mindestens einen Filter aus.'),
+        ),
+      );
+      return;
+    }
+
+    int? levelValue;
+    String? levelOperatorValue;
+    int? scaleValue;
+    String? scaleOperatorValue;
+    int? linkRatingValue;
+    String? linkRatingOperatorValue;
+
+    if (_selectedLevel != null) {
+      levelValue = int.tryParse(_selectedLevel!);
+      levelOperatorValue = _levelOperator;
+    }
+    if (_selectedScale != null) {
+      scaleValue = int.tryParse(_selectedScale!);
+      scaleOperatorValue = _scaleOperator;
+    }
+    if (_selectedLinkRating != null) {
+      linkRatingValue = int.tryParse(_selectedLinkRating!);
+      linkRatingOperatorValue = _linkRatingOperator;
+    }
+
+    setState(() {
+      _searchFuture = _cardData
+          .searchWithFilters(
+            type: _selectedType,
+            race: _selectedRace,
+            attribute: _selectedAttribute,
+            archetype: _selectedArchetype,
+            level: levelValue,
+            levelOperator: levelOperatorValue,
+            linkRating: linkRatingValue,
+            linkRatingOperator: linkRatingOperatorValue,
+            scale: scaleValue,
+            scaleOperator: scaleOperatorValue,
+          )
+          .then((list) async {
+            final cards = list.cast<Map<String, dynamic>>();
+            final filteredCards = cards.where((card) {
+              final frameType = (card['frameType'] as String? ?? '')
+                  .toLowerCase();
+              return frameType != 'token' && frameType != 'skill';
+            }).toList();
+            await _cardData.preloadCardImages(filteredCards);
+            return filteredCards;
+          });
+      _showFilters = false;
+    });
+  }
+
+  void _resetFilters() {
+    setState(() {
+      _selectedType = null;
+      _selectedRace = null;
+      _selectedAttribute = null;
+      _selectedArchetype = null;
+      _selectedLevel = null;
+      _selectedScale = null;
+      _selectedLinkRating = null;
+      _levelOperator = '=';
+      _scaleOperator = '=';
+      _linkRatingOperator = '=';
+    });
   }
 
   int _getMaxAllowedCount(Map<String, dynamic> card) {
@@ -85,7 +217,7 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
       builder: (BuildContext context) {
         return AlertDialog(
           backgroundColor: Theme.of(context).cardColor,
-          title: Text('Wie oft hinzufügen?'),
+          title: const Text('Wie oft hinzufügen?'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -95,7 +227,7 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
               if (maxCount < 3)
                 Text(
                   'Diese Karte ist ${maxCount == 1 ? 'limitiert' : 'semi-limitiert'}',
-                  style: TextStyle(color: Colors.orange, fontSize: 12),
+                  style: const TextStyle(color: Colors.orange, fontSize: 12),
                 ),
             ],
           ),
@@ -112,12 +244,200 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
                   Navigator.of(context).pop();
                   Navigator.of(context).pop();
                 },
-                child: Text('$count${count == 1 ? 'x' : 'x'}'),
+                child: Text('${count}x'),
               );
             }),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildDropdown({
+    required String label,
+    required String? value,
+    required List<String> items,
+    required void Function(String?) onChanged,
+  }) {
+    return DropdownButtonFormField<String>(
+      decoration: InputDecoration(
+        hintText: label,
+        border: const OutlineInputBorder(),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      ),
+      value: value,
+      items: [
+        DropdownMenuItem<String>(value: null, child: Text(label)),
+        ...items.map(
+          (item) => DropdownMenuItem<String>(
+            value: item,
+            child: Text(item, overflow: TextOverflow.ellipsis),
+          ),
+        ),
+      ],
+      onChanged: onChanged,
+      style: Theme.of(context).textTheme.bodyMedium,
+    );
+  }
+
+  Widget _buildDropdownWithOperator({
+    required String label,
+    required String? value,
+    required List<String> items,
+    required String operator,
+    required void Function(String?) onChanged,
+    required void Function(String?) onOperatorChanged,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          flex: 1,
+          child: DropdownButtonFormField<String>(
+            isExpanded: true,
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            ),
+            value: operator,
+            items: _operators.map((op) {
+              return DropdownMenuItem<String>(
+                value: op,
+                child: Text(op, textAlign: TextAlign.center),
+              );
+            }).toList(),
+            onChanged: onOperatorChanged,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          flex: 2,
+          child: DropdownButtonFormField<String>(
+            decoration: InputDecoration(
+              hintText: label,
+              border: const OutlineInputBorder(),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 8,
+              ),
+            ),
+            value: value,
+            items: [
+              DropdownMenuItem<String>(value: null, child: Text(label)),
+              ...items.map(
+                (item) => DropdownMenuItem<String>(
+                  value: item,
+                  child: Text(item, overflow: TextOverflow.ellipsis),
+                ),
+              ),
+            ],
+            onChanged: onChanged,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFilterSection() {
+    if (_filtersLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    const double spacing = 12.0;
+
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildDropdown(
+            label: 'Type',
+            value: _selectedType,
+            items: _types,
+            onChanged: (value) => setState(() => _selectedType = value),
+          ),
+          const SizedBox(height: spacing),
+          Row(
+            children: [
+              Expanded(
+                child: _buildDropdown(
+                  label: 'Race',
+                  value: _selectedRace,
+                  items: _races,
+                  onChanged: (value) => setState(() => _selectedRace = value),
+                ),
+              ),
+              const SizedBox(width: spacing),
+              Expanded(
+                child: _buildDropdown(
+                  label: 'Attribut',
+                  value: _selectedAttribute,
+                  items: _attributes,
+                  onChanged: (value) =>
+                      setState(() => _selectedAttribute = value),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: spacing),
+          _buildDropdown(
+            label: 'Archetyp',
+            value: _selectedArchetype,
+            items: _archetypes,
+            onChanged: (value) => setState(() => _selectedArchetype = value),
+          ),
+          const SizedBox(height: spacing),
+          _buildDropdownWithOperator(
+            label: 'Level',
+            value: _selectedLevel,
+            items: List.generate(14, (index) => index.toString()),
+            operator: _levelOperator,
+            onChanged: (value) => setState(() => _selectedLevel = value),
+            onOperatorChanged: (value) =>
+                setState(() => _levelOperator = value!),
+          ),
+          const SizedBox(height: spacing),
+          _buildDropdownWithOperator(
+            label: 'Scale',
+            value: _selectedScale,
+            items: List.generate(14, (index) => index.toString()),
+            operator: _scaleOperator,
+            onChanged: (value) => setState(() => _selectedScale = value),
+            onOperatorChanged: (value) =>
+                setState(() => _scaleOperator = value!),
+          ),
+          const SizedBox(height: spacing),
+          _buildDropdownWithOperator(
+            label: 'Link Rating',
+            value: _selectedLinkRating,
+            items: List.generate(6, (index) => (index + 1).toString()),
+            operator: _linkRatingOperator,
+            onChanged: (value) => setState(() => _selectedLinkRating = value),
+            onOperatorChanged: (value) =>
+                setState(() => _linkRatingOperator = value!),
+          ),
+          const SizedBox(height: spacing),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _performFilterSearch,
+                  icon: const Icon(Icons.search),
+                  label: const Text('Suchen'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _resetFilters,
+                  icon: const Icon(Icons.clear),
+                  label: const Text('Zurücksetzen'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -139,28 +459,43 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
                 ),
                 const Spacer(),
                 IconButton(
+                  icon: Icon(_showFilters ? Icons.search : Icons.filter_list),
+                  onPressed: () {
+                    setState(() {
+                      _showFilters = !_showFilters;
+                    });
+                  },
+                ),
+                IconButton(
                   icon: const Icon(Icons.close),
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
             ),
             const SizedBox(height: 16),
-            TextField(
-              controller: _searchController,
-              decoration: const InputDecoration(
-                hintText: "Kartenname eingeben...",
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
+
+            if (!_showFilters) ...[
+              TextField(
+                controller: _searchController,
+                decoration: const InputDecoration(
+                  hintText: "Kartenname eingeben...",
+                  prefixIcon: Icon(Icons.search),
+                  border: OutlineInputBorder(),
+                ),
+                onSubmitted: _performTextSearch,
               ),
-              onSubmitted: _performSearch,
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
+            ],
+
             Expanded(
-              child: _searchFuture == null
+              child: _showFilters
+                  ? _buildFilterSection()
+                  : _searchFuture == null
                   ? Center(
                       child: Text(
-                        'Gib einen Kartennamen ein, um zu suchen',
+                        'Gib einen Kartennamen ein oder nutze die Filter',
                         style: Theme.of(context).textTheme.bodyMedium,
+                        textAlign: TextAlign.center,
                       ),
                     )
                   : FutureBuilder<List<Map<String, dynamic>>>(

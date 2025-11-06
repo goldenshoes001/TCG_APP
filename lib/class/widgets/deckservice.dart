@@ -475,10 +475,20 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
               return TextButton(
                 onPressed: () {
                   setState(() {
-                    if (removeCount >= currentCount) {
-                      deck.remove(card);
-                    } else {
-                      card['count'] = currentCount - removeCount;
+                    final cardId = card['id']?.toString() ?? card['name'];
+                    final cardIndex = deck.indexWhere(
+                      (c) => (c['id']?.toString() ?? c['name']) == cardId,
+                    );
+
+                    if (cardIndex != -1) {
+                      if (removeCount >= currentCount) {
+                        deck.removeAt(cardIndex);
+                      } else {
+                        deck[cardIndex] = {
+                          ...deck[cardIndex],
+                          'count': currentCount - removeCount,
+                        };
+                      }
                     }
                   });
                   Navigator.of(context).pop();
@@ -556,99 +566,92 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: cards.length,
-            itemBuilder: (context, index) {
-              final card = cards[index];
-              final cardImages = card['card_images'] as List<dynamic>?;
-              final imageUrl = cardImages != null && cardImages.isNotEmpty
-                  ? (cardImages[0]
-                            as Map<String, dynamic>)['image_url_cropped'] ??
-                        ''
-                  : '';
+          ...cards.map((card) {
+            final cardImages = card['card_images'] as List<dynamic>?;
+            final imageUrl = cardImages != null && cardImages.isNotEmpty
+                ? (cardImages[0]
+                          as Map<String, dynamic>)['image_url_cropped'] ??
+                      ''
+                : '';
 
-              final count = card['count'] as int? ?? 0;
-              final name = card['name'] as String? ?? 'Unbekannt';
+            final count = card['count'] as int? ?? 0;
+            final name = card['name'] as String? ?? 'Unbekannt';
 
-              return Card(
-                margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                child: InkWell(
-                  onTap: () => _showCardDetail(card),
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 30,
-                          alignment: Alignment.center,
-                          child: Text(
-                            '${count}x',
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                          ),
+            return Card(
+              margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+              child: InkWell(
+                onTap: () => _showCardDetail(card),
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 30,
+                        alignment: Alignment.center,
+                        child: Text(
+                          '${count}x',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
                         ),
-                        const SizedBox(width: 8),
+                      ),
+                      const SizedBox(width: 8),
 
-                        if (imageUrl.isNotEmpty)
-                          FutureBuilder<String>(
-                            future: _cardData.getImgPath(imageUrl),
-                            builder: (context, snapshot) {
-                              if (snapshot.hasData &&
-                                  snapshot.data!.isNotEmpty) {
-                                return Image.network(
-                                  snapshot.data!,
-                                  width: 40,
-                                  height: 60,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return const Icon(
-                                      Icons.broken_image,
-                                      size: 40,
-                                    );
-                                  },
-                                );
-                              }
-                              return const SizedBox(
+                      if (imageUrl.isNotEmpty)
+                        FutureBuilder<String>(
+                          future: _cardData.getImgPath(imageUrl),
+                          builder: (context, snapshot) {
+                            if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+                              return Image.network(
+                                snapshot.data!,
                                 width: 40,
                                 height: 60,
-                                child: Icon(Icons.image),
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Icon(
+                                    Icons.broken_image,
+                                    size: 40,
+                                  );
+                                },
                               );
-                            },
-                          )
-                        else
-                          const SizedBox(
-                            width: 40,
-                            height: 60,
-                            child: Icon(Icons.image),
-                          ),
-
-                        const SizedBox(width: 12),
-
-                        Expanded(
-                          child: Text(
-                            name,
-                            style: Theme.of(context).textTheme.bodyMedium,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                            }
+                            return const SizedBox(
+                              width: 40,
+                              height: 60,
+                              child: Icon(Icons.image),
+                            );
+                          },
+                        )
+                      else
+                        const SizedBox(
+                          width: 40,
+                          height: 60,
+                          child: Icon(Icons.image),
                         ),
 
-                        IconButton(
-                          icon: const Icon(
-                            Icons.remove_circle_outline,
-                            color: Colors.red,
-                          ),
-                          onPressed: () => _removeCardFromDeck(card, deck),
-                          iconSize: 20,
+                      const SizedBox(width: 12),
+
+                      Expanded(
+                        child: Text(
+                          name,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ],
-                    ),
+                      ),
+
+                      IconButton(
+                        icon: const Icon(
+                          Icons.remove_circle_outline,
+                          color: Colors.red,
+                        ),
+                        onPressed: () => _removeCardFromDeck(card, deck),
+                        iconSize: 20,
+                      ),
+                    ],
                   ),
                 ),
-              );
-            },
-          ),
+              ),
+            );
+          }).toList(),
           const SizedBox(height: 8),
         ],
       );

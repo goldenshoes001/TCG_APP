@@ -1,10 +1,9 @@
-// meta.dart - KORRIGIERT UND AUFGERÄUMT
-
+// meta.dart - MIT DECK-SUCHE
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 import 'package:tcg_app/class/common/buildCards.dart';
-
-import 'package:tcg_app/class/widgets/helperClass%20allgemein/search_results_view.dart'; // NEU: Import für ausgelagertes Widget
+import 'package:tcg_app/class/widgets/helperClass%20allgemein/search_results_view.dart';
+import 'package:tcg_app/class/widgets/deck_search_service.dart';
 
 class Meta extends StatefulWidget {
   final List<String>? preloadedTypes;
@@ -24,28 +23,32 @@ class Meta extends StatefulWidget {
   State<Meta> createState() => _MetaState();
 }
 
-class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
+class _MetaState extends State<Meta>
+    with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin {
   final CardData _cardData = CardData();
-  Future<List<Map<String, dynamic>>>? _searchFuture;
+  final DeckSearchService _deckSearchService = DeckSearchService();
+
+  late TabController _tabController;
+
+  Future<List<Map<String, dynamic>>>? _cardSearchFuture;
+  Future<List<Map<String, dynamic>>>? _deckSearchFuture;
   Map<String, dynamic>? _selectedCard;
+  Map<String, dynamic>? _selectedDeck;
   bool _showFilters = true;
 
   final TextEditingController _suchfeld = TextEditingController();
 
-  // Filter-Werte (bleiben persistent)
+  // Filter-Werte für Karten
   String? _selectedType;
   String? _selectedRace;
   String? _selectedAttribute;
   String? _selectedArchetype;
   String? _selectedBanlistTCG;
   String? _selectedBanlistOCG;
-
-  // Numerische Filter als String-Variablen (für Dropdowns)
   String? _selectedLevel;
   String? _selectedScale;
   String? _selectedLinkRating;
 
-  // Listen für dynamisch geladene Filter-Werte
   List<String> _types = [];
   List<String> _races = [];
   List<String> _attributes = [];
@@ -53,7 +56,6 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
 
   bool _filtersLoading = true;
 
-  // Nur für ATK und DEF behalten wir TextController (manuelle Eingabe)
   final TextEditingController _atkController = TextEditingController();
   final TextEditingController _defController = TextEditingController();
 
@@ -69,6 +71,7 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _loadFilterData();
   }
 
@@ -90,9 +93,7 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
     }
 
     if (mounted) {
-      setState(() {
-        _filtersLoading = true;
-      });
+      setState(() => _filtersLoading = true);
     }
 
     try {
@@ -113,15 +114,14 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
     } catch (e) {
       print('Fehler beim Laden der Filterdaten: $e');
       if (mounted) {
-        setState(() {
-          _filtersLoading = false;
-        });
+        setState(() => _filtersLoading = false);
       }
     }
   }
 
   @override
   void dispose() {
+    _tabController.dispose();
     _suchfeld.dispose();
     _atkController.dispose();
     _defController.dispose();
@@ -158,7 +158,7 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
     });
   }
 
-  void _performSearch() {
+  void _performCardSearch() {
     if (_selectedType == null &&
         _selectedRace == null &&
         _selectedAttribute == null &&
@@ -219,8 +219,7 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
     }
 
     setState(() {
-      // NEUE LOGIK: Preloading nach Abruf der Daten (für Filter-Suche)
-      _searchFuture = _cardData
+      _cardSearchFuture = _cardData
           .searchWithFilters(
             type: _selectedType,
             race: _selectedRace,
@@ -239,7 +238,6 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
           )
           .then((list) async {
             final cards = list.cast<Map<String, dynamic>>();
-            // WICHTIG: Preload der URLs, damit sie beim Rendern im Cache sind
             await _cardData.preloadCardImages(cards);
             return cards;
           });
@@ -248,13 +246,241 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
     });
   }
 
+  void _performTextSearch(String value) {
+    final trimmedValue = value.trim();
+
+    if (trimmedValue.isEmpty) {
+      setState(() {
+        _cardSearchFuture = Future.value([]);
+        _deckSearchFuture = Future.value([]);
+      });
+      return;
+    }
+
+    if (_tabController.index == 0) {
+      // Karten-Textsuche
+      setState(() {
+        _cardSearchFuture = _cardData.ergebniseAnzeigen(trimmedValue).then((
+          list,
+        ) async {
+          final cards = list.cast<Map<String, dynamic>>();
+          await _cardData.preloadCardImages(cards);
+          return cards;
+        });
+        _selectedCard = null;
+        _showFilters = false;
+      });
+    } else {
+      // Deck-Suche
+      setState(() {
+        _deckSearchFuture = _deckSearchService.searchDecks(trimmedValue);
+        _selectedDeck = null;
+      });
+    }
+  }
+
   void _resetFilters() {
     _resetFiltersState();
     setState(() {
-      _searchFuture = null;
+      _cardSearchFuture = null;
+      _deckSearchFuture = null;
       _selectedCard = null;
+      _selectedDeck = null;
       _showFilters = true;
     });
+  }
+
+  Widget _buildDeckResults() {
+    if (_deckSearchFuture == null) {
+      return Center(
+        child: Text(
+          'Gib einen Deck-Namen oder Archetyp ein',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+      );
+    }
+
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _deckSearchFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasError) {
+          return Center(child: Text('Fehler: ${snapshot.error}'));
+        }
+
+        final decks = snapshot.data ?? [];
+
+        if (decks.isEmpty) {
+          return const Center(child: Text('Keine Decks gefunden'));
+        }
+
+        return ListView.builder(
+          itemCount: decks.length,
+          itemBuilder: (context, index) {
+            final deck = decks[index];
+            final deckName = deck['deckName'] as String? ?? 'Unbekannt';
+            final archetype = deck['archetype'] as String? ?? '';
+            final username = deck['username'] as String? ?? 'Unbekannt';
+
+            final mainDeck = deck['mainDeck'] as List<dynamic>? ?? [];
+            final cardCount = mainDeck.fold(0, (sum, card) {
+              if (card is Map<String, dynamic>) {
+                return sum + (card['count'] as int? ?? 0);
+              }
+              return sum;
+            });
+
+            return Card(
+              margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+              child: ListTile(
+                title: Text(deckName),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (archetype.isNotEmpty) Text('Archetypen: $archetype'),
+                    Text('Von: $username'),
+                    Text('$cardCount Karten'),
+                  ],
+                ),
+                onTap: () {
+                  setState(() {
+                    _selectedDeck = deck;
+                  });
+                },
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildDeckDetail() {
+    if (_selectedDeck == null) return const SizedBox.shrink();
+
+    final deckName = _selectedDeck!['deckName'] as String? ?? 'Unbekannt';
+    final archetype = _selectedDeck!['archetype'] as String? ?? '';
+    final description = _selectedDeck!['description'] as String? ?? '';
+    final username = _selectedDeck!['username'] as String? ?? 'Unbekannt';
+
+    final mainDeck = _selectedDeck!['mainDeck'] as List<dynamic>? ?? [];
+    final extraDeck = _selectedDeck!['extraDeck'] as List<dynamic>? ?? [];
+    final sideDeck = _selectedDeck!['sideDeck'] as List<dynamic>? ?? [];
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () {
+                    setState(() {
+                      _selectedDeck = null;
+                    });
+                  },
+                ),
+                Expanded(
+                  child: Text(
+                    deckName,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            if (archetype.isNotEmpty) ...[
+              Text('Archetypen: $archetype'),
+              const SizedBox(height: 4),
+            ],
+
+            Text('Von: $username'),
+            const SizedBox(height: 8),
+
+            if (description.isNotEmpty) ...[
+              Text(
+                'Beschreibung:',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 4),
+              Text(description),
+              const SizedBox(height: 16),
+            ],
+
+            Text(
+              'Main Deck (${mainDeck.fold(0, (sum, card) => sum + ((card as Map)['count'] as int? ?? 0))} Karten)',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            ...mainDeck.map((cardData) {
+              final card = cardData as Map<String, dynamic>;
+              return ListTile(
+                dense: true,
+                title: Text('${card['count']}x ${card['name']}'),
+                onTap: () {
+                  setState(() {
+                    _selectedCard = card;
+                    _selectedDeck = null;
+                  });
+                },
+              );
+            }),
+
+            const SizedBox(height: 16),
+
+            if (extraDeck.isNotEmpty) ...[
+              Text(
+                'Extra Deck (${extraDeck.fold(0, (sum, card) => sum + ((card as Map)['count'] as int? ?? 0))} Karten)',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              ...extraDeck.map((cardData) {
+                final card = cardData as Map<String, dynamic>;
+                return ListTile(
+                  dense: true,
+                  title: Text('${card['count']}x ${card['name']}'),
+                  onTap: () {
+                    setState(() {
+                      _selectedCard = card;
+                      _selectedDeck = null;
+                    });
+                  },
+                );
+              }),
+              const SizedBox(height: 16),
+            ],
+
+            if (sideDeck.isNotEmpty) ...[
+              Text(
+                'Side Deck (${sideDeck.fold(0, (sum, card) => sum + ((card as Map)['count'] as int? ?? 0))} Karten)',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              ...sideDeck.map((cardData) {
+                final card = cardData as Map<String, dynamic>;
+                return ListTile(
+                  dense: true,
+                  title: Text('${card['count']}x ${card['name']}'),
+                  onTap: () {
+                    setState(() {
+                      _selectedCard = card;
+                      _selectedDeck = null;
+                    });
+                  },
+                );
+              }),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -265,7 +491,11 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
       return _buildCardDetail();
     }
 
-    if (_filtersLoading) {
+    if (_selectedDeck != null) {
+      return _buildDeckDetail();
+    }
+
+    if (_filtersLoading && _tabController.index == 0) {
       return Center(
         child: Text(
           'Filter werden geladen...',
@@ -278,116 +508,125 @@ class _MetaState extends State<Meta> with AutomaticKeepAliveClientMixin {
       );
     }
 
-    return Padding(
-      padding: EdgeInsets.all(MediaQuery.of(context).size.height / 30),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(height: MediaQuery.of(context).size.height / 350),
+    return Column(
+      children: [
+        TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Karten'),
+            Tab(text: 'Decks'),
+          ],
+          onTap: (index) {
+            setState(() {
+              _cardSearchFuture = null;
+              _deckSearchFuture = null;
+              _selectedCard = null;
+              _selectedDeck = null;
+              _showFilters = index == 0;
+              _suchfeld.clear();
+            });
+          },
+        ),
+        Expanded(
+          child: Padding(
+            padding: EdgeInsets.all(MediaQuery.of(context).size.height / 30),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(height: MediaQuery.of(context).size.height / 350),
 
-          // --- Suchfeld ---
-          TextField(
-            decoration: const InputDecoration(
-              hintText: "Suchen...",
-              prefixIcon: Icon(Icons.search),
-            ),
-            onSubmitted: (value) {
-              final trimmedValue = _suchfeld.text.trim();
-              if (trimmedValue.isNotEmpty) {
-                setState(() {
-                  // NEUE LOGIK: Preloading nach Abruf der Daten (für Textsuche)
-                  _searchFuture = _cardData
-                      .ergebniseAnzeigen(trimmedValue)
-                      .then((list) async {
-                        final cards = list.cast<Map<String, dynamic>>();
-                        await _cardData.preloadCardImages(cards);
-                        return cards;
-                      });
-                  _selectedCard = null;
-                  _showFilters = false;
-                });
-              } else {
-                setState(() {
-                  _searchFuture = Future.value([]);
-                  _selectedCard = null;
-                  _showFilters = true;
-                });
-              }
-            },
-            controller: _suchfeld,
-          ),
-          SizedBox(height: MediaQuery.of(context).size.height / 55),
-
-          if (!_showFilters && _searchFuture != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16.0),
-              child: Row(
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      setState(() {
-                        _showFilters = true;
-                      });
-                    },
-                    icon: const Icon(Icons.filter_list),
-                    label: const Text('Filter anzeigen'),
+                TextField(
+                  decoration: InputDecoration(
+                    hintText: _tabController.index == 0
+                        ? "Karte suchen..."
+                        : "Deck suchen...",
+                    prefixIcon: const Icon(Icons.search),
                   ),
-                ],
-              ),
-            ),
+                  onSubmitted: _performTextSearch,
+                  controller: _suchfeld,
+                ),
+                SizedBox(height: MediaQuery.of(context).size.height / 55),
 
-          Expanded(
-            child: _showFilters
-                ? SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                if (_tabController.index == 0 &&
+                    !_showFilters &&
+                    _cardSearchFuture != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16.0),
+                    child: Row(
                       children: [
-                        _buildFilterGrid(),
-
-                        SizedBox(
-                          height: MediaQuery.of(context).size.height / 40,
-                        ),
-
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: _performSearch,
-                                icon: const Icon(Icons.search),
-                                label: const Text('Suchen'),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: _resetFilters,
-                                icon: const Icon(Icons.clear),
-                                label: const Text('Zurücksetzen'),
-                              ),
-                            ),
-                          ],
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            setState(() {
+                              _showFilters = true;
+                            });
+                          },
+                          icon: const Icon(Icons.filter_list),
+                          label: const Text('Filter anzeigen'),
                         ),
                       ],
                     ),
-                  )
-                : SearchResultsView(
-                    // NEUE Verwendung des ausgelagerten Widgets
-                    searchFuture: _searchFuture,
-                    cardData: _cardData,
-                    onCardSelected: (card) {
-                      setState(() {
-                        _selectedCard = card;
-                      });
-                    },
                   ),
+
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      // Karten-Tab
+                      _showFilters
+                          ? SingleChildScrollView(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildFilterGrid(),
+                                  SizedBox(
+                                    height:
+                                        MediaQuery.of(context).size.height / 40,
+                                  ),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: ElevatedButton.icon(
+                                          onPressed: _performCardSearch,
+                                          icon: const Icon(Icons.search),
+                                          label: const Text('Suchen'),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: OutlinedButton.icon(
+                                          onPressed: _resetFilters,
+                                          icon: const Icon(Icons.clear),
+                                          label: const Text('Zurücksetzen'),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            )
+                          : SearchResultsView(
+                              searchFuture: _cardSearchFuture,
+                              cardData: _cardData,
+                              onCardSelected: (card) {
+                                setState(() {
+                                  _selectedCard = card;
+                                });
+                              },
+                            ),
+
+                      // Decks-Tab
+                      _buildDeckResults(),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
-
-  // --- Filter Helper Widgets (aus Übersichtlichkeitsgründen hier belassen) ---
 
   Widget _buildFilterGrid() {
     const double spacing = 12.0;
