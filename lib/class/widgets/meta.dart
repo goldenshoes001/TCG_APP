@@ -1,9 +1,10 @@
-// meta.dart - MIT DECK-SUCHE
+// meta.dart - AKTUALISIERT MIT DECKVIEWER
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 import 'package:tcg_app/class/common/buildCards.dart';
 import 'package:tcg_app/class/widgets/helperClass%20allgemein/search_results_view.dart';
 import 'package:tcg_app/class/widgets/deck_search_service.dart';
+import 'package:tcg_app/class/widgets/deck_viewer.dart';
 
 class Meta extends StatefulWidget {
   final List<String>? preloadedTypes;
@@ -38,7 +39,6 @@ class _MetaState extends State<Meta>
 
   final TextEditingController _suchfeld = TextEditingController();
 
-  // Filter-Werte für Karten
   String? _selectedType;
   String? _selectedRace;
   String? _selectedAttribute;
@@ -258,7 +258,6 @@ class _MetaState extends State<Meta>
     }
 
     if (_tabController.index == 0) {
-      // Karten-Textsuche
       setState(() {
         _cardSearchFuture = _cardData.ergebniseAnzeigen(trimmedValue).then((
           list,
@@ -271,7 +270,6 @@ class _MetaState extends State<Meta>
         _showFilters = false;
       });
     } else {
-      // Deck-Suche
       setState(() {
         _deckSearchFuture = _deckSearchService.searchDecks(trimmedValue);
         _selectedDeck = null;
@@ -333,7 +331,8 @@ class _MetaState extends State<Meta>
               return sum;
             });
 
-            return Card(
+            return Container(
+              color: Theme.of(context).cardColor,
               margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
               child: ListTile(
                 title: Text(deckName),
@@ -358,131 +357,6 @@ class _MetaState extends State<Meta>
     );
   }
 
-  Widget _buildDeckDetail() {
-    if (_selectedDeck == null) return const SizedBox.shrink();
-
-    final deckName = _selectedDeck!['deckName'] as String? ?? 'Unbekannt';
-    final archetype = _selectedDeck!['archetype'] as String? ?? '';
-    final description = _selectedDeck!['description'] as String? ?? '';
-    final username = _selectedDeck!['username'] as String? ?? 'Unbekannt';
-
-    final mainDeck = _selectedDeck!['mainDeck'] as List<dynamic>? ?? [];
-    final extraDeck = _selectedDeck!['extraDeck'] as List<dynamic>? ?? [];
-    final sideDeck = _selectedDeck!['sideDeck'] as List<dynamic>? ?? [];
-
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () {
-                    setState(() {
-                      _selectedDeck = null;
-                    });
-                  },
-                ),
-                Expanded(
-                  child: Text(
-                    deckName,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-
-            if (archetype.isNotEmpty) ...[
-              Text('Archetypen: $archetype'),
-              const SizedBox(height: 4),
-            ],
-
-            Text('Von: $username'),
-            const SizedBox(height: 8),
-
-            if (description.isNotEmpty) ...[
-              Text(
-                'Beschreibung:',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 4),
-              Text(description),
-              const SizedBox(height: 16),
-            ],
-
-            Text(
-              'Main Deck (${mainDeck.fold(0, (sum, card) => sum + ((card as Map)['count'] as int? ?? 0))} Karten)',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            ...mainDeck.map((cardData) {
-              final card = cardData as Map<String, dynamic>;
-              return ListTile(
-                dense: true,
-                title: Text('${card['count']}x ${card['name']}'),
-                onTap: () {
-                  setState(() {
-                    _selectedCard = card;
-                    _selectedDeck = null;
-                  });
-                },
-              );
-            }),
-
-            const SizedBox(height: 16),
-
-            if (extraDeck.isNotEmpty) ...[
-              Text(
-                'Extra Deck (${extraDeck.fold(0, (sum, card) => sum + ((card as Map)['count'] as int? ?? 0))} Karten)',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              ...extraDeck.map((cardData) {
-                final card = cardData as Map<String, dynamic>;
-                return ListTile(
-                  dense: true,
-                  title: Text('${card['count']}x ${card['name']}'),
-                  onTap: () {
-                    setState(() {
-                      _selectedCard = card;
-                      _selectedDeck = null;
-                    });
-                  },
-                );
-              }),
-              const SizedBox(height: 16),
-            ],
-
-            if (sideDeck.isNotEmpty) ...[
-              Text(
-                'Side Deck (${sideDeck.fold(0, (sum, card) => sum + ((card as Map)['count'] as int? ?? 0))} Karten)',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              ...sideDeck.map((cardData) {
-                final card = cardData as Map<String, dynamic>;
-                return ListTile(
-                  dense: true,
-                  title: Text('${card['count']}x ${card['name']}'),
-                  onTap: () {
-                    setState(() {
-                      _selectedCard = card;
-                      _selectedDeck = null;
-                    });
-                  },
-                );
-              }),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -491,8 +365,16 @@ class _MetaState extends State<Meta>
       return _buildCardDetail();
     }
 
+    // NEU: Verwende DeckViewer für gefundene Decks
     if (_selectedDeck != null) {
-      return _buildDeckDetail();
+      return DeckViewer(
+        deckData: _selectedDeck!,
+        onBack: () {
+          setState(() {
+            _selectedDeck = null;
+          });
+        },
+      );
     }
 
     if (_filtersLoading && _tabController.index == 0) {
@@ -542,6 +424,11 @@ class _MetaState extends State<Meta>
                         ? "Karte suchen..."
                         : "Deck suchen...",
                     prefixIcon: const Icon(Icons.search),
+                    border: const OutlineInputBorder(),
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 12,
+                    ),
                   ),
                   onSubmitted: _performTextSearch,
                   controller: _suchfeld,
@@ -572,7 +459,6 @@ class _MetaState extends State<Meta>
                   child: TabBarView(
                     controller: _tabController,
                     children: [
-                      // Karten-Tab
                       _showFilters
                           ? SingleChildScrollView(
                               child: Column(
@@ -614,8 +500,6 @@ class _MetaState extends State<Meta>
                                 });
                               },
                             ),
-
-                      // Decks-Tab
                       _buildDeckResults(),
                     ],
                   ),
@@ -785,7 +669,7 @@ class _MetaState extends State<Meta>
             isExpanded: true,
             decoration: const InputDecoration(
               border: OutlineInputBorder(),
-              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
             ),
             value: operator,
             items: _operators.map((op) {
@@ -802,11 +686,11 @@ class _MetaState extends State<Meta>
         Expanded(
           child: DropdownButtonFormField<String>(
             decoration: InputDecoration(
-              iconColor: Colors.white,
+              iconColor: Theme.of(context).textTheme.bodyMedium!.color,
               hintText: label,
               border: const OutlineInputBorder(),
               contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
+                horizontal: 8,
                 vertical: 8,
               ),
             ),
@@ -842,7 +726,7 @@ class _MetaState extends State<Meta>
             isExpanded: true,
             decoration: const InputDecoration(
               border: OutlineInputBorder(),
-              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
             ),
             value: operator,
             items: _operators.map((op) {
@@ -865,7 +749,7 @@ class _MetaState extends State<Meta>
               hintText: label,
               border: const OutlineInputBorder(),
               contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
+                horizontal: 8,
                 vertical: 8,
               ),
             ),
@@ -886,7 +770,7 @@ class _MetaState extends State<Meta>
         iconColor: Theme.of(context).textTheme.bodyMedium!.color,
         hintText: label,
         border: const OutlineInputBorder(),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       ),
       value: value,
       items: [

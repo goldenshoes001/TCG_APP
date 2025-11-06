@@ -1,8 +1,10 @@
+// search.dart - AKTUALISIERT MIT DECKVIEWER
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 import 'package:tcg_app/class/common/buildCards.dart';
 import 'package:tcg_app/class/widgets/helperClass%20allgemein/search_results_view.dart';
 import 'package:tcg_app/class/widgets/deck_search_service.dart';
+import 'package:tcg_app/class/widgets/deck_viewer.dart';
 
 class Search extends StatefulWidget {
   const Search({super.key});
@@ -112,7 +114,8 @@ class _SearchState extends State<Search> with SingleTickerProviderStateMixin {
               return sum;
             });
 
-            return Card(
+            return Container(
+              color: Theme.of(context).cardColor,
               margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
               child: ListTile(
                 title: Text(deckName),
@@ -137,113 +140,6 @@ class _SearchState extends State<Search> with SingleTickerProviderStateMixin {
     );
   }
 
-  Widget _buildDeckDetail() {
-    if (_selectedDeck == null) return const SizedBox.shrink();
-
-    final deckName = _selectedDeck!['deckName'] as String? ?? 'Unbekannt';
-    final archetype = _selectedDeck!['archetype'] as String? ?? '';
-    final description = _selectedDeck!['description'] as String? ?? '';
-    final username = _selectedDeck!['username'] as String? ?? 'Unbekannt';
-
-    final mainDeck = _selectedDeck!['mainDeck'] as List<dynamic>? ?? [];
-    final extraDeck = _selectedDeck!['extraDeck'] as List<dynamic>? ?? [];
-    final sideDeck = _selectedDeck!['sideDeck'] as List<dynamic>? ?? [];
-
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () {
-                    setState(() {
-                      _selectedDeck = null;
-                    });
-                  },
-                ),
-                Expanded(
-                  child: Text(
-                    deckName,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-
-            if (archetype.isNotEmpty) ...[
-              Text('Archetypen: $archetype'),
-              const SizedBox(height: 4),
-            ],
-
-            Text('Von: $username'),
-            const SizedBox(height: 8),
-
-            if (description.isNotEmpty) ...[
-              Text(
-                'Beschreibung:',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 4),
-              Text(description),
-              const SizedBox(height: 16),
-            ],
-
-            Text(
-              'Main Deck (${mainDeck.fold(0, (sum, card) => sum + ((card as Map)['count'] as int? ?? 0))} Karten)',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            ...mainDeck.map((cardData) {
-              final card = cardData as Map<String, dynamic>;
-              return ListTile(
-                dense: true,
-                title: Text('${card['count']}x ${card['name']}'),
-              );
-            }),
-
-            const SizedBox(height: 16),
-
-            if (extraDeck.isNotEmpty) ...[
-              Text(
-                'Extra Deck (${extraDeck.fold(0, (sum, card) => sum + ((card as Map)['count'] as int? ?? 0))} Karten)',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              ...extraDeck.map((cardData) {
-                final card = cardData as Map<String, dynamic>;
-                return ListTile(
-                  dense: true,
-                  title: Text('${card['count']}x ${card['name']}'),
-                );
-              }),
-              const SizedBox(height: 16),
-            ],
-
-            if (sideDeck.isNotEmpty) ...[
-              Text(
-                'Side Deck (${sideDeck.fold(0, (sum, card) => sum + ((card as Map)['count'] as int? ?? 0))} Karten)',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              ...sideDeck.map((cardData) {
-                final card = cardData as Map<String, dynamic>;
-                return ListTile(
-                  dense: true,
-                  title: Text('${card['count']}x ${card['name']}'),
-                );
-              }),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_selectedCard != null) {
@@ -257,8 +153,16 @@ class _SearchState extends State<Search> with SingleTickerProviderStateMixin {
       );
     }
 
+    // NEU: Verwende DeckViewer für gefundene Decks
     if (_selectedDeck != null) {
-      return _buildDeckDetail();
+      return DeckViewer(
+        deckData: _selectedDeck!,
+        onBack: () {
+          setState(() {
+            _selectedDeck = null;
+          });
+        },
+      );
     }
 
     return Column(
@@ -289,6 +193,11 @@ class _SearchState extends State<Search> with SingleTickerProviderStateMixin {
                         ? "Karte suchen..."
                         : "Deck suchen...",
                     prefixIcon: const Icon(Icons.search),
+                    border: const OutlineInputBorder(),
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 12,
+                    ),
                   ),
                   onSubmitted: _performSearch,
                   controller: suchfeld,
