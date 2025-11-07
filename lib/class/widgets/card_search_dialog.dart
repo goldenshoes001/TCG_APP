@@ -526,37 +526,13 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
                           itemCount: cards.length,
                           itemBuilder: (context, index) {
                             final card = cards[index];
-                            final cardImages =
-                                card['card_images'] as List<dynamic>?;
-                            final imageUrl =
-                                cardImages != null && cardImages.isNotEmpty
-                                ? (cardImages[0]
-                                          as Map<
-                                            String,
-                                            dynamic
-                                          >)['image_url_cropped'] ??
-                                      ''
-                                : '';
 
                             return Card(
                               child: ListTile(
-                                leading: imageUrl.isNotEmpty
-                                    ? FutureBuilder<String>(
-                                        future: _cardData.getImgPath(imageUrl),
-                                        builder: (context, imgSnapshot) {
-                                          if (imgSnapshot.hasData &&
-                                              imgSnapshot.data!.isNotEmpty) {
-                                            return Image.network(
-                                              imgSnapshot.data!,
-                                              width: 40,
-                                              height: 60,
-                                              fit: BoxFit.cover,
-                                            );
-                                          }
-                                          return const Icon(Icons.image);
-                                        },
-                                      )
-                                    : const Icon(Icons.image),
+                                leading: _CardImageWidget(
+                                  card: card,
+                                  cardData: _cardData,
+                                ),
                                 title: Text(card['name'] ?? 'Unbekannt'),
                                 subtitle: Text(card['type'] ?? ''),
                                 onTap: () => _showCardCountDialog(card),
@@ -570,6 +546,147 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// VERBESSERTE Card Image Widget mit intelligenter Fallback-Logik
+class _CardImageWidget extends StatefulWidget {
+  final Map<String, dynamic> card;
+  final CardData cardData;
+
+  const _CardImageWidget({required this.card, required this.cardData});
+
+  @override
+  State<_CardImageWidget> createState() => _CardImageWidgetState();
+}
+
+class _CardImageWidgetState extends State<_CardImageWidget> {
+  String? _loadedImageUrl;
+  bool _isLoading = true;
+  bool _hasError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadImage();
+  }
+
+  @override
+  void didUpdateWidget(_CardImageWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.card != oldWidget.card) {
+      _loadedImageUrl = null;
+      _isLoading = true;
+      _hasError = false;
+      _loadImage();
+    }
+  }
+
+  Future<void> _loadImage() async {
+    final cardImages = widget.card['card_images'] as List<dynamic>?;
+
+    if (cardImages == null || cardImages.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _hasError = true;
+        });
+      }
+      return;
+    }
+
+    // Sammle alle möglichen Bild-URLs in Prioritätsreihenfolge
+    final List<String> allImageUrls = [];
+
+    for (var imageEntry in cardImages) {
+      if (imageEntry is Map<String, dynamic>) {
+        // Priorität 1: image_url (hohe Auflösung)
+        final normalUrl = imageEntry['image_url'] as String?;
+        if (normalUrl != null && normalUrl.isNotEmpty) {
+          allImageUrls.add(normalUrl);
+        }
+
+        // Priorität 2: image_url_cropped (zugeschnitten)
+        final croppedUrl = imageEntry['image_url_cropped'] as String?;
+        if (croppedUrl != null && croppedUrl.isNotEmpty) {
+          allImageUrls.add(croppedUrl);
+        }
+
+        // Priorität 3: image_url_small (falls vorhanden)
+        final smallUrl = imageEntry['image_url_small'] as String?;
+        if (smallUrl != null && smallUrl.isNotEmpty) {
+          allImageUrls.add(smallUrl);
+        }
+      }
+    }
+
+    // Versuche jede URL nacheinander bis eine funktioniert
+    for (var imageUrl in allImageUrls) {
+      try {
+        final downloadUrl = await widget.cardData.getImgPath(imageUrl);
+
+        if (downloadUrl.isNotEmpty && mounted) {
+          setState(() {
+            _loadedImageUrl = downloadUrl;
+            _isLoading = false;
+            _hasError = false;
+          });
+          return; // Erfolgreich geladen, beende Schleife
+        }
+      } catch (e) {
+        // Fehler beim Laden dieser URL, versuche nächste
+        continue;
+      }
+    }
+
+    // Keine URL hat funktioniert
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+        _hasError = true;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const SizedBox(
+        width: 40,
+        height: 60,
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+    }
+
+    if (_hasError || _loadedImageUrl == null || _loadedImageUrl!.isEmpty) {
+      return const SizedBox(
+        width: 40,
+        height: 60,
+        child: Icon(Icons.image_not_supported, size: 30),
+      );
+    }
+
+    return Image.network(
+      _loadedImageUrl!,
+      width: 40,
+      height: 60,
+      fit: BoxFit.cover,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return const SizedBox(
+          width: 40,
+          height: 60,
+          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        );
+      },
+      errorBuilder: (context, error, stackTrace) {
+        return const SizedBox(
+          width: 40,
+          height: 60,
+          child: Icon(Icons.broken_image, size: 30, color: Colors.red),
+        );
+      },
     );
   }
 }

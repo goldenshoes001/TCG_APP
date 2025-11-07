@@ -550,6 +550,10 @@ class CardData implements Dbrepo {
     return getTCGBannedCards();
   }
 
+  // Version 1: NUR exakte Phrasen (keine Schreibfehler-Toleranz)
+  // Groß-/Kleinschreibung wird ignoriert
+  // Ersetze ergebniseAnzeigen in getCardData.dart:
+
   Future<List<Map<String, dynamic>>> ergebniseAnzeigen(String suchfeld) async {
     if (suchfeld.isEmpty) return [];
 
@@ -573,6 +577,8 @@ class CardData implements Dbrepo {
               query: normalizedSearch,
               removeWordsIfNoResults: algolia_lib.RemoveWordsIfNoResults.none,
               hitsPerPage: 1000,
+              // WICHTIG: Typo-Toleranz DEAKTIVIEREN für exakte Suche
+              typoTolerance: algolia_lib.TypoToleranceEnum.false_,
             ),
           ],
         ),
@@ -586,6 +592,7 @@ class CardData implements Dbrepo {
 
       final List<dynamic> hits = hitsData as List;
 
+      // Filtere NUR nach exakter Phrase (mit Bindestrich-Toleranz)
       final List<Map<String, dynamic>> filteredCards = hits
           .map((hit) => Map<String, dynamic>.from(hit as Map))
           .where((card) {
@@ -594,9 +601,27 @@ class CardData implements Dbrepo {
             final archetype = (card['archetype'] as String? ?? '')
                 .toLowerCase();
 
+            // Normalisiere beide Seiten: Bindestriche → Leerzeichen
+            final normalizedName = name
+                .replaceAll('-', ' ')
+                .replaceAll(RegExp(r'\s+'), ' ');
+            final normalizedDesc = desc
+                .replaceAll('-', ' ')
+                .replaceAll(RegExp(r'\s+'), ' ');
+            final normalizedArchetype = archetype
+                .replaceAll('-', ' ')
+                .replaceAll(RegExp(r'\s+'), ' ');
+            final normalizedSearchPhrase = searchPhrase
+                .replaceAll('-', ' ')
+                .replaceAll(RegExp(r'\s+'), ' ');
+
+            // Prüfe ob die EXAKTE Phrase vorkommt (mit und ohne Bindestrich)
             return name.contains(searchPhrase) ||
+                normalizedName.contains(normalizedSearchPhrase) ||
                 archetype.contains(searchPhrase) ||
-                desc.contains(searchPhrase);
+                normalizedArchetype.contains(normalizedSearchPhrase) ||
+                desc.contains(searchPhrase) ||
+                normalizedDesc.contains(normalizedSearchPhrase);
           })
           .toList();
 
@@ -609,7 +634,8 @@ class CardData implements Dbrepo {
       _searchResultsCache[normalizedSearch] = filteredCards;
 
       return filteredCards;
-    } catch (_) {
+    } catch (e) {
+      print('Fehler bei Algolia-Suche: $e');
       return [];
     }
   }

@@ -1,12 +1,14 @@
-// deck_viewer.dart - Verbesserte Bildlade-Logik
+// deck_viewer.dart - Final mit dynamischen Deck-Kommentaren und CardDetailView
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 import 'package:tcg_app/class/common/buildCards.dart';
 import 'package:tcg_app/class/widgets/deckservice.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart'; // NEU: Für Datumsformatierung in CommentSection
 
-enum ViewDeckType { main, extra, side }
+// NEUE ENUM: 'notes' hinzugefügt
+enum ViewDeckType { main, extra, side, notes }
 
 class DeckViewer extends StatefulWidget {
   final Map<String, dynamic> deckData;
@@ -20,7 +22,6 @@ class DeckViewer extends StatefulWidget {
 
 class _DeckViewerState extends State<DeckViewer> {
   final CardData _cardData = CardData();
-  final DeckService _deckService = DeckService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   ViewDeckType _selectedDeckType = ViewDeckType.main;
@@ -44,301 +45,485 @@ class _DeckViewerState extends State<DeckViewer> {
           .toList() ??
       [];
 
-  void _showCardDetail(Map<String, dynamic> card) {
-    setState(() {
-      _selectedCardForDetail = card;
-    });
-  }
-
-  Widget _buildDeckSection({
-    required String title,
-    required List<Map<String, dynamic>> deck,
-  }) {
-    if (deck.isEmpty) {
-      return Center(
-        child: Text(
-          'Keine Karten im $title',
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-      );
-    }
-
+  // --- HILFSFUNKTION FÜR KATEGORISIERUNG UND SORTIERUNG ---
+  Map<String, List<Map<String, dynamic>>> _sortAndCategorizeCards(
+    List<Map<String, dynamic>> cards,
+  ) {
+    // 1. Kategorisierung
     final Map<String, List<Map<String, dynamic>>> categorized = {
       'Monster': [],
-      'Spell': [],
-      'Trap': [],
+      'Zauber': [],
+      'Falle': [],
+      'Andere': [],
     };
 
-    for (var card in deck) {
-      final type = card['type'] as String? ?? '';
-      if (type.contains('Monster')) {
+    for (var card in cards) {
+      final frameType = (card['frameType'] as String? ?? '').toLowerCase();
+      final type = (card['type'] as String? ?? '').toLowerCase();
+
+      if (frameType.contains('monster') ||
+          frameType.contains('xyz') ||
+          frameType.contains('synchro') ||
+          frameType.contains('fusion') ||
+          frameType.contains('link') ||
+          frameType.contains('pendulum') ||
+          type.contains('monster')) {
         categorized['Monster']!.add(card);
-      } else if (type.contains('Spell')) {
-        categorized['Spell']!.add(card);
-      } else if (type.contains('Trap')) {
-        categorized['Trap']!.add(card);
+      } else if (frameType.contains('spell') || type.contains('spell')) {
+        categorized['Zauber']!.add(card);
+      } else if (frameType.contains('trap') || type.contains('trap')) {
+        categorized['Falle']!.add(card);
+      } else {
+        categorized['Andere']!.add(card);
       }
     }
 
-    int getTotalCount(List<Map<String, dynamic>> cards) {
-      return cards.fold(0, (sum, card) => sum + (card['count'] as int? ?? 0));
-    }
-
-    Widget buildCategory(
-      String categoryName,
-      List<Map<String, dynamic>> cards,
-    ) {
-      if (cards.isEmpty) return const SizedBox.shrink();
-
-      final totalCount = getTotalCount(cards);
-
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            child: Text(
-              '$categoryName ($totalCount)',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: cards.map((card) {
-              final count = card['count'] as int? ?? 0;
-              final name = card['name'] as String? ?? 'Unbekannt';
-
-              return Container(
-                margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                child: InkWell(
-                  onTap: () => _showCardDetail(card),
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 30,
-                          alignment: Alignment.center,
-                          child: Text(
-                            '${count}x',
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        _CardImageWidget(card: card, cardData: _cardData),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            name,
-                            style: Theme.of(context).textTheme.bodyMedium,
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 2,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 8),
-        ],
+    // 2. Alphabetisch sortieren innerhalb jeder Kategorie
+    categorized.forEach((key, list) {
+      list.sort(
+        (a, b) =>
+            (a['name'] as String? ?? '').compareTo(b['name'] as String? ?? ''),
       );
+    });
+
+    if (categorized['Andere']!.isEmpty) {
+      categorized.remove('Andere');
     }
 
+    return categorized;
+  }
+  // --- ENDE HILFSFUNKTION ---
+
+  @override
+  Widget build(BuildContext context) {
+    // Wenn eine Karte ausgewählt wurde, zeige CardDetailView
+    if (_selectedCardForDetail != null) {
+      return _buildCardDetail();
+    }
+
+    // Ansonsten zeige die Deckliste/Notes
     return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        buildCategory('Monster', categorized['Monster']!),
-        buildCategory('Spell', categorized['Spell']!),
-        buildCategory('Trap', categorized['Trap']!),
+        _buildCustomAppBar(context),
+        _buildDeckTypeTabs(),
+        Expanded(
+          child: _buildCurrentView(), // Methode wählt zwischen Liste und Notes
+        ),
       ],
     );
   }
 
-  Widget _buildDynamicDeckView() {
-    ViewDeckType currentType = _selectedDeckType;
-    String title;
-    List<Map<String, dynamic>> deck;
-
-    switch (currentType) {
+  // Wählt die anzuzeigende Ansicht basierend auf _selectedDeckType
+  Widget _buildCurrentView() {
+    switch (_selectedDeckType) {
       case ViewDeckType.main:
-        title = 'Main Deck';
-        deck = _mainDeck;
-        break;
       case ViewDeckType.extra:
-        title = 'Extra Deck';
-        deck = _extraDeck;
-        break;
       case ViewDeckType.side:
-        title = 'Side Deck';
-        deck = _sideDeck;
-        break;
+        return _buildCardList();
+      case ViewDeckType.notes:
+        return _buildDeckNotes(); // Hier wird der CommentSection aufgerufen
+    }
+  }
+
+  // NEU: Aufruf des CommentSection Widgets
+  Widget _buildDeckNotes() {
+    // Annahme: Die Deck ID ist im Map unter 'id' oder 'deckId' gespeichert.
+    final deckId =
+        (widget.deckData['id'] ?? widget.deckData['deckId']) as String?;
+
+    if (deckId == null || deckId.isEmpty) {
+      return const Center(
+        child: Text('Fehler: Deck ID nicht gefunden, um Kommentare zu laden.'),
+      );
     }
 
-    final totalCards = deck.fold(
-      0,
-      (sum, card) => sum + (card['count'] as int? ?? 0),
-    );
+    // Verwende das bereitgestellte CommentSection Widget
+    return CommentSection(deckId: deckId);
+  }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8.0, left: 8.0),
-          child: Text(
-            '$title ($totalCards Karten)',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
-          ),
+  Widget _buildCustomAppBar(BuildContext context) {
+    final double topPadding = MediaQuery.of(context).padding.top;
+    const double toolbarHeight = kToolbarHeight;
+
+    return Container(
+      color:
+          Theme.of(context).appBarTheme.backgroundColor ??
+          Theme.of(context).primaryColor,
+      height: topPadding + toolbarHeight,
+      padding: EdgeInsets.only(top: topPadding),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: widget.onBack,
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(left: 8.0),
+                child: Text(
+                  widget.deckData['name'] ?? "",
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(color: Colors.white),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          ],
         ),
-        Expanded(
-          child: SingleChildScrollView(
-            child: _buildDeckSection(title: title, deck: deck),
-          ),
-        ),
-      ],
+      ),
     );
+  }
+
+  Widget _buildDeckTypeTabs() {
+    return Container(
+      color: Theme.of(context).cardColor,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: ViewDeckType.values.map((type) {
+          bool isSelected = _selectedDeckType == type;
+          String label;
+          switch (type) {
+            case ViewDeckType.main:
+              label = 'MAIN';
+              break;
+            case ViewDeckType.extra:
+              label = 'EXTRA';
+              break;
+            case ViewDeckType.side:
+              label = 'SIDE';
+              break;
+            case ViewDeckType.notes: // REITER 'NOTES'
+              label = 'KOMMENTARE';
+              break;
+          }
+
+          return TextButton(
+            onPressed: () {
+              setState(() {
+                _selectedDeckType = type;
+              });
+            },
+            child: Text(
+              label,
+              style: TextStyle(
+                color: isSelected
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).textTheme.bodyLarge!.color,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildCardList() {
+    List<Map<String, dynamic>> currentDeck;
+    String deckName;
+
+    switch (_selectedDeckType) {
+      case ViewDeckType.main:
+        currentDeck = _mainDeck;
+        deckName = 'Main Deck';
+        break;
+      case ViewDeckType.extra:
+        currentDeck = _extraDeck;
+        deckName = 'Extra Deck';
+        break;
+      case ViewDeckType.side:
+        currentDeck = _sideDeck;
+        deckName = 'Side Deck';
+        break;
+      default:
+        currentDeck = [];
+        deckName = 'Unbekannt';
+    }
+
+    if (currentDeck.isEmpty) {
+      return Center(child: Text('$deckName ist leer.'));
+    }
+
+    final categorizedCards = _sortAndCategorizeCards(currentDeck);
+
+    final List<String> primaryKeys = ['Monster', 'Zauber', 'Falle'];
+    final List<String> sortedKeys = [];
+
+    for (var key in primaryKeys) {
+      if (categorizedCards.containsKey(key) &&
+          categorizedCards[key]!.isNotEmpty) {
+        sortedKeys.add(key);
+      }
+    }
+
+    for (var key in categorizedCards.keys) {
+      if (!sortedKeys.contains(key)) {
+        sortedKeys.add(key);
+      }
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
+            child: Text(
+              '$deckName (${currentDeck.length} Karten)',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+          ),
+          const Divider(),
+
+          ...sortedKeys.map((category) {
+            final cards = categorizedCards[category]!;
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Text(
+                    '$category (${cards.length})',
+                    style: Theme.of(context).textTheme.titleMedium!.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: _getCategoryColor(category),
+                    ),
+                  ),
+                ),
+                Column(
+                  children: cards.map((card) {
+                    final count = card['count'] ?? 1;
+                    return ListTile(
+                      leading: _CardImageWidget(
+                        card: card,
+                        cardData: _cardData,
+                      ),
+                      title: Text(card['name'] ?? 'Unbekannte Karte'),
+                      subtitle: Text(card['type'] ?? ''),
+                      trailing: Text('x$count'),
+                      onTap: () {
+                        setState(() {
+                          _selectedCardForDetail =
+                              card; // Setzt die Detailansicht
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+                const Divider(),
+              ],
+            );
+          }).toList(),
+        ],
+      ),
+    );
+  }
+
+  Color _getCategoryColor(String category) {
+    switch (category) {
+      case 'Monster':
+        return Colors.red;
+      case 'Zauber':
+        return Colors.green;
+      case 'Falle':
+        return Colors.purple;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  // _buildCardDetail verwendet CardDetailView und setzt den State zurück
+  Widget _buildCardDetail() {
+    return CardDetailView(
+      cardData: _selectedCardForDetail!,
+      onBack: () {
+        setState(() {
+          _selectedCardForDetail = null; // Zurück zur Deckliste
+        });
+      },
+    );
+  }
+}
+
+// ====================================================================
+// VOM BENUTZER BEREITGESTELLTES WIDGET FÜR DIE KOMMENTARE
+// ====================================================================
+class CommentSection extends StatefulWidget {
+  final String deckId;
+  const CommentSection({super.key, required this.deckId});
+
+  @override
+  State<CommentSection> createState() => _CommentSectionState();
+}
+
+class _CommentSectionState extends State<CommentSection> {
+  // DeckService muss hier lokal initialisiert werden, da es eine separate Klasse ist
+  final DeckService _deckService = DeckService();
+  final TextEditingController _commentController = TextEditingController();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _addComment() async {
+    final comment = _commentController.text.trim();
+    if (comment.isEmpty) return;
+
+    try {
+      await _deckService.addComment(deckId: widget.deckId, comment: comment);
+      _commentController.clear();
+
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Kommentar hinzugefügt')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Fehler: $e')));
+      }
+    }
+  }
+
+  Future<void> _deleteComment(String commentId) async {
+    try {
+      await _deckService.deleteComment(
+        deckId: widget.deckId,
+        commentId: commentId,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Kommentar gelöscht')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Fehler: $e')));
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_selectedCardForDetail != null) {
-      return CardDetailView(
-        cardData: _selectedCardForDetail!,
-        onBack: () {
-          setState(() {
-            _selectedCardForDetail = null;
-          });
-        },
-      );
-    }
-
-    final deckName = widget.deckData['deckName'] as String? ?? 'Unbekannt';
-    final archetype = widget.deckData['archetype'] as String? ?? '';
-    final description = widget.deckData['description'] as String? ?? '';
-    final username = widget.deckData['username'] as String? ?? 'Unbekannt';
-    final deckId = widget.deckData['deckId'] as String?;
-
-    final dropdownItemStyle = TextStyle(
-      color: Theme.of(context).textTheme.bodyMedium!.color,
-      fontSize: 14,
-    );
+    final currentUserId = _auth.currentUser?.uid;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.only(top: 0, bottom: 16, left: 16, right: 16),
+      // Füge SingleChildScrollView hinzu, falls die Kommentare den Bildschirm übersteigen
+      padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 10),
+          Text('Kommentare', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 16),
 
-          // Header mit Zurück-Button
+          // Kommentar hinzufügen
           Row(
             children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: widget.onBack,
-              ),
               Expanded(
-                child: Text(
-                  deckName,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+                child: TextField(
+                  controller: _commentController,
+                  decoration: const InputDecoration(
+                    hintText: 'Kommentar schreiben...',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
+              IconButton(icon: const Icon(Icons.send), onPressed: _addComment),
             ],
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
 
-          // Deck-Informationen
-          if (archetype.isNotEmpty) ...[
-            Text('Archetypen: $archetype'),
-            const SizedBox(height: 4),
-          ],
-          Text('Von: $username'),
-          const SizedBox(height: 8),
+          // Kommentare anzeigen
+          StreamBuilder<QuerySnapshot>(
+            stream: _deckService.getComments(widget.deckId),
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return Text('Fehler: ${snapshot.error}');
+              }
 
-          if (description.isNotEmpty) ...[
-            Text(
-              'Beschreibung:',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            Text(description),
-            const SizedBox(height: 16),
-          ],
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-          // Dropdown Menü zur Auswahl des Decks
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Deck-Anzeige',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              DropdownButton<ViewDeckType>(
-                value: _selectedDeckType,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                onChanged: (ViewDeckType? newValue) {
-                  if (newValue != null) {
-                    setState(() {
-                      _selectedDeckType = newValue;
-                    });
-                  }
+              final comments = snapshot.data?.docs ?? [];
+
+              if (comments.isEmpty) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Text('Noch keine Kommentare'),
+                  ),
+                );
+              }
+
+              return ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: comments.length,
+                itemBuilder: (context, index) {
+                  final comment =
+                      comments[index].data() as Map<String, dynamic>;
+                  final commentId = comment['commentId'] as String;
+                  final userId = comment['userId'] as String;
+                  final username = comment['username'] as String;
+                  final commentText = comment['comment'] as String;
+                  final timestamp = comment['createdAt'] as Timestamp?;
+
+                  final canDelete = currentUserId == userId;
+
+                  return Container(
+                    color: Theme.of(context).cardColor,
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    child: ListTile(
+                      title: Text(username),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(commentText),
+                          if (timestamp != null)
+                            Text(
+                              DateFormat(
+                                'dd.MM.yyyy',
+                              ).format(timestamp.toDate().toLocal()),
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                        ],
+                      ),
+                      trailing: canDelete
+                          ? IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () => _deleteComment(commentId),
+                            )
+                          : null,
+                    ),
+                  );
                 },
-                dropdownColor: Theme.of(context).cardColor,
-                items: [
-                  DropdownMenuItem(
-                    value: ViewDeckType.main,
-                    child: Text('Main Deck', style: dropdownItemStyle),
-                  ),
-                  DropdownMenuItem(
-                    value: ViewDeckType.extra,
-                    child: Text('Extra Deck', style: dropdownItemStyle),
-                  ),
-                  DropdownMenuItem(
-                    value: ViewDeckType.side,
-                    child: Text('Side Deck', style: dropdownItemStyle),
-                  ),
-                ],
-              ),
-            ],
+              );
+            },
           ),
-
-          const SizedBox(height: 8),
-
-          // Dynamischer Anzeige-Bereich
-          SizedBox(height: 400, child: _buildDynamicDeckView()),
-
-          const SizedBox(height: 24),
-
-          // Kommentarsektion (nur wenn deckId vorhanden)
-          if (deckId != null) ...[
-            CommentSection(deckId: deckId),
-            const SizedBox(height: 50),
-          ],
         ],
       ),
     );
   }
 }
 
-// VERBESSERTE Card Image Widget mit intelligenter Fallback-Logik
+// Card Image Widget (unberührt gelassen)
 class _CardImageWidget extends StatefulWidget {
   final Map<String, dynamic> card;
   final CardData cardData;
@@ -384,24 +569,18 @@ class _CardImageWidgetState extends State<_CardImageWidget> {
       return;
     }
 
-    // Sammle alle möglichen Bild-URLs in Prioritätsreihenfolge
     final List<String> allImageUrls = [];
 
     for (var imageEntry in cardImages) {
       if (imageEntry is Map<String, dynamic>) {
-        // Priorität 1: image_url (hohe Auflösung)
         final normalUrl = imageEntry['image_url'] as String?;
         if (normalUrl != null && normalUrl.isNotEmpty) {
           allImageUrls.add(normalUrl);
         }
-
-        // Priorität 2: image_url_cropped (zugeschnitten)
         final croppedUrl = imageEntry['image_url_cropped'] as String?;
         if (croppedUrl != null && croppedUrl.isNotEmpty) {
           allImageUrls.add(croppedUrl);
         }
-
-        // Priorität 3: image_url_small (falls vorhanden)
         final smallUrl = imageEntry['image_url_small'] as String?;
         if (smallUrl != null && smallUrl.isNotEmpty) {
           allImageUrls.add(smallUrl);
@@ -409,7 +588,6 @@ class _CardImageWidgetState extends State<_CardImageWidget> {
       }
     }
 
-    // Versuche jede URL nacheinander bis eine funktioniert
     for (var imageUrl in allImageUrls) {
       try {
         final downloadUrl = await widget.cardData.getImgPath(imageUrl);
@@ -420,15 +598,13 @@ class _CardImageWidgetState extends State<_CardImageWidget> {
             _isLoading = false;
             _hasError = false;
           });
-          return; // Erfolgreich geladen, beende Schleife
+          return;
         }
       } catch (e) {
-        // Fehler beim Laden dieser URL, versuche nächste
         continue;
       }
     }
 
-    // Keine URL hat funktioniert
     if (mounted) {
       setState(() {
         _isLoading = false;
@@ -469,7 +645,6 @@ class _CardImageWidgetState extends State<_CardImageWidget> {
         );
       },
       errorBuilder: (context, error, stackTrace) {
-        // Wenn das Netzwerkbild fehlschlägt, zeige Fehler-Icon
         return const SizedBox(
           width: 40,
           height: 60,
