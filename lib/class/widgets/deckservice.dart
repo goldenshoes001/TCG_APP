@@ -1,7 +1,8 @@
-// deckservice.dart - VOLLSTÄNDIG ÜBERARBEITET MIT KOMMENTARFUNKTION
+// deckservice.dart - VOLLSTÄNDIG ÜBERARBEITET MIT DROP-DOWN, KARTENLISTE UND KOMMENTAR-REITER
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 import 'package:tcg_app/class/common/buildCards.dart';
@@ -244,6 +245,9 @@ class DeckService {
 // 2. DeckCreationScreen: Formular-Inhalt
 // ============================================================================
 
+// NEU: 'comments' hinzugefügt
+enum DeckType { main, extra, side, comments }
+
 class DeckCreationScreen extends StatefulWidget {
   final String? initialDeckId;
   final void Function(Map<String, dynamic> data) onDataCollected;
@@ -275,6 +279,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
   bool _addToSideDeck = false;
   String? _currentDeckId;
   Map<String, dynamic>? _selectedCardForDetail;
+  DeckType _selectedDeckType = DeckType.main; // NEU: Ausgewählter Deck-Typ
 
   @override
   void initState() {
@@ -508,17 +513,17 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
     });
   }
 
+  // Überarbeitete Funktion zur Anzeige eines Decks (jetzt in Listenansicht)
   Widget _buildDeckSection({
     required String title,
     required List<Map<String, dynamic>> deck,
   }) {
+    // Wenn das Deck leer ist, geben wir nur ein zentriertes Text-Widget zurück.
     if (deck.isEmpty) {
-      return Expanded(
-        child: Center(
-          child: Text(
-            'Keine Karten im $title',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
+      return Center(
+        child: Text(
+          'Keine Karten im $title',
+          style: Theme.of(context).textTheme.bodyMedium,
         ),
       );
     }
@@ -563,209 +568,184 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
               '$categoryName ($totalCount)',
               style: Theme.of(
                 context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
-          ...cards.map((card) {
-            final cardImages = card['card_images'] as List<dynamic>?;
-            final imageUrl = cardImages != null && cardImages.isNotEmpty
-                ? (cardImages[0]
-                          as Map<String, dynamic>)['image_url_cropped'] ??
-                      ''
-                : '';
+          // RÜCKÄNDERUNG: Column, um Karten untereinander anzuzeigen
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: cards.map((card) {
+              final cardImages = card['card_images'] as List<dynamic>?;
+              final imageUrl = cardImages != null && cardImages.isNotEmpty
+                  ? (cardImages[0] as Map<String, dynamic>)['image_url'] ?? ''
+                  : '';
 
-            final count = card['count'] as int? ?? 0;
-            final name = card['name'] as String? ?? 'Unbekannt';
+              final count = card['count'] as int? ?? 0;
+              final name = card['name'] as String? ?? 'Unbekannt';
 
-            return Card(
-              margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-              child: InkWell(
-                onTap: () => _showCardDetail(card),
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 30,
-                        alignment: Alignment.center,
-                        child: Text(
-                          '${count}x',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(fontWeight: FontWeight.bold),
+              return Container(
+                // Kein feste Breite mehr, damit die Row den Platz nutzen kann
+                margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                child: InkWell(
+                  onTap: () => _showCardDetail(card),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      // Horizontale Anordnung: Count, Image, Name, Delete
+                      children: [
+                        // 1. Kartenanzahl
+                        Container(
+                          width: 30,
+                          alignment: Alignment.center,
+                          child: Text(
+                            '${count}x',
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
+                        const SizedBox(width: 8),
 
-                      if (imageUrl.isNotEmpty)
-                        FutureBuilder<String>(
-                          future: _cardData.getImgPath(imageUrl),
-                          builder: (context, snapshot) {
-                            if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-                              return Image.network(
-                                snapshot.data!,
+                        // 2. Kartenbild (mit fester Größe)
+                        if (imageUrl.isNotEmpty)
+                          FutureBuilder<String>(
+                            future: _cardData.getImgPath(imageUrl),
+                            builder: (context, snapshot) {
+                              if (snapshot.hasData &&
+                                  snapshot.data!.isNotEmpty) {
+                                return Image.network(
+                                  snapshot.data!,
+                                  width: 40,
+                                  height: 60,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return const Icon(
+                                      Icons.broken_image,
+                                      size: 40,
+                                    );
+                                  },
+                                );
+                              }
+                              return const SizedBox(
                                 width: 40,
                                 height: 60,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Icon(
-                                    Icons.broken_image,
-                                    size: 40,
-                                  );
-                                },
+                                child: Icon(Icons.image),
                               );
-                            }
-                            return const SizedBox(
-                              width: 40,
-                              height: 60,
-                              child: Icon(Icons.image),
-                            );
-                          },
-                        )
-                      else
-                        const SizedBox(
-                          width: 40,
-                          height: 60,
-                          child: Icon(Icons.image),
+                            },
+                          )
+                        else
+                          const SizedBox(
+                            width: 40,
+                            height: 60,
+                            child: Icon(Icons.image),
+                          ),
+
+                        const SizedBox(width: 12),
+
+                        // 3. Kartenname (nutzt den verbleibenden Platz)
+                        Expanded(
+                          child: Text(
+                            name,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 2,
+                          ),
                         ),
 
-                      const SizedBox(width: 12),
-
-                      Expanded(
-                        child: Text(
-                          name,
-                          style: Theme.of(context).textTheme.bodyMedium,
-                          overflow: TextOverflow.ellipsis,
+                        // 4. Entfernen-Button
+                        IconButton(
+                          icon: const Icon(
+                            Icons.remove_circle_outline,
+                            color: Colors.red,
+                          ),
+                          onPressed: () => _removeCardFromDeck(card, deck),
                         ),
-                      ),
-
-                      IconButton(
-                        icon: const Icon(
-                          Icons.remove_circle_outline,
-                          color: Colors.red,
-                        ),
-                        onPressed: () => _removeCardFromDeck(card, deck),
-                        iconSize: 20,
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            );
-          }).toList(),
+              );
+            }).toList(),
+          ),
           const SizedBox(height: 8),
         ],
       );
     }
 
-    final totalCards = getTotalCount(deck);
-
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              '$title ($totalCards Karten)',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            ),
-          ),
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  buildCategory('Monster', categorized['Monster']!),
-                  buildCategory('Spell', categorized['Spell']!),
-                  buildCategory('Trap', categorized['Trap']!),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+    // Top-Level Element ist Column
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        buildCategory('Monster', categorized['Monster']!),
+        buildCategory('Spell', categorized['Spell']!),
+        buildCategory('Trap', categorized['Trap']!),
+      ],
     );
   }
 
-  Widget _buildSideDeck() {
-    if (_sideDeck.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Text('Keine Karten im Side Deck'),
-        ),
-      );
-    }
+  // FUNKTION: Baut die aktuell ausgewählte Deck-Ansicht (jetzt inklusive Kommentare)
+  Widget _buildDynamicDeckView() {
+    DeckType currentType = _selectedDeckType;
+    String title;
+    List<Map<String, dynamic>> deck = []; // Initialisiere mit leerer Liste
 
-    return SizedBox(
-      height: 120,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: _sideDeck.length,
-        itemBuilder: (context, index) {
-          final card = _sideDeck[index];
-          final cardImages = card['card_images'] as List<dynamic>?;
-          final imageUrl = cardImages != null && cardImages.isNotEmpty
-              ? (cardImages[0] as Map<String, dynamic>)['image_url_cropped'] ??
-                    ''
-              : '';
-
-          final count = card['count'] as int? ?? 0;
-          final name = card['name'] as String? ?? 'Unbekannt';
-
-          return Card(
-            margin: const EdgeInsets.all(4),
-            child: InkWell(
-              onTap: () => _showCardDetail(card),
-              child: Container(
-                width: 80,
-                padding: const EdgeInsets.all(4),
-                child: Column(
-                  children: [
-                    if (imageUrl.isNotEmpty)
-                      FutureBuilder<String>(
-                        future: _cardData.getImgPath(imageUrl),
-                        builder: (context, snapshot) {
-                          if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-                            return Image.network(
-                              snapshot.data!,
-                              width: 60,
-                              height: 80,
-                              fit: BoxFit.cover,
-                            );
-                          }
-                          return const Icon(Icons.image, size: 60);
-                        },
-                      )
-                    else
-                      const Icon(Icons.image, size: 60),
-
-                    Text('${count}x', style: const TextStyle(fontSize: 10)),
-
-                    IconButton(
-                      icon: const Icon(
-                        Icons.remove_circle_outline,
-                        color: Colors.red,
-                      ),
-                      onPressed: () => _removeCardFromDeck(card, _sideDeck),
-                      iconSize: 16,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                  ],
-                ),
-              ),
+    switch (currentType) {
+      case DeckType.main:
+        title = 'Main Deck';
+        deck = _mainDeck;
+        break;
+      case DeckType.extra:
+        title = 'Extra Deck';
+        deck = _extraDeck;
+        break;
+      case DeckType.side:
+        title = 'Side Deck';
+        deck = _sideDeck;
+        break;
+      case DeckType.comments:
+        title = 'Kommentare';
+        if (_currentDeckId == null) {
+          return const Center(
+            child: Text(
+              'Deck muss zuerst gespeichert werden, um Kommentare anzuzeigen.',
             ),
           );
-        },
-      ),
+        }
+        // Wenn Kommentare ausgewählt sind, zeige die CommentSection
+        return CommentSection(deckId: _currentDeckId!);
+    }
+
+    // --- Logik für Deck-Typen (main, extra, side) ---
+    final totalCards = deck.fold(
+      0,
+      (sum, card) => sum + (card['count'] as int? ?? 0),
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8.0, left: 8.0),
+          child: Text(
+            '$title ($totalCards Karten)',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
+        ),
+        // Stellt sicher, dass die Liste scrollbar ist und den Rest des Platzes ausfüllt
+        Expanded(
+          child: SingleChildScrollView(
+            child: _buildDeckSection(title: title, deck: deck),
+          ),
+        ),
+      ],
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    TextStyle? bodyMedium = Theme.of(context).textTheme.bodyMedium;
     if (_selectedCardForDetail != null) {
       return CardDetailView(
         cardData: _selectedCardForDetail!,
@@ -830,36 +810,62 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
 
             const SizedBox(height: 16),
 
-            // Main Deck und Extra Deck nebeneinander
-            SizedBox(
-              height: 400,
-              child: Row(
-                children: [
-                  _buildDeckSection(title: 'Main Deck', deck: _mainDeck),
-                  const SizedBox(width: 8),
-                  _buildDeckSection(title: 'Extra Deck', deck: _extraDeck),
-                ],
-              ),
+            // Dropdown Menü zur Auswahl des Decks
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Deck-Anzeige',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                DropdownButton<DeckType>(
+                  dropdownColor: Theme.of(context).cardColor,
+                  value: _selectedDeckType,
+                  onChanged: (DeckType? newValue) {
+                    if (newValue != null) {
+                      setState(() {
+                        _selectedDeckType = newValue;
+                      });
+                    }
+                  },
+                  items: [
+                    DropdownMenuItem(
+                      value: DeckType.main,
+                      child: Text('Main Deck', style: bodyMedium),
+                    ),
+                    DropdownMenuItem(
+                      value: DeckType.extra,
+                      child: Text('Extra Deck', style: bodyMedium),
+                    ),
+                    DropdownMenuItem(
+                      value: DeckType.side,
+                      child: Text('Side Deck', style: bodyMedium),
+                    ),
+                    // NEU: Kommentar-Dropdown-Element (nur wenn Deck-ID existiert)
+                    if (_currentDeckId != null)
+                      DropdownMenuItem(
+                        value: DeckType.comments,
+                        child: Text('Kommentare', style: bodyMedium),
+                      ),
+                  ],
+                ),
+              ],
             ),
 
-            const SizedBox(height: 16),
-
-            // Side Deck
-            Text(
-              'Side Deck (${_sideDeck.fold(0, (sum, card) => sum + (card['count'] as int? ?? 0))} Karten)',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            ),
             const SizedBox(height: 8),
-            _buildSideDeck(),
+
+            // Dynamischer Anzeige-Bereich (Main, Extra oder Side Deck oder Kommentare)
+            SizedBox(
+              height: 400, // Beibehalten der Höhe
+              child: _buildDynamicDeckView(),
+            ),
 
             const SizedBox(height: 24),
 
-            if (_currentDeckId != null) ...[
-              CommentSection(deckId: _currentDeckId!),
-              const SizedBox(height: 50),
-            ],
+            // HINWEIS: Die CommentSection wurde in _buildDynamicDeckView verschoben.
+            const SizedBox(height: 50),
           ],
         ),
       ),
@@ -940,7 +946,7 @@ class _CommentSectionState extends State<CommentSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Kommentare', style: Theme.of(context).textTheme.titleLarge),
+        Text('Kommentare', style: Theme.of(context).textTheme.bodyLarge),
         const SizedBox(height: 16),
 
         // Kommentar hinzufügen
@@ -953,7 +959,6 @@ class _CommentSectionState extends State<CommentSection> {
                   hintText: 'Kommentar schreiben...',
                   border: OutlineInputBorder(),
                 ),
-                maxLines: 3,
               ),
             ),
             const SizedBox(width: 8),
@@ -1000,7 +1005,8 @@ class _CommentSectionState extends State<CommentSection> {
 
                 final canDelete = currentUserId == userId;
 
-                return Card(
+                return Container(
+                  color: Theme.of(context).cardColor,
                   margin: const EdgeInsets.symmetric(vertical: 4),
                   child: ListTile(
                     title: Text(username),
@@ -1010,7 +1016,10 @@ class _CommentSectionState extends State<CommentSection> {
                         Text(commentText),
                         if (timestamp != null)
                           Text(
-                            timestamp.toDate().toString(),
+                            // Korrigierte Datumsformatierung
+                            DateFormat(
+                              'dd.MM.yyyy',
+                            ).format(timestamp.toDate().toLocal()),
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                       ],
