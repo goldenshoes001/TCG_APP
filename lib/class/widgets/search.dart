@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 import 'package:tcg_app/class/common/buildCards.dart';
+import 'package:tcg_app/class/widgets/DeckSearchView.dart';
 import 'package:tcg_app/class/widgets/helperClass%20allgemein/search_results_view.dart';
 import 'package:tcg_app/class/widgets/deck_search_service.dart';
 import 'package:tcg_app/class/widgets/deck_viewer.dart';
@@ -216,7 +217,7 @@ class _SearchState extends State<Search> with SingleTickerProviderStateMixin {
                           });
                         },
                       ),
-                      _buildDeckResults(),
+                      const DeckSearchView(),
                     ],
                   ),
                 ),
