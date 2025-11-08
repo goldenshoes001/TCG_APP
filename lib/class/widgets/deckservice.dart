@@ -50,6 +50,7 @@ class DeckService {
     required List<Map<String, dynamic>> mainDeck,
     required List<Map<String, dynamic>> extraDeck,
     required List<Map<String, dynamic>> sideDeck,
+    String? coverImageUrl, // ✅ HINZUFÜGEN!
   }) async {
     final user = _auth.currentUser;
     if (user == null) {
@@ -79,6 +80,7 @@ class DeckService {
       'sideDeck': sideDeck,
       'searchIndex': searchIndex,
       'searchTokens': searchTokens,
+      'coverImageUrl': coverImageUrl, // ✅ HINZUFÜGEN!
       'updatedAt': FieldValue.serverTimestamp(),
     });
   }
@@ -119,6 +121,7 @@ class DeckService {
     required List<Map<String, dynamic>> mainDeck,
     required List<Map<String, dynamic>> extraDeck,
     required List<Map<String, dynamic>> sideDeck,
+    String? coverImageUrl, // ✅ HINZUFÜGEN!
   }) async {
     final user = _auth.currentUser;
     final deckNameLower = deckName.trim().toLowerCase();
@@ -166,6 +169,7 @@ class DeckService {
       'sideDeck': sideDeck,
       'searchIndex': searchIndex,
       'searchTokens': searchTokens,
+      'coverImageUrl': coverImageUrl, // ✅ HINZUFÜGEN!
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });

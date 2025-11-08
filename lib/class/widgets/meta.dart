@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 import 'package:tcg_app/class/common/buildCards.dart';
-import 'package:tcg_app/class/widgets/DeckSearchView.dart';
+import 'package:tcg_app/class/widgets/DeckSearchView.dart'; // WIEDER EINGEFÜGT
 import 'package:tcg_app/class/widgets/helperClass%20allgemein/search_results_view.dart';
 import 'package:tcg_app/class/widgets/deck_search_service.dart';
 import 'package:tcg_app/class/widgets/deck_viewer.dart';
@@ -258,6 +258,8 @@ class _MetaState extends State<Meta>
       return;
     }
 
+    // ACHTUNG: Das globale Suchfeld ist jetzt nur für Tab 0 sichtbar.
+    // Daher sollte hier nur noch die Kartensuche ausgelöst werden.
     if (_tabController.index == 0) {
       setState(() {
         _cardSearchFuture = _cardData.ergebniseAnzeigen(trimmedValue).then((
@@ -270,12 +272,8 @@ class _MetaState extends State<Meta>
         _selectedCard = null;
         _showFilters = false;
       });
-    } else {
-      setState(() {
-        _deckSearchFuture = _deckSearchService.searchDecks(trimmedValue);
-        _selectedDeck = null;
-      });
     }
+    // Der ELSE-Block (Deck-Suche) ist nicht mehr nötig, da das Feld nur in Tab 0 existiert
   }
 
   void _resetFilters() {
@@ -289,74 +287,9 @@ class _MetaState extends State<Meta>
     });
   }
 
-  Widget _buildDeckResults() {
-    if (_deckSearchFuture == null) {
-      return Center(
-        child: Text(
-          'Gib einen Deck-Namen oder Archetyp ein',
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-      );
-    }
-
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: _deckSearchFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (snapshot.hasError) {
-          return Center(child: Text('Fehler: ${snapshot.error}'));
-        }
-
-        final decks = snapshot.data ?? [];
-
-        if (decks.isEmpty) {
-          return const Center(child: Text('Keine Decks gefunden'));
-        }
-
-        return ListView.builder(
-          itemCount: decks.length,
-          itemBuilder: (context, index) {
-            final deck = decks[index];
-            final deckName = deck['deckName'] as String? ?? 'Unbekannt';
-            final archetype = deck['archetype'] as String? ?? '';
-            final username = deck['username'] as String? ?? 'Unbekannt';
-
-            final mainDeck = deck['mainDeck'] as List<dynamic>? ?? [];
-            final cardCount = mainDeck.fold(0, (sum, card) {
-              if (card is Map<String, dynamic>) {
-                return sum + (card['count'] as int? ?? 0);
-              }
-              return sum;
-            });
-
-            return Container(
-              color: Theme.of(context).cardColor,
-              margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-              child: ListTile(
-                title: Text(deckName),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (archetype.isNotEmpty) Text('Archetypen: $archetype'),
-                    Text('Von: $username'),
-                    Text('$cardCount Karten'),
-                  ],
-                ),
-                onTap: () {
-                  setState(() {
-                    _selectedDeck = deck;
-                  });
-                },
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
+  // Die _buildDeckResults() ist für die Ergebnisse des *globalen* Suchfeldes und
+  // ist in dieser Logik nicht mehr relevant, da wir DeckSearchView verwenden.
+  // Ich lasse sie, falls sie woanders benötigt wird, aber sie wird hier nicht mehr aufgerufen.
 
   @override
   Widget build(BuildContext context) {
@@ -406,6 +339,7 @@ class _MetaState extends State<Meta>
               _selectedCard = null;
               _selectedDeck = null;
               _showFilters = index == 0;
+              // Der Suchfeld-Text bleibt im Controller, aber die onSubmitted-Logik ist auf Tab 0 beschränkt
               _suchfeld.clear();
             });
           },
@@ -419,23 +353,29 @@ class _MetaState extends State<Meta>
               children: [
                 SizedBox(height: MediaQuery.of(context).size.height / 350),
 
-                TextField(
-                  decoration: InputDecoration(
-                    hintText: _tabController.index == 0
-                        ? "Karte suchen..."
-                        : "Deck suchen...",
-                    prefixIcon: const Icon(Icons.search),
-                    border: const OutlineInputBorder(),
-                    contentPadding: const EdgeInsets.symmetric(
-                      vertical: 8,
-                      horizontal: 12,
-                    ),
+                // GEÄNDERT: Bedingte Anzeige des globalen Suchfelds
+                if (_tabController.index == 0)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextField(
+                        decoration: InputDecoration(
+                          hintText: "Karte suchen...", // Angepasster Hint
+                          prefixIcon: const Icon(Icons.search),
+                          border: const OutlineInputBorder(),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 8,
+                            horizontal: 12,
+                          ),
+                        ),
+                        onSubmitted: _performTextSearch,
+                        controller: _suchfeld,
+                      ),
+                      SizedBox(height: MediaQuery.of(context).size.height / 55),
+                    ],
                   ),
-                  onSubmitted: _performTextSearch,
-                  controller: _suchfeld,
-                ),
-                SizedBox(height: MediaQuery.of(context).size.height / 55),
 
+                // ENDE: Bedingte Anzeige
                 if (_tabController.index == 0 &&
                     !_showFilters &&
                     _cardSearchFuture != null)
@@ -460,6 +400,7 @@ class _MetaState extends State<Meta>
                   child: TabBarView(
                     controller: _tabController,
                     children: [
+                      // TAB 1: KARTEN (Bleibt gleich)
                       _showFilters
                           ? SingleChildScrollView(
                               child: Column(
@@ -501,7 +442,9 @@ class _MetaState extends State<Meta>
                                 });
                               },
                             ),
-                      const DeckSearchView()
+
+                      // TAB 2: DECKS (Wiederhergestellt)
+                      const DeckSearchView(), // Das Suchfeld ist hier intern im Widget enthalten
                     ],
                   ),
                 ),

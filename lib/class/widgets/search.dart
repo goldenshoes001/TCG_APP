@@ -64,81 +64,15 @@ class _SearchState extends State<Search> with SingleTickerProviderStateMixin {
       });
     } else {
       // Deck-Suche
+      // ACHTUNG: Die globale Suche wird im Deck-Tab nicht mehr unterstützt.
+      // Wenn der Benutzer hier tippt, löst er versehentlich die Suche aus.
+      // Da wir das Suchfeld nun ausblenden, ist dieser else-Block obsolet,
+      // aber wir lassen die Logik hier zur Sicherheit.
       setState(() {
         _deckSearchFuture = _deckSearchService.searchDecks(trimmedValue);
         _selectedDeck = null;
       });
     }
-  }
-
-  Widget _buildDeckResults() {
-    if (_deckSearchFuture == null) {
-      return Center(
-        child: Text(
-          'Gib einen Deck-Namen oder Archetyp ein',
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-      );
-    }
-
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: _deckSearchFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (snapshot.hasError) {
-          return Center(child: Text('Fehler: ${snapshot.error}'));
-        }
-
-        final decks = snapshot.data ?? [];
-
-        if (decks.isEmpty) {
-          return const Center(child: Text('Keine Decks gefunden'));
-        }
-
-        return ListView.builder(
-          itemCount: decks.length,
-          itemBuilder: (context, index) {
-            final deck = decks[index];
-            final deckName = deck['deckName'] as String? ?? 'Unbekannt';
-            final archetype = deck['archetype'] as String? ?? '';
-            final username = deck['username'] as String? ?? 'Unbekannt';
-
-            // Zähle Karten
-            final mainDeck = deck['mainDeck'] as List<dynamic>? ?? [];
-            final cardCount = mainDeck.fold(0, (sum, card) {
-              if (card is Map<String, dynamic>) {
-                return sum + (card['count'] as int? ?? 0);
-              }
-              return sum;
-            });
-
-            return Container(
-              color: Theme.of(context).cardColor,
-              margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-              child: ListTile(
-                title: Text(deckName),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (archetype.isNotEmpty) Text('Archetypen: $archetype'),
-                    Text('Von: $username'),
-                    Text('$cardCount Karten'),
-                  ],
-                ),
-                onTap: () {
-                  setState(() {
-                    _selectedDeck = deck;
-                  });
-                },
-              ),
-            );
-          },
-        );
-      },
-    );
   }
 
   @override
@@ -176,6 +110,7 @@ class _SearchState extends State<Search> with SingleTickerProviderStateMixin {
           ],
           onTap: (index) {
             setState(() {
+              // Beim Tab-Wechsel Suchergebnisse und Suchfeldinhalt zurücksetzen
               _cardSearchFuture = null;
               _deckSearchFuture = null;
               suchfeld.clear();
@@ -188,22 +123,30 @@ class _SearchState extends State<Search> with SingleTickerProviderStateMixin {
             child: Column(
               children: [
                 SizedBox(height: MediaQuery.of(context).size.height / 350),
-                TextField(
-                  decoration: InputDecoration(
-                    hintText: _tabController.index == 0
-                        ? "Karte suchen..."
-                        : "Deck suchen...",
-                    prefixIcon: const Icon(Icons.search),
-                    border: const OutlineInputBorder(),
-                    contentPadding: const EdgeInsets.symmetric(
-                      vertical: 8,
-                      horizontal: 12,
-                    ),
+
+                // HIER: Bedingte Anzeige des Suchfelds
+                if (_tabController.index == 0)
+                  Column(
+                    children: [
+                      TextField(
+                        decoration: const InputDecoration(
+                          // Der Hint-Text ist jetzt fest auf Kartensuche eingestellt
+                          hintText: "Karte suchen...",
+                          prefixIcon: Icon(Icons.search),
+                          border: OutlineInputBorder(),
+                          contentPadding: EdgeInsets.symmetric(
+                            vertical: 8,
+                            horizontal: 12,
+                          ),
+                        ),
+                        onSubmitted: _performSearch,
+                        controller: suchfeld,
+                      ),
+                      SizedBox(height: MediaQuery.of(context).size.height / 55),
+                    ],
                   ),
-                  onSubmitted: _performSearch,
-                  controller: suchfeld,
-                ),
-                SizedBox(height: MediaQuery.of(context).size.height / 55),
+
+                // ENDE: Bedingte Anzeige
                 Expanded(
                   child: TabBarView(
                     controller: _tabController,
@@ -217,7 +160,7 @@ class _SearchState extends State<Search> with SingleTickerProviderStateMixin {
                           });
                         },
                       ),
-                      const DeckSearchView(),
+                      const DeckSearchView(), // Behält seine interne Struktur
                     ],
                   ),
                 ),

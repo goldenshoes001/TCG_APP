@@ -97,99 +97,96 @@ class _DeckSearchViewState extends State<DeckSearchView> {
       );
     }
 
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          // Suchfeld
-          TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'Deck-Name oder Archetyp suchen...',
-              prefixIcon: const Icon(Icons.search),
-              border: const OutlineInputBorder(),
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        _searchController.clear();
-                        setState(() {});
-                      },
-                    )
-                  : null,
-            ),
-            onSubmitted: (_) => _performSearch(),
-            onChanged: (_) => setState(() {}),
+    return Column(
+      children: [
+        // Suchfeld
+        TextField(
+          controller: _searchController,
+          decoration: InputDecoration(
+            hintText: 'Deck-Name oder Archetyp suchen...',
+            prefixIcon: const Icon(Icons.search),
+            border: const OutlineInputBorder(),
+            suffixIcon: _searchController.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear),
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() {});
+                    },
+                  )
+                : null,
           ),
+          onSubmitted: (_) => _performSearch(),
+          onChanged: (_) => setState(() {}),
+        ),
 
-          const SizedBox(height: 16),
+        const SizedBox(height: 16),
 
-          // Archetyp-Dropdown
-          if (_isLoadingArchetypes)
-            const SizedBox(
-              height: 50,
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (_availableArchetypes.isNotEmpty)
-            DropdownButtonFormField<String>(
-              decoration: const InputDecoration(
-                labelText: 'Oder Archetyp auswählen',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.category),
-              ),
-              value: _selectedArchetype,
-              items: [
-                const DropdownMenuItem<String>(
-                  value: null,
-                  child: Text('Alle Archetypen'),
-                ),
-                ..._availableArchetypes.map(
-                  (archetype) => DropdownMenuItem<String>(
-                    value: archetype,
-                    child: Text(archetype),
-                  ),
-                ),
-              ],
-              onChanged: (value) {
-                setState(() {
-                  _selectedArchetype = value;
-                  // Wenn Archetyp ausgewählt wird, lösche Textsuche
-                  if (value != null) {
-                    _searchController.clear();
-                  }
-                });
-              },
+        // Archetyp-Dropdown
+        if (_isLoadingArchetypes)
+          const SizedBox(
+            height: 50,
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else if (_availableArchetypes.isNotEmpty)
+          DropdownButtonFormField<String>(
+            decoration: const InputDecoration(
+              labelText: 'Oder Archetyp auswählen',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.category),
             ),
-
-          const SizedBox(height: 16),
-
-          // Such- und Reset-Buttons
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _performSearch,
-                  icon: const Icon(Icons.search),
-                  label: const Text('Suchen'),
-                ),
+            value: _selectedArchetype,
+            items: [
+              const DropdownMenuItem<String>(
+                value: null,
+                child: Text('Alle Archetypen'),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _resetFilters,
-                  icon: const Icon(Icons.clear),
-                  label: const Text('Zurücksetzen'),
+              ..._availableArchetypes.map(
+                (archetype) => DropdownMenuItem<String>(
+                  value: archetype,
+                  child: Text(archetype),
                 ),
               ),
             ],
+            onChanged: (value) {
+              setState(() {
+                _selectedArchetype = value;
+                // Wenn Archetyp ausgewählt wird, lösche Textsuche
+                if (value != null) {
+                  _searchController.clear();
+                }
+              });
+            },
           ),
 
-          const SizedBox(height: 16),
+        const SizedBox(height: 16),
 
-          // Suchergebnisse
-          Expanded(child: _buildResults()),
-        ],
-      ),
+        // Such- und Reset-Buttons
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: _performSearch,
+                icon: const Icon(Icons.search),
+                label: const Text('Suchen'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _resetFilters,
+                icon: const Icon(Icons.clear),
+                label: const Text('Zurücksetzen'),
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 16),
+
+        // Suchergebnisse
+        Expanded(child: _buildResults()),
+      ],
     );
   }
 

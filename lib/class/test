@@ -1,0 +1,120 @@
+// deck_search_service.dart - MIT ARCHETYP DROPDOWN
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+class DeckSearchService {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  /// Sucht nach Decks basierend auf Name oder Archetyp
+  Future<List<Map<String, dynamic>>> searchDecks(String searchTerm) async {
+    if (searchTerm.trim().isEmpty) {
+      return [];
+    }
+
+    final normalizedSearch = searchTerm.trim().toLowerCase();
+    
+    try {
+      // Suche über searchTokens
+      final QuerySnapshot snapshot = await _firestore
+          .collection('decks')
+          .where('searchTokens', arrayContains: normalizedSearch)
+          .limit(100)
+          .get();
+
+      List<Map<String, dynamic>> results = snapshot.docs
+          .map((doc) => doc.data() as Map<String, dynamic>)
+          .toList();
+
+      // Falls keine Ergebnisse über searchTokens, versuche Teilstring-Suche
+      if (results.isEmpty) {
+        final QuerySnapshot allDecks = await _firestore
+            .collection('decks')
+            .limit(100)
+            .get();
+
+        results = allDecks.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .where((deck) {
+              final deckName = (deck['deckName'] as String? ?? '').toLowerCase();
+              final archetype = (deck['archetype'] as String? ?? '').toLowerCase();
+              
+              return deckName.contains(normalizedSearch) ||
+                     archetype.contains(normalizedSearch);
+            })
+            .toList();
+      }
+
+      // Sortiere Ergebnisse nach Relevanz
+      results.sort((a, b) {
+        final aName = (a['deckName'] as String? ?? '').toLowerCase();
+        final bName = (b['deckName'] as String? ?? '').toLowerCase();
+        final aArchetype = (a['archetype'] as String? ?? '').toLowerCase();
+        final bArchetype = (b['archetype'] as String? ?? '').toLowerCase();
+        
+        if (aName == normalizedSearch) return -1;
+        if (bName == normalizedSearch) return 1;
+        
+        if (aArchetype.contains(normalizedSearch) && !bArchetype.contains(normalizedSearch)) return -1;
+        if (!aArchetype.contains(normalizedSearch) && bArchetype.contains(normalizedSearch)) return 1;
+        
+        if (aName.startsWith(normalizedSearch) && !bName.startsWith(normalizedSearch)) return -1;
+        if (!aName.startsWith(normalizedSearch) && bName.startsWith(normalizedSearch)) return 1;
+        
+        return aName.compareTo(bName);
+      });
+
+      return results;
+    } catch (e) {
+      print('Fehler bei Deck-Suche: $e');
+      return [];
+    }
+  }
+
+  /// Lädt alle verfügbaren Archetypen aus den Decks
+  Future<List<String>> getAllArchetypes() async {
+    try {
+      final QuerySnapshot snapshot = await _firestore
+          .collection('decks')
+          .get();
+
+      final Set<String> archetypes = {};
+      
+      for (var doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final archetype = data['archetype'] as String? ?? '';
+        
+        if (archetype.isNotEmpty) {
+          // Trenne mehrere Archetypen (falls mit Komma getrennt)
+          final archetypeList = archetype
+              .split(',')
+              .map((a) => a.trim())
+              .where((a) => a.isNotEmpty);
+          archetypes.addAll(archetypeList);
+        }
+      }
+
+      final List<String> sortedArchetypes = archetypes.toList()..sort();
+      return sortedArchetypes;
+    } catch (e) {
+      print('Fehler beim Laden der Archetypen: $e');
+      return [];
+    }
+  }
+
+  /// Lädt die neuesten Decks
+  Future<List<Map<String, dynamic>>> getRecentDecks({int limit = 20}) async {
+    try {
+      final QuerySnapshot snapshot = await _firestore
+          .collection('decks')
+          .orderBy('updatedAt', descending: true)
+          .limit(limit)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => doc.data() as Map<String, dynamic>)
+          .toList();
+    } catch (e) {
+      print('Fehler beim Laden der neuesten Decks: $e');
+      return [];
+    }
+  }
+}

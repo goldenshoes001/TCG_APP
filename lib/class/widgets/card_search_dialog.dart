@@ -241,8 +241,8 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
               return TextButton(
                 onPressed: () {
                   widget.onCardSelected(card, count);
-                  Navigator.of(context).pop();
-                  Navigator.of(context).pop();
+                  Navigator.of(context).pop(); // Schließt NUR den Count-Dialog
+                  // Navigator.of(context).pop(); ❌ DIESE ZEILE ENTFERNEN!
                 },
                 child: Text('${count}x'),
               );
