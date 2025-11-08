@@ -615,7 +615,7 @@ class _MetaState extends State<Meta>
               border: OutlineInputBorder(),
               contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
             ),
-            value: operator,
+            initialValue: operator,
             items: _operators.map((op) {
               return DropdownMenuItem<String>(
                 value: op,
@@ -638,7 +638,7 @@ class _MetaState extends State<Meta>
                 vertical: 8,
               ),
             ),
-            value: value,
+            initialValue: value,
             items: [
               DropdownMenuItem<String>(value: null, child: Text(label)),
               ...items.map(
@@ -672,7 +672,7 @@ class _MetaState extends State<Meta>
               border: OutlineInputBorder(),
               contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
             ),
-            value: operator,
+            initialValue: operator,
             items: _operators.map((op) {
               return DropdownMenuItem<String>(
                 value: op,
@@ -716,7 +716,7 @@ class _MetaState extends State<Meta>
         border: const OutlineInputBorder(),
         contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       ),
-      value: value,
+      initialValue: value,
       items: [
         DropdownMenuItem<String>(value: null, child: Text(label)),
         ...items.map(

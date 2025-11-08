@@ -30,7 +30,7 @@ class OperatorTextInput extends StatelessWidget {
               border: OutlineInputBorder(),
               contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             ),
-            value: operator,
+            initialValue: operator,
             items: operators.map((op) {
               return DropdownMenuItem<String>(
                 value: op,

@@ -1,9 +1,8 @@
-// Erweiterte Deck-Suchansicht mit Archetyp-Dropdown
-// Kann in search.dart oder meta.dart integriert werden
-
+// DeckSearchView.dart - MIT COVER-BILD ANZEIGE
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/widgets/deck_search_service.dart';
 import 'package:tcg_app/class/widgets/deck_viewer.dart';
+import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 
 class DeckSearchView extends StatefulWidget {
   const DeckSearchView({super.key});
@@ -14,6 +13,7 @@ class DeckSearchView extends StatefulWidget {
 
 class _DeckSearchViewState extends State<DeckSearchView> {
   final DeckSearchService _deckSearchService = DeckSearchService();
+  final CardData _cardData = CardData();
   final TextEditingController _searchController = TextEditingController();
 
   Future<List<Map<String, dynamic>>>? _deckSearchFuture;
@@ -57,9 +57,6 @@ class _DeckSearchViewState extends State<DeckSearchView> {
     final searchTerm = _searchController.text.trim();
     final selectedArchetype = _selectedArchetype;
 
-    // Wenn Archetyp ausgewählt ist, suche danach
-    // Wenn Text eingegeben wurde, suche danach
-    // Sonst zeige neueste Decks
     if (selectedArchetype != null && selectedArchetype.isNotEmpty) {
       setState(() {
         _deckSearchFuture = _deckSearchService.searchDecks(selectedArchetype);
@@ -83,9 +80,81 @@ class _DeckSearchViewState extends State<DeckSearchView> {
     });
   }
 
+  Widget _buildDeckCoverImage(Map<String, dynamic> deck) {
+    final coverImageUrl = deck['coverImageUrl'] as String?;
+
+    if (coverImageUrl == null || coverImageUrl.isEmpty) {
+      return Container(
+        width: 50,
+        height: 70,
+        decoration: BoxDecoration(
+          color: Colors.grey[300],
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Icon(Icons.style, size: 30, color: Colors.grey[600]),
+      );
+    }
+
+    return FutureBuilder<String>(
+      future: _cardData.getImgPath(coverImageUrl),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            width: 50,
+            height: 70,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: const Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          );
+        }
+
+        if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+          return Container(
+            width: 50,
+            height: 70,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Icon(Icons.broken_image, size: 30, color: Colors.grey[600]),
+          );
+        }
+
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: Image.network(
+            snapshot.data!,
+            width: 50,
+            height: 70,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                width: 50,
+                height: 70,
+                color: Colors.grey[300],
+                child: Icon(
+                  Icons.broken_image,
+                  size: 30,
+                  color: Colors.grey[600],
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Zeige DeckViewer wenn ein Deck ausgewählt wurde
     if (_selectedDeck != null) {
       return DeckViewer(
         deckData: _selectedDeck!,
@@ -97,96 +166,94 @@ class _DeckSearchViewState extends State<DeckSearchView> {
       );
     }
 
-    return Column(
-      children: [
-        // Suchfeld
-        TextField(
-          controller: _searchController,
-          decoration: InputDecoration(
-            hintText: 'Deck-Name oder Archetyp suchen...',
-            prefixIcon: const Icon(Icons.search),
-            border: const OutlineInputBorder(),
-            suffixIcon: _searchController.text.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(Icons.clear),
-                    onPressed: () {
-                      _searchController.clear();
-                      setState(() {});
-                    },
-                  )
-                : null,
-          ),
-          onSubmitted: (_) => _performSearch(),
-          onChanged: (_) => setState(() {}),
-        ),
-
-        const SizedBox(height: 16),
-
-        // Archetyp-Dropdown
-        if (_isLoadingArchetypes)
-          const SizedBox(
-            height: 50,
-            child: Center(child: CircularProgressIndicator()),
-          )
-        else if (_availableArchetypes.isNotEmpty)
-          DropdownButtonFormField<String>(
-            decoration: const InputDecoration(
-              labelText: 'Oder Archetyp auswählen',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.category),
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Deck-Name oder Archetyp suchen...',
+              prefixIcon: const Icon(Icons.search),
+              border: const OutlineInputBorder(),
+              suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() {});
+                      },
+                    )
+                  : null,
             ),
-            value: _selectedArchetype,
-            items: [
-              const DropdownMenuItem<String>(
-                value: null,
-                child: Text('Alle Archetypen'),
+            onSubmitted: (_) => _performSearch(),
+            onChanged: (_) => setState(() {}),
+          ),
+
+          const SizedBox(height: 16),
+
+          if (_isLoadingArchetypes)
+            const SizedBox(
+              height: 50,
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_availableArchetypes.isNotEmpty)
+            DropdownButtonFormField<String>(
+              decoration: const InputDecoration(
+                labelText: 'Oder Archetyp auswählen',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.category),
               ),
-              ..._availableArchetypes.map(
-                (archetype) => DropdownMenuItem<String>(
-                  value: archetype,
-                  child: Text(archetype),
+              initialValue: _selectedArchetype,
+              items: [
+                const DropdownMenuItem<String>(
+                  value: null,
+                  child: Text('Alle Archetypen'),
+                ),
+                ..._availableArchetypes.map(
+                  (archetype) => DropdownMenuItem<String>(
+                    value: archetype,
+                    child: Text(archetype),
+                  ),
+                ),
+              ],
+              onChanged: (value) {
+                setState(() {
+                  _selectedArchetype = value;
+                  if (value != null) {
+                    _searchController.clear();
+                  }
+                });
+              },
+            ),
+
+          const SizedBox(height: 16),
+
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _performSearch,
+                  icon: const Icon(Icons.search),
+                  label: const Text('Suchen'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _resetFilters,
+                  icon: const Icon(Icons.clear),
+                  label: const Text('Zurücksetzen'),
                 ),
               ),
             ],
-            onChanged: (value) {
-              setState(() {
-                _selectedArchetype = value;
-                // Wenn Archetyp ausgewählt wird, lösche Textsuche
-                if (value != null) {
-                  _searchController.clear();
-                }
-              });
-            },
           ),
 
-        const SizedBox(height: 16),
+          const SizedBox(height: 16),
 
-        // Such- und Reset-Buttons
-        Row(
-          children: [
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: _performSearch,
-                icon: const Icon(Icons.search),
-                label: const Text('Suchen'),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _resetFilters,
-                icon: const Icon(Icons.clear),
-                label: const Text('Zurücksetzen'),
-              ),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 16),
-
-        // Suchergebnisse
-        Expanded(child: _buildResults()),
-      ],
+          Expanded(child: _buildResults()),
+        ],
+      ),
     );
   }
 
@@ -251,7 +318,6 @@ class _DeckSearchViewState extends State<DeckSearchView> {
             final archetype = deck['archetype'] as String? ?? '';
             final username = deck['username'] as String? ?? 'Unbekannt';
 
-            // Zähle Karten
             final mainDeck = deck['mainDeck'] as List<dynamic>? ?? [];
             final extraDeck = deck['extraDeck'] as List<dynamic>? ?? [];
             final sideDeck = deck['sideDeck'] as List<dynamic>? ?? [];
@@ -281,6 +347,7 @@ class _DeckSearchViewState extends State<DeckSearchView> {
               color: Theme.of(context).cardColor,
               margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
               child: ListTile(
+                leading: _buildDeckCoverImage(deck),
                 title: Text(
                   deckName,
                   style: const TextStyle(fontWeight: FontWeight.bold),

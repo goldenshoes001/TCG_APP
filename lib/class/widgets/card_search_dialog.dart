@@ -242,7 +242,6 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
                 onPressed: () {
                   widget.onCardSelected(card, count);
                   Navigator.of(context).pop(); // Schließt NUR den Count-Dialog
-                  // Navigator.of(context).pop(); ❌ DIESE ZEILE ENTFERNEN!
                 },
                 child: Text('${count}x'),
               );
@@ -265,7 +264,7 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
         border: const OutlineInputBorder(),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
-      value: value,
+      initialValue: value,
       items: [
         DropdownMenuItem<String>(value: null, child: Text(label)),
         ...items.map(
@@ -298,7 +297,7 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
               border: OutlineInputBorder(),
               contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             ),
-            value: operator,
+            initialValue: operator,
             items: _operators.map((op) {
               return DropdownMenuItem<String>(
                 value: op,
@@ -321,7 +320,7 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
                 vertical: 8,
               ),
             ),
-            value: value,
+            initialValue: value,
             items: [
               DropdownMenuItem<String>(value: null, child: Text(label)),
               ...items.map(

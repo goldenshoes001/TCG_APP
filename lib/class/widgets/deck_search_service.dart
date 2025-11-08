@@ -64,19 +64,23 @@ class DeckSearchService {
 
         // Dann exakte Übereinstimmung im Archetyp
         if (aArchetype.contains(normalizedSearch) &&
-            !bArchetype.contains(normalizedSearch))
+            !bArchetype.contains(normalizedSearch)) {
           return -1;
+        }
         if (!aArchetype.contains(normalizedSearch) &&
-            bArchetype.contains(normalizedSearch))
+            bArchetype.contains(normalizedSearch)) {
           return 1;
+        }
 
         // Name beginnt mit Suchbegriff
         if (aName.startsWith(normalizedSearch) &&
-            !bName.startsWith(normalizedSearch))
+            !bName.startsWith(normalizedSearch)) {
           return -1;
+        }
         if (!aName.startsWith(normalizedSearch) &&
-            bName.startsWith(normalizedSearch))
+            bName.startsWith(normalizedSearch)) {
           return 1;
+        }
 
         // Sonst alphabetisch nach Namen
         return aName.compareTo(bName);

@@ -94,25 +94,29 @@ class _DeckViewerState extends State<DeckViewer> {
   }
   // --- ENDE HILFSFUNKTION ---
 
-  @override
+ @override
   Widget build(BuildContext context) {
-    // Wenn eine Karte ausgewählt wurde, zeige CardDetailView
+    // Wenn eine Karte ausgewählt wurde, zeige NUR CardDetailView (OHNE AppBar/Tabs)
     if (_selectedCardForDetail != null) {
-      return _buildCardDetail();
+      return CardDetailView(
+        cardData: _selectedCardForDetail!,
+        onBack: () {
+          setState(() {
+            _selectedCardForDetail = null;
+          });
+        },
+      );
     }
 
-    // Ansonsten zeige die Deckliste/Notes
+    // Ansonsten zeige die normale Deckliste mit AppBar und Tabs
     return Column(
       children: [
         _buildCustomAppBar(context),
         _buildDeckTypeTabs(),
-        Expanded(
-          child: _buildCurrentView(), // Methode wählt zwischen Liste und Notes
-        ),
+        Expanded(child: _buildCurrentView()),
       ],
     );
   }
-
   // Wählt die anzuzeigende Ansicht basierend auf _selectedDeckType
   Widget _buildCurrentView() {
     switch (_selectedDeckType) {
@@ -319,7 +323,7 @@ class _DeckViewerState extends State<DeckViewer> {
                 const Divider(),
               ],
             );
-          }).toList(),
+          }),
         ],
       ),
     );

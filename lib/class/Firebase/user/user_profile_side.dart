@@ -1,5 +1,6 @@
 // user_profile_side.dart - AKTUALISIERT MIT ARCHETYPES-ANZEIGE
 import 'package:flutter/material.dart';
+import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 import 'package:tcg_app/class/Firebase/interfaces/FirebaseAuthRepository.dart';
 import 'package:tcg_app/class/Firebase/user/user.dart';
 import 'package:tcg_app/class/widgets/deckservice.dart';
@@ -30,10 +31,16 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   final Userdata userdb = Userdata();
   final authRepo = FirebaseAuthRepository();
   final DeckService _deckService = DeckService();
+  final CardData cardData = CardData();
   late Future<Map<String, dynamic>> userData;
 
   String? email;
   String? uid;
+
+  String? _usernameFromDB;
+  bool _isLoadingUsername = true; // Ladezustand für den Namen
+
+  // ... (Restliche Final-Variablen)
 
   @override
   void initState() {
@@ -44,10 +51,43 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       uid = currentUser.uid;
       email = currentUser.displayName ?? currentUser.email;
       userData = userdb.readUser(uid!);
+
+      // 🆕 RUFE DEN NAMEN ASYNCHRON AB
+      _loadUsernameFromFirestore(uid!);
     } else {
       uid = null;
       email = "Gast";
       userData = Future.value({});
+
+      // Wenn kein User, Ladezustand beenden
+      _isLoadingUsername = false;
+    }
+  }
+
+  // 🆕 NEUE METHODE ZUM ASYNCHRONEN LADEN DES NAMENS
+  Future<void> _loadUsernameFromFirestore(String userId) async {
+    final firestore = FirebaseFirestore.instance;
+    String? fetchedUsername;
+
+    try {
+      DocumentSnapshot<Map<String, dynamic>> doc = await firestore
+          .collection('users')
+          .doc(userId)
+          .get();
+
+      if (doc.exists) {
+        // Nutze den gespeicherten 'username' aus Firestore
+        fetchedUsername = doc.data()?['username'] as String?;
+      }
+    } catch (e) {
+      print("Fehler beim Laden des Usernamens: $e");
+    }
+
+    if (mounted) {
+      setState(() {
+        _usernameFromDB = fetchedUsername;
+        _isLoadingUsername = false; // Ladevorgang beendet
+      });
     }
   }
 
@@ -114,6 +154,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           mainDeck: deckData['mainDeck'],
           extraDeck: deckData['extraDeck'],
           sideDeck: deckData['sideDeck'],
+          coverImageUrl: deckData['coverImageUrl'], // ✅ HINZUGEFÜGT
         );
       } else {
         await _deckService.updateDeck(
@@ -123,6 +164,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           mainDeck: deckData['mainDeck'],
           extraDeck: deckData['extraDeck'],
           sideDeck: deckData['sideDeck'],
+          coverImageUrl: deckData['coverImageUrl'], // ✅ HINZUGEFÜGT
         );
       }
 
@@ -252,6 +294,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         .whereType<Map<String, dynamic>>()
         .toList();
 
+    // Wir verwenden den eingeloggten Benutzer als Ersteller, falls der Name nicht im Deck gespeichert ist.
+    final String deckCreator = _usernameFromDB!;
+
     if (decks.isEmpty) {
       return const Center(
         child: Padding(
@@ -267,76 +312,150 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       itemCount: decks.length,
       itemBuilder: (context, index) {
         final deck = decks[index];
-
         final mainDeckData = deck['mainDeck'] as List<dynamic>? ?? [];
         final mainDeckList = mainDeckData
             .whereType<Map<String, dynamic>>()
             .toList();
-
         final cardCount = _getDeckCardCount(mainDeckList);
         final deckId = deck['deckId'] as String?;
         final deckName = deck['deckName'] as String;
-        final archetype = deck['archetype'] as String?;
+        // Die 'coverImageUrl' muss String sein, um das FutureBuilder zu vermeiden,
+        // falls null im JSON ist, behandeln wir es als leeren String.
+        final String coverImage = deck["coverImageUrl"] as String? ?? '';
 
-        return Container(
-          color: Theme.of(context).cardColor,
-          padding: const EdgeInsets.all(12.0),
-          margin: const EdgeInsets.symmetric(vertical: 4.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (deckName != null && deckName.isNotEmpty)
-                      Text(
-                        "Deckname: $deckName",
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    if (archetype != null && archetype.isNotEmpty)
-                      Text(
-                        'Archetypen: $archetype',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                  ],
+        Future<String?> imgpathFuture = cardData
+            .getCorrectImgPath([coverImage])
+            .then((result) {
+              print('=== DEBUG: Cover Image Loading ===');
+              print('Input URL: $coverImage');
+              print('Output URL: $result');
+              print('Is gs:// URL: ${coverImage.startsWith('gs://')}');
+              return result;
+            });
+
+        return FutureBuilder<String?>(
+          future: imgpathFuture,
+          builder: (context, asyncSnapshot) {
+            if (asyncSnapshot.connectionState == ConnectionState.waiting) {
+              return Container(
+                padding: const EdgeInsets.all(12.0),
+                margin: const EdgeInsets.symmetric(vertical: 4.0),
+                child: const Center(child: CircularProgressIndicator()),
+              );
+            }
+
+            if (asyncSnapshot.hasError) {
+              return Container(
+                padding: const EdgeInsets.all(12.0),
+                margin: const EdgeInsets.symmetric(vertical: 4.0),
+                child: Center(
+                  child: Text(
+                    "Fehler beim Laden des Bildes: ${asyncSnapshot.error}",
+                  ),
                 ),
-              ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
+              );
+            }
+
+            final String? imageUrl = asyncSnapshot.data;
+
+            return Container(
+              color: Theme.of(context).cardColor,
+              padding: const EdgeInsets.all(12.0),
+              margin: const EdgeInsets.symmetric(vertical: 4.0),
+              child: Column(
+                crossAxisAlignment:
+                    CrossAxisAlignment.start, // Wichtig für die Textausrichtung
                 children: [
-                  Text('${cardCount} Karten'),
-                  const SizedBox(width: 128),
-                  InkWell(
-                    onTap: () {
-                      if (deckId != null) {
-                        _openDeckForEdit(deckId);
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Deck ID fehlt! Bearbeitung nicht möglich.',
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Linke Seite: Bild und Deck-Informationen
+                      Expanded(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // 1. Deck Cover Image
+                            if (imageUrl != null && imageUrl.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 12.0),
+                                child: Image.network(
+                                  imageUrl,
+                                  width: 50,
+                                  height: 50,
+                                ),
+                              ),
+
+                            // 2. Deckname, Kartenanzahl, Ersteller
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Deckname und Kartenanzahl
+                                if (deckName.isNotEmpty)
+                                  Text(
+                                    "$deckName ($cardCount Karten)",
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium, // Titel für den Decknamen
+                                  ),
+
+                                // Ersteller
+                                Text(
+                                  deckCreator,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall, // Kleinerer Text für den Ersteller
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Rechte Seite: Aktionen (Bearbeiten/Löschen)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          InkWell(
+                            onTap: () {
+                              if (deckId != null) {
+                                _openDeckForEdit(deckId);
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Deck ID fehlt! Bearbeitung nicht möglich.',
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
+                            child: const Padding(
+                              padding: EdgeInsets.all(4.0),
+                              child: Icon(Icons.edit, color: Colors.blue),
                             ),
                           ),
-                        );
-                      }
-                    },
-                    child: const Icon(Icons.edit, color: Colors.blue),
-                  ),
-                  const SizedBox(width: 16),
-                  InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: () {
-                      if (deckId != null) {
-                        _handleDeckDelete(deckId, deckName);
-                      }
-                    },
-                    child: const Icon(Icons.delete, color: Colors.red),
+                          const SizedBox(width: 8),
+                          InkWell(
+                            customBorder: const CircleBorder(),
+                            onTap: () {
+                              if (deckId != null) {
+                                _handleDeckDelete(deckId, deckName);
+                              }
+                            },
+                            child: const Padding(
+                              padding: EdgeInsets.all(4.0),
+                              child: Icon(Icons.delete, color: Colors.red),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );

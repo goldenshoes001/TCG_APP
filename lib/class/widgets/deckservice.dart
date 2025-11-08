@@ -1,4 +1,4 @@
-// deckservice.dart - MIT HORIZONTALEN TABS STATT DROPDOWN
+// deckservice.dart - MIT COVER-BILD FUNKTIONALITÄT
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -50,7 +50,7 @@ class DeckService {
     required List<Map<String, dynamic>> mainDeck,
     required List<Map<String, dynamic>> extraDeck,
     required List<Map<String, dynamic>> sideDeck,
-    String? coverImageUrl, // ✅ HINZUFÜGEN!
+    String? coverImageUrl,
   }) async {
     final user = _auth.currentUser;
     if (user == null) {
@@ -80,7 +80,7 @@ class DeckService {
       'sideDeck': sideDeck,
       'searchIndex': searchIndex,
       'searchTokens': searchTokens,
-      'coverImageUrl': coverImageUrl, // ✅ HINZUFÜGEN!
+      'coverImageUrl': coverImageUrl,
       'updatedAt': FieldValue.serverTimestamp(),
     });
   }
@@ -121,7 +121,7 @@ class DeckService {
     required List<Map<String, dynamic>> mainDeck,
     required List<Map<String, dynamic>> extraDeck,
     required List<Map<String, dynamic>> sideDeck,
-    String? coverImageUrl, // ✅ HINZUFÜGEN!
+    String? coverImageUrl,
   }) async {
     final user = _auth.currentUser;
     final deckNameLower = deckName.trim().toLowerCase();
@@ -169,7 +169,7 @@ class DeckService {
       'sideDeck': sideDeck,
       'searchIndex': searchIndex,
       'searchTokens': searchTokens,
-      'coverImageUrl': coverImageUrl, // ✅ HINZUFÜGEN!
+      'coverImageUrl': coverImageUrl,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
@@ -182,7 +182,12 @@ class DeckService {
     String archetype,
     String description,
   ) {
-    return '$deckName $archetype $description'.toLowerCase();
+    // Entferne überflüssige Leerzeichen und trimme
+    final combined = '$deckName $archetype $description'
+        .toLowerCase()
+        .trim()
+        .replaceAll(RegExp(r'\s+'), ' ');
+    return combined;
   }
 
   Future<void> deleteDeck(String deckId) async {
@@ -191,17 +196,14 @@ class DeckService {
         .doc(deckId)
         .collection('comments');
 
-    // 1. Alle Kommentare abrufen
     final snapshot = await commentsRef.get();
 
-    // 2. Jeden Kommentar einzeln löschen
     final batch = _firestore.batch();
     for (var doc in snapshot.docs) {
       batch.delete(doc.reference);
     }
-    await batch.commit(); // Alle Löschvorgänge ausführen
+    await batch.commit();
 
-    // 3. Deck-Dokument löschen
     await _firestore.collection('decks').doc(deckId).delete();
   }
 
@@ -210,7 +212,16 @@ class DeckService {
     String archetype,
     String description,
   ) {
-    return _generateSearchIndex(deckName, archetype, description).split(' ');
+    final searchIndex = _generateSearchIndex(deckName, archetype, description);
+
+    final tokens = searchIndex
+        .split(RegExp(r'[\s,]+'))
+        .where((token) => token.trim().isNotEmpty)
+        .map((token) => token.trim().toLowerCase())
+        .toSet()
+        .toList();
+
+    return tokens;
   }
 
   // Kommentar-Funktionen
@@ -225,7 +236,6 @@ class DeckService {
 
     final commentId = _uuid.v4();
 
-    // Lade den vollständigen Benutzernamen aus Firestore
     String username = 'Unbekannter Benutzer';
     try {
       final userDoc = await _firestore.collection('users').doc(user.uid).get();
@@ -238,7 +248,6 @@ class DeckService {
             user.email ??
             'Unbekannter Benutzer';
       } else {
-        // Fallback auf Firebase Auth Daten
         username =
             user.displayName ??
             user.email?.split('@')[0] ??
@@ -289,7 +298,7 @@ class DeckService {
 }
 
 // ============================================================================
-// 2. DeckCreationScreen: Formular-Inhalt MIT HORIZONTALEN TABS
+// 2. DeckCreationScreen: Formular-Inhalt MIT COVER-BILD
 // ============================================================================
 
 enum DeckType { main, extra, side, comments }
@@ -324,6 +333,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
   bool _isSaving = false;
   bool _addToSideDeck = false;
   String? _currentDeckId;
+  String? _coverImageUrl;
   Map<String, dynamic>? _selectedCardForDetail;
   DeckType _selectedDeckType = DeckType.main;
 
@@ -352,6 +362,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
 
       _deckNameController.text = deck['deckName'] as String;
       _descriptionController.text = deck['description'] as String? ?? '';
+      _coverImageUrl = deck['coverImageUrl'] as String?;
 
       _mainDeck =
           (deck['mainDeck'] as List<dynamic>?)
@@ -391,6 +402,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
         'mainDeck': _mainDeck,
         'extraDeck': _extraDeck,
         'sideDeck': _sideDeck,
+        'coverImageUrl': _coverImageUrl,
       };
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -415,6 +427,150 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
           onCardSelected: (card, count) {
             _addCardToDeck(card, count);
           },
+        );
+      },
+    );
+  }
+
+  void _showCoverImageSelector() {
+    final allCards = [..._mainDeck, ..._extraDeck];
+
+    if (allCards.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Füge zuerst Karten zum Deck hinzu')),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Deck Cover-Bild auswählen'),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 400,
+            child: GridView.builder(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                childAspectRatio: 0.7,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+              ),
+              itemCount: allCards.length,
+              itemBuilder: (context, index) {
+                final card = allCards[index];
+                final cardImages = card['card_images'] as List<dynamic>?;
+
+                // Sammle alle verfügbaren Bild-URLs aus ALLEN Array-Einträgen
+                List<String> availableUrls = [];
+
+                if (cardImages != null && cardImages.isNotEmpty) {
+                  // Durchlaufe ALLE Einträge im card_images Array (für Dark Magician Girl etc.)
+                  for (var imageEntry in cardImages) {
+                    if (imageEntry is Map<String, dynamic>) {
+                      // Priorität: image_url > image_url_small > image_url_cropped
+                      final imageUrl = imageEntry['image_url'] as String?;
+                      final smallUrl = imageEntry['image_url_small'] as String?;
+                      final croppedUrl =
+                          imageEntry['image_url_cropped'] as String?;
+
+                      if (imageUrl != null && imageUrl.isNotEmpty) {
+                        availableUrls.add(imageUrl);
+                      }
+                      if (smallUrl != null && smallUrl.isNotEmpty) {
+                        availableUrls.add(smallUrl);
+                      }
+                      if (croppedUrl != null && croppedUrl.isNotEmpty) {
+                        availableUrls.add(croppedUrl);
+                      }
+                    }
+                  }
+                }
+
+                return InkWell(
+                  onTap: () async {
+                    if (availableUrls.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Kein Bild für ${card['name']} verfügbar',
+                          ),
+                        ),
+                      );
+                      return;
+                    }
+
+                    // Finde die erste funktionierende URL
+                    String? workingUrl;
+                    for (String url in availableUrls) {
+                      try {
+                        final downloadUrl = await _cardData.getImgPath(url);
+                        if (downloadUrl.isNotEmpty) {
+                          workingUrl = url;
+                          break; // Erste funktionierende gefunden!
+                        }
+                      } catch (e) {
+                        continue; // Probiere die nächste
+                      }
+                    }
+
+                    if (workingUrl != null) {
+                      setState(() {
+                        _coverImageUrl = workingUrl;
+                      });
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Cover-Bild auf "${card['name']}" gesetzt',
+                          ),
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Keine funktionierende Bild-URL für ${card['name']} gefunden',
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                  child: Card(
+                    clipBehavior: Clip.antiAlias,
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: _CardImageWidget(
+                            card: card,
+                            cardData: _cardData,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(4.0),
+                          child: Text(
+                            card['name'] as String? ?? '',
+                            style: const TextStyle(fontSize: 10),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Abbrechen'),
+            ),
+          ],
         );
       },
     );
@@ -447,9 +603,9 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
     int maxAllowed = 3;
     if (banlistInfo != null) {
       final tcgBan = banlistInfo['ban_tcg'] as String?;
-      if (tcgBan == 'Forbidden')
+      if (tcgBan == 'Forbidden') {
         maxAllowed = 0;
-      else if (tcgBan == 'Limited')
+      } else if (tcgBan == 'Limited')
         maxAllowed = 1;
       else if (tcgBan == 'Semi-Limited')
         maxAllowed = 2;
@@ -673,14 +829,12 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
     );
   }
 
-  // NEU: Horizontale Tab-Leiste wie in deck_viewer.dart
   Widget _buildDeckTypeTabs() {
     return Container(
       color: Theme.of(context).cardColor,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: DeckType.values.map((type) {
-          // Zeige Kommentar-Tab nur wenn Deck bereits gespeichert wurde
           if (type == DeckType.comments && _currentDeckId == null) {
             return const SizedBox.shrink();
           }
@@ -777,10 +931,15 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
         ),
       ],
     );
+
+
   }
 
-  @override
+
+
+ @override
   Widget build(BuildContext context) {
+    // Wenn Detail-Ansicht, zeige NUR die Karte (OHNE obere Buttons)
     if (_selectedCardForDetail != null) {
       return CardDetailView(
         cardData: _selectedCardForDetail!,
@@ -792,13 +951,12 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
       );
     }
 
+    // Ansonsten zeige die normale Editing-Ansicht
     if (_isLoading || _isSaving) {
       return const Center(child: CircularProgressIndicator());
     }
-
     return Column(
       children: [
-        // Oberer Bereich mit Deck-Name und Karte hinzufügen
         Padding(
           padding: const EdgeInsets.all(16.0),
           child: Form(
@@ -806,6 +964,80 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Cover-Bild Anzeige
+                if (_coverImageUrl != null)
+                  Center(
+                    child: Stack(
+                      children: [
+                        Container(
+                          width: 120,
+                          height: 180,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: FutureBuilder<String>(
+                            future: _cardData.getCorrectImgPath([
+                              _coverImageUrl!,
+                            ]),
+                            builder: (context, snapshot) {
+                              if (snapshot.hasData &&
+                                  snapshot.data!.isNotEmpty) {
+                                return ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.network(
+                                    snapshot.data!,
+                                    fit: BoxFit.cover,
+                                  ),
+                                );
+                              }
+                              return const Center(
+                                child: CircularProgressIndicator(),
+                              );
+                            },
+                          ),
+                        ),
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white),
+                            style: IconButton.styleFrom(
+                              backgroundColor: Colors.black54,
+                              padding: const EdgeInsets.all(4),
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _coverImageUrl = null;
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                if (_coverImageUrl != null) const SizedBox(height: 16),
+
+                // Cover-Bild Button
+                OutlinedButton.icon(
+                  onPressed: _showCoverImageSelector,
+                  icon: const Icon(Icons.image),
+                  label: Text(
+                    _coverImageUrl == null
+                        ? 'Deck Cover-Bild auswählen'
+                        : 'Cover-Bild ändern',
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
                 TextField(
                   controller: _deckNameController,
                   decoration: const InputDecoration(
@@ -844,10 +1076,8 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
           ),
         ),
 
-        // Horizontale Tab-Leiste
         _buildDeckTypeTabs(),
 
-        // Deck-Anzeige
         Expanded(child: _buildDynamicDeckView()),
       ],
     );
@@ -1032,14 +1262,19 @@ class _CommentSectionState extends State<CommentSection> {
 }
 
 // ============================================================================
-// VERBESSERTE Card Image Widget mit intelligenter Fallback-Logik
+// Card Image Widget
 // ============================================================================
 
 class _CardImageWidget extends StatefulWidget {
   final Map<String, dynamic> card;
   final CardData cardData;
+  final BoxFit fit;
 
-  const _CardImageWidget({required this.card, required this.cardData});
+  const _CardImageWidget({
+    required this.card,
+    required this.cardData,
+    this.fit = BoxFit.cover,
+  });
 
   @override
   State<_CardImageWidget> createState() => _CardImageWidgetState();
@@ -1148,7 +1383,7 @@ class _CardImageWidgetState extends State<_CardImageWidget> {
       _loadedImageUrl!,
       width: 40,
       height: 60,
-      fit: BoxFit.cover,
+      fit: widget.fit,
       loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) return child;
         return const SizedBox(

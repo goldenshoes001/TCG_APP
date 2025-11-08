@@ -89,19 +89,27 @@ class CardData implements Dbrepo {
 
     try {
       final Uri uri = Uri.parse(gsPath);
-      String path = Uri.decodeComponent(uri.path);
+      String path = Uri.decodeComponent(uri.path); // NUR EINMAL dekodieren!
 
       if (path.startsWith('/')) {
         path = path.substring(1);
       }
 
+      // ENTFERNE diese Zeile:
+      // path = Uri.decodeComponent(path); // ❌ DOPPELTE DEKODIERUNG!
+
+      print('🔍 Trying to load: $path');
+
       final Reference gsReference = storage.ref(path);
       final String downloadUrl = await gsReference.getDownloadURL();
 
       return downloadUrl;
-    } on FirebaseException catch (_) {
+    } on FirebaseException catch (e) {
+      print('❌ Firebase Storage Error: ${e.code} - ${e.message}');
+      print('❌ Path war: $gsPath');
       return '';
-    } catch (_) {
+    } catch (e) {
+      print('❌ Fehler: $e');
       return '';
     }
   }
@@ -186,6 +194,7 @@ class CardData implements Dbrepo {
       if (imageUrl.isEmpty) continue;
 
       final String downloadUrl = await getImgPath(imageUrl);
+      print(downloadUrl);
 
       if (downloadUrl.isNotEmpty) {
         return downloadUrl;
@@ -383,7 +392,7 @@ class CardData implements Dbrepo {
         return [];
       }
 
-      final List<dynamic> hits = hitsData as List;
+      final List<dynamic> hits = hitsData;
 
       final List<Map<String, dynamic>> cards = hits
           .map((hit) => Map<String, dynamic>.from(hit as Map))
@@ -425,7 +434,7 @@ class CardData implements Dbrepo {
         return [];
       }
 
-      final List<dynamic> hits = hitsData as List;
+      final List<dynamic> hits = hitsData;
 
       final List<Map<String, dynamic>> cards = hits
           .map((hit) => Map<String, dynamic>.from(hit as Map))
@@ -590,7 +599,7 @@ class CardData implements Dbrepo {
         return [];
       }
 
-      final List<dynamic> hits = hitsData as List;
+      final List<dynamic> hits = hitsData;
 
       // Filtere NUR nach exakter Phrase (mit Bindestrich-Toleranz)
       final List<Map<String, dynamic>> filteredCards = hits
@@ -769,7 +778,7 @@ class CardData implements Dbrepo {
         if (facetValuesMap != null && facetValuesMap is Map) {
           final List<String> values = (facetValuesMap as Map<String, dynamic>)
               .keys
-              .where((key) => key != null && key.toString().isNotEmpty)
+              .where((key) => key.toString().isNotEmpty)
               .map((key) => key.toString())
               .toList();
 

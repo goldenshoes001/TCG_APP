@@ -25,7 +25,7 @@ class FilterDropdown extends StatelessWidget {
         border: const OutlineInputBorder(),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
-      value: value,
+      initialValue: value,
       items: [
         DropdownMenuItem<String>(value: null, child: Text(label)),
         ...items.map(
