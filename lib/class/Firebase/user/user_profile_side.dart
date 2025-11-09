@@ -197,10 +197,33 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     });
   }
 
-  Widget _buildDeckCreationView() {
+  Widget _buildDeckCreationView(Map<String, dynamic> userdata) {
     // Prüfe ob DeckCreationScreen eine Karte zeigt
     final isShowingDetail =
         _deckCreationKey.currentState?.isShowingCardDetail ?? false;
+    String title;
+    if (_editingDeckId == null) {
+      title = 'Neues Deck';
+    } else {
+      // Finde das Deck im userMap anhand der ID
+      final List<dynamic> dynamicDecks =
+          userdata['decks'] as List<dynamic>? ?? [];
+
+      Map<String, dynamic>? deck;
+      for (final d in dynamicDecks) {
+        if (d is Map<String, dynamic> && d['deckId'] == _editingDeckId) {
+          deck = d;
+          break;
+        }
+      }
+
+      if (deck != null) {
+        // Sicherer Zugriff auf den Namen
+        title = deck['deckName'] as String? ?? 'Deck bearbeiten';
+      } else {
+        title = 'Deck bearbeiten (Nicht gefunden)';
+      }
+    }
 
     return Column(
       children: [
@@ -213,21 +236,58 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               top: 8.0,
               bottom: 8.0,
             ),
+            // user_profile_side.dart (Auszug aus _buildDeckCreationView, ca. Zeile 251)
+
+            // ...
             child: Row(
               children: [
-                Text(
-                  _editingDeckId == null ? 'Neues Deck' : 'Deck bearbeiten',
-                  style: Theme.of(context).textTheme.bodyMedium,
+                // 🆕 NEUES TEXTFELD ANSTELLE DES TEXT-WIDGETS
+                Expanded(
+                  // ⬅️ WICHTIG: Begrenzt die Breite
+                  child: TextField(
+                    // Da das eigentliche TextField im DeckCreationScreen ist,
+                    // übergeben wir hier einen Controller, der den Namen hält.
+                    // ABER: Das ist kompliziert. Besser: Wir nutzen den
+                    // TextField-Controller, der bereits im DeckCreationScreen existiert.
+
+                    // Besser: Da der DeckCreationScreen den Controller verwaltet,
+                    // müssen wir den Titel nur anzeigen, WENN wir keinen Edit-Modus haben.
+                    // Wir müssen den DeckCreationScreen dazu bringen, den TextField selbst anzuzeigen.
+
+                    // Moment! Das ursprüngliche TextField war im DeckCreationScreen.
+                    // Das hier ist NUR die Titelleiste!
+
+                    // Wenn wir hier das TextField einfügen, muss es den Controller
+                    // des DeckCreationScreenState verwenden.
+
+                    // Da wir das GlobalKey (_deckCreationKey) haben, können wir auf den
+                    // Controller zugreifen, falls er in DeckCreationScreenState öffentlich ist.
+
+                    // Annahme: Der Controller heißt _deckNameController und ist im State verfügbar.
+                    controller:
+                        _deckCreationKey.currentState?.deckNameController,
+                    decoration: InputDecoration(
+                      // Titel als initialer Text setzen
+                      hintText: title,
+
+                      contentPadding: EdgeInsets.zero,
+                      isDense: true,
+                    ),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                 ),
-                const Spacer(),
-                ElevatedButton(
+
+                // -------------------------------------------------------------
+                const Spacer(), // Bleibt
+
+                IconButton(
                   onPressed: () {
                     setState(() {
                       _showDeckCreation = false;
                       _editingDeckId = null;
                     });
                   },
-                  child: const Text('Abbrechen'),
+                  icon: Icon(Icons.cancel),
                 ),
                 const SizedBox(width: 8),
                 IconButton(onPressed: _saveDeck, icon: Icon(Icons.save)),
@@ -541,7 +601,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         final userMap = snapshot.data ?? {};
 
         if (_showDeckCreation) {
-          return _buildDeckCreationView();
+          return _buildDeckCreationView(userMap);
         } else {
           return _buildProfileContent(userMap);
         }

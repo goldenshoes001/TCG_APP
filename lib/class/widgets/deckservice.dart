@@ -323,7 +323,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
   // ✅ NEU: Public Getter
   bool get isShowingCardDetail => _selectedCardForDetail != null;
   final _formKey = GlobalKey<FormState>();
-  final _deckNameController = TextEditingController();
+  final deckNameController = TextEditingController();
   final _descriptionController = TextEditingController();
 
   List<Map<String, dynamic>> _mainDeck = [];
@@ -350,7 +350,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
 
   @override
   void dispose() {
-    _deckNameController.dispose();
+    deckNameController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
@@ -364,7 +364,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
     try {
       final deck = await _deckService.readDeck(_currentDeckId!);
 
-      _deckNameController.text = deck['deckName'] as String;
+      deckNameController.text = deck['deckName'] as String;
       _descriptionController.text = deck['description'] as String? ?? '';
       _coverImageUrl = deck['coverImageUrl'] as String?;
 
@@ -399,9 +399,9 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
 
   Map<String, dynamic>? collectDeckDataAndValidate() {
     if (_formKey.currentState!.validate() &&
-        _deckNameController.text.trim().isNotEmpty) {
+        deckNameController.text.trim().isNotEmpty) {
       return {
-        'deckName': _deckNameController.text.trim(),
+        'deckName': deckNameController.text.trim(),
         'description': _descriptionController.text.trim(),
         'mainDeck': _mainDeck,
         'extraDeck': _extraDeck,
@@ -1037,14 +1037,6 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
 
                 const SizedBox(height: 16),
 
-                TextField(
-                  controller: _deckNameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Deck Name',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
                 Row(
                   children: [
                     Expanded(
