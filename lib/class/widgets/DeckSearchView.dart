@@ -5,7 +5,8 @@ import 'package:tcg_app/class/widgets/deck_viewer.dart';
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 
 class DeckSearchView extends StatefulWidget {
-  const DeckSearchView({super.key});
+  final Function(Map<String, dynamic>)? onDeckSelected;
+  const DeckSearchView({super.key, this.onDeckSelected});
 
   @override
   State<DeckSearchView> createState() => _DeckSearchViewState();
@@ -17,7 +18,7 @@ class _DeckSearchViewState extends State<DeckSearchView> {
   final TextEditingController _searchController = TextEditingController();
 
   Future<List<Map<String, dynamic>>>? _deckSearchFuture;
-  Map<String, dynamic>? _selectedDeck;
+
   List<String> _availableArchetypes = [];
   String? _selectedArchetype;
   bool _isLoadingArchetypes = true;
@@ -155,16 +156,7 @@ class _DeckSearchViewState extends State<DeckSearchView> {
 
   @override
   Widget build(BuildContext context) {
-    if (_selectedDeck != null) {
-      return DeckViewer(
-        deckData: _selectedDeck!,
-        onBack: () {
-          setState(() {
-            _selectedDeck = null;
-          });
-        },
-      );
-    }
+  
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -398,7 +390,7 @@ class _DeckSearchViewState extends State<DeckSearchView> {
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                 onTap: () {
                   setState(() {
-                    _selectedDeck = deck;
+                    widget.onDeckSelected?.call(deck);
                   });
                 },
               ),

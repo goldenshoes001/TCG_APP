@@ -75,7 +75,7 @@ class _SearchState extends State<Search> with SingleTickerProviderStateMixin {
     }
   }
 
- @override
+  @override
   Widget build(BuildContext context) {
     // ✅ WENN Karten-Detail: Zeige NUR CardDetailView
     if (_selectedCard != null) {
@@ -158,7 +158,14 @@ class _SearchState extends State<Search> with SingleTickerProviderStateMixin {
                           });
                         },
                       ),
-                      const DeckSearchView(),
+                      DeckSearchView(
+                        onDeckSelected: (deck) {
+                          // NEU!
+                          setState(() {
+                            _selectedDeck = deck;
+                          });
+                        },
+                      ),
                     ],
                   ),
                 ),

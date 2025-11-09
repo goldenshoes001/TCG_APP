@@ -220,7 +220,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const Spacer(),
-                TextButton(
+                ElevatedButton(
                   onPressed: () {
                     setState(() {
                       _showDeckCreation = false;
@@ -230,10 +230,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   child: const Text('Abbrechen'),
                 ),
                 const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: _saveDeck,
-                  child: const Text('Speichern'),
-                ),
+                IconButton(onPressed: _saveDeck, icon: Icon(Icons.save)),
               ],
             ),
           ),

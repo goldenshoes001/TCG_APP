@@ -299,7 +299,7 @@ class _MetaState extends State<Meta>
       return _buildCardDetail();
     }
 
-    // NEU: Verwende DeckViewer für gefundene Decks
+    // NEU: Wenn ein Deck ausgewählt ist, zeige NUR DeckViewer (OHNE Tabs)
     if (_selectedDeck != null) {
       return DeckViewer(
         deckData: _selectedDeck!,
@@ -324,6 +324,7 @@ class _MetaState extends State<Meta>
       );
     }
 
+    // NUR HIER werden die Tabs angezeigt
     return Column(
       children: [
         TabBar(
@@ -444,7 +445,14 @@ class _MetaState extends State<Meta>
                             ),
 
                       // TAB 2: DECKS (Wiederhergestellt)
-                      const DeckSearchView(), // Das Suchfeld ist hier intern im Widget enthalten
+                      DeckSearchView(
+                        onDeckSelected: (deck) {
+                          // NEU!
+                          setState(() {
+                            _selectedDeck = deck;
+                          });
+                        },
+                      ), // Das Suchfeld ist hier intern im Widget enthalten
                     ],
                   ),
                 ),
