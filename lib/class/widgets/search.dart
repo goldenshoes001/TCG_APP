@@ -75,8 +75,9 @@ class _SearchState extends State<Search> with SingleTickerProviderStateMixin {
     }
   }
 
-  @override
+ @override
   Widget build(BuildContext context) {
+    // ✅ WENN Karten-Detail: Zeige NUR CardDetailView
     if (_selectedCard != null) {
       return CardDetailView(
         cardData: _selectedCard!,
@@ -88,7 +89,7 @@ class _SearchState extends State<Search> with SingleTickerProviderStateMixin {
       );
     }
 
-    // NEU: Verwende DeckViewer für gefundene Decks
+    // ✅ WENN Deck-Detail: Zeige NUR DeckViewer (OHNE Tabs!)
     if (_selectedDeck != null) {
       return DeckViewer(
         deckData: _selectedDeck!,
@@ -100,6 +101,7 @@ class _SearchState extends State<Search> with SingleTickerProviderStateMixin {
       );
     }
 
+    // ✅ SONST: Zeige normale Ansicht MIT Tabs
     return Column(
       children: [
         TabBar(
@@ -110,7 +112,6 @@ class _SearchState extends State<Search> with SingleTickerProviderStateMixin {
           ],
           onTap: (index) {
             setState(() {
-              // Beim Tab-Wechsel Suchergebnisse und Suchfeldinhalt zurücksetzen
               _cardSearchFuture = null;
               _deckSearchFuture = null;
               suchfeld.clear();
@@ -124,13 +125,11 @@ class _SearchState extends State<Search> with SingleTickerProviderStateMixin {
               children: [
                 SizedBox(height: MediaQuery.of(context).size.height / 350),
 
-                // HIER: Bedingte Anzeige des Suchfelds
                 if (_tabController.index == 0)
                   Column(
                     children: [
                       TextField(
                         decoration: const InputDecoration(
-                          // Der Hint-Text ist jetzt fest auf Kartensuche eingestellt
                           hintText: "Karte suchen...",
                           prefixIcon: Icon(Icons.search),
                           border: OutlineInputBorder(),
@@ -146,7 +145,6 @@ class _SearchState extends State<Search> with SingleTickerProviderStateMixin {
                     ],
                   ),
 
-                // ENDE: Bedingte Anzeige
                 Expanded(
                   child: TabBarView(
                     controller: _tabController,
@@ -160,7 +158,7 @@ class _SearchState extends State<Search> with SingleTickerProviderStateMixin {
                           });
                         },
                       ),
-                      const DeckSearchView(), // Behält seine interne Struktur
+                      const DeckSearchView(),
                     ],
                   ),
                 ),

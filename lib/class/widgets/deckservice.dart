@@ -306,11 +306,13 @@ enum DeckType { main, extra, side, comments }
 class DeckCreationScreen extends StatefulWidget {
   final String? initialDeckId;
   final void Function(Map<String, dynamic> data) onDataCollected;
+  final void Function(bool isShowingDetail)? onDetailViewChanged;
 
   const DeckCreationScreen({
     super.key,
     this.initialDeckId,
     required this.onDataCollected,
+    this.onDetailViewChanged,
   });
 
   @override
@@ -318,6 +320,8 @@ class DeckCreationScreen extends StatefulWidget {
 }
 
 class DeckCreationScreenState extends State<DeckCreationScreen> {
+  // ✅ NEU: Public Getter
+  bool get isShowingCardDetail => _selectedCardForDetail != null;
   final _formKey = GlobalKey<FormState>();
   final _deckNameController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -708,6 +712,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
     setState(() {
       _selectedCardForDetail = card;
     });
+    widget.onDetailViewChanged?.call(true);
   }
 
   Widget _buildDeckSection({
@@ -931,13 +936,9 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
         ),
       ],
     );
-
-
   }
 
-
-
- @override
+  @override
   Widget build(BuildContext context) {
     // Wenn Detail-Ansicht, zeige NUR die Karte (OHNE obere Buttons)
     if (_selectedCardForDetail != null) {
@@ -947,6 +948,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
           setState(() {
             _selectedCardForDetail = null;
           });
+          widget.onDetailViewChanged?.call(false);
         },
       );
     }

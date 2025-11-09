@@ -198,44 +198,56 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Widget _buildDeckCreationView() {
+    // Prüfe ob DeckCreationScreen eine Karte zeigt
+    final isShowingDetail =
+        _deckCreationKey.currentState?.isShowingCardDetail ?? false;
+
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.only(
-            left: 16.0,
-            right: 16.0,
-            top: 8.0,
-            bottom: 8.0,
+        // ✅ Zeige Buttons NUR wenn NICHT in Detail-Ansicht
+        if (!isShowingDetail)
+          Padding(
+            padding: const EdgeInsets.only(
+              left: 16.0,
+              right: 16.0,
+              top: 8.0,
+              bottom: 8.0,
+            ),
+            child: Row(
+              children: [
+                Text(
+                  _editingDeckId == null ? 'Neues Deck' : 'Deck bearbeiten',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _showDeckCreation = false;
+                      _editingDeckId = null;
+                    });
+                  },
+                  child: const Text('Abbrechen'),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: _saveDeck,
+                  child: const Text('Speichern'),
+                ),
+              ],
+            ),
           ),
-          child: Row(
-            children: [
-              Text(
-                _editingDeckId == null ? 'Neues Deck' : 'Deck bearbeiten',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const Spacer(),
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    _showDeckCreation = false;
-                    _editingDeckId = null;
-                  });
-                },
-                child: const Text('Abbrechen'),
-              ),
-              const SizedBox(width: 8),
-              ElevatedButton(
-                onPressed: _saveDeck,
-                child: const Text('Speichern'),
-              ),
-            ],
-          ),
-        ),
         Expanded(
           child: DeckCreationScreen(
             key: _deckCreationKey,
             initialDeckId: _editingDeckId,
             onDataCollected: (data) {},
+            onDetailViewChanged: (isShowing) {
+              // ✅ HINZUFÜGEN!
+              setState(() {
+                // Wird automatisch durch den Getter isShowingCardDetail abgefragt
+              });
+            },
           ),
         ),
       ],
