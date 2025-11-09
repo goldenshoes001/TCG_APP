@@ -1,4 +1,4 @@
-// user_profile_side.dart - AKTUALISIERT FÜR NEUES DECK LAYOUT
+// user_profile_side.dart - AKTUALISIERT MIT ARCHETYPES-ANZEIGE
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 import 'package:tcg_app/class/Firebase/interfaces/FirebaseAuthRepository.dart';
@@ -38,7 +38,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   String? uid;
 
   String? _usernameFromDB;
-  bool _isLoadingUsername = true;
+  bool _isLoadingUsername = true; // Ladezustand für den Namen
+
+  // ... (Restliche Final-Variablen)
 
   @override
   void initState() {
@@ -50,15 +52,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       email = currentUser.displayName ?? currentUser.email;
       userData = userdb.readUser(uid!);
 
+      // 🆕 RUFE DEN NAMEN ASYNCHRON AB
       _loadUsernameFromFirestore(uid!);
     } else {
       uid = null;
       email = "Gast";
       userData = Future.value({});
+
+      // Wenn kein User, Ladezustand beenden
       _isLoadingUsername = false;
     }
   }
 
+  // 🆕 NEUE METHODE ZUM ASYNCHRONEN LADEN DES NAMENS
   Future<void> _loadUsernameFromFirestore(String userId) async {
     final firestore = FirebaseFirestore.instance;
     String? fetchedUsername;
@@ -70,6 +76,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           .get();
 
       if (doc.exists) {
+        // Nutze den gespeicherten 'username' aus Firestore
         fetchedUsername = doc.data()?['username'] as String?;
       }
     } catch (e) {
@@ -79,8 +86,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     if (mounted) {
       setState(() {
         _usernameFromDB = fetchedUsername;
-        _isLoadingUsername = false;
+        _isLoadingUsername = false; // Ladevorgang beendet
       });
+    }
+  }
+
+  void _saveDeck() {
+    final deckData = _deckCreationKey.currentState
+        ?.collectDeckDataAndValidate();
+
+    if (deckData != null) {
+      _handleDeckSave(deckData);
     }
   }
 
@@ -138,7 +154,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           mainDeck: deckData['mainDeck'],
           extraDeck: deckData['extraDeck'],
           sideDeck: deckData['sideDeck'],
-          coverImageUrl: deckData['coverImageUrl'],
+          coverImageUrl: deckData['coverImageUrl'], // ✅ HINZUGEFÜGT
         );
       } else {
         await _deckService.updateDeck(
@@ -148,7 +164,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           mainDeck: deckData['mainDeck'],
           extraDeck: deckData['extraDeck'],
           sideDeck: deckData['sideDeck'],
-          coverImageUrl: deckData['coverImageUrl'],
+          coverImageUrl: deckData['coverImageUrl'], // ✅ HINZUGEFÜGT
         );
       }
 
@@ -181,40 +197,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     });
   }
 
-  // ✅ VEREINFACHT: Keine Buttons mehr hier - alles im DeckCreationScreen
   Widget _buildDeckCreationView() {
-    return DeckCreationScreen(
-      key: _deckCreationKey,
-      initialDeckId: _editingDeckId,
-      onDataCollected: (data) {
-        // Callback wenn Deck gespeichert wird
-        setState(() {
-          _showDeckCreation = false;
-          _editingDeckId = null;
-          userData = userdb.readUser(uid!);
-        });
-      },
-      onDetailViewChanged: (isShowing) {
-        // Optional: Reagiere auf Detail-Ansicht
-        setState(() {});
-      },
+    // Prüfe ob DeckCreationScreen eine Karte zeigt
+    final isShowingDetail =
+        _deckCreationKey.currentState?.isShowingCardDetail ?? false;
 
-<<<<<<< HEAD
-      onCancel: () {
-        setState(() {
-          _showDeckCreation = false;
-          _editingDeckId = null;
-        });
-      },
-      onSaved: () {
-        setState(() {
-          _showDeckCreation = false;
-          _editingDeckId = null;
-          // Daten neu laden, damit das neue Deck sichtbar ist
-          userData = userdb.readUser(uid!);
-        });
-      },
-=======
     return Column(
       children: [
         // ✅ Zeige Buttons NUR wenn NICHT in Detail-Ansicht
@@ -233,7 +220,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const Spacer(),
-                ElevatedButton(
+                TextButton(
                   onPressed: () {
                     setState(() {
                       _showDeckCreation = false;
@@ -243,7 +230,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   child: const Text('Abbrechen'),
                 ),
                 const SizedBox(width: 8),
-                IconButton(onPressed: _saveDeck, icon: Icon(Icons.save)),
+                ElevatedButton(
+                  onPressed: _saveDeck,
+                  child: const Text('Speichern'),
+                ),
               ],
             ),
           ),
@@ -261,7 +251,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ),
         ),
       ],
->>>>>>> 25ccb01 (test)
     );
   }
 
@@ -317,6 +306,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         .whereType<Map<String, dynamic>>()
         .toList();
 
+    // Wir verwenden den eingeloggten Benutzer als Ersteller, falls der Name nicht im Deck gespeichert ist.
     final String deckCreator = _usernameFromDB!;
 
     if (decks.isEmpty) {
@@ -341,11 +331,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         final cardCount = _getDeckCardCount(mainDeckList);
         final deckId = deck['deckId'] as String?;
         final deckName = deck['deckName'] as String;
+        // Die 'coverImageUrl' muss String sein, um das FutureBuilder zu vermeiden,
+        // falls null im JSON ist, behandeln wir es als leeren String.
         final String coverImage = deck["coverImageUrl"] as String? ?? '';
 
         Future<String?> imgpathFuture = cardData
             .getCorrectImgPath([coverImage])
             .then((result) {
+              print('=== DEBUG: Cover Image Loading ===');
+              print('Input URL: $coverImage');
+              print('Output URL: $result');
+              print('Is gs:// URL: ${coverImage.startsWith('gs://')}');
               return result;
             });
 
@@ -379,16 +375,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               padding: const EdgeInsets.all(12.0),
               margin: const EdgeInsets.symmetric(vertical: 4.0),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment:
+                    CrossAxisAlignment.start, // Wichtig für die Textausrichtung
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Linke Seite: Bild und Deck-Informationen
                       Expanded(
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // 1. Deck Cover Image
                             if (imageUrl != null && imageUrl.isNotEmpty)
                               Padding(
                                 padding: const EdgeInsets.only(right: 12.0),
@@ -399,20 +398,25 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                 ),
                               ),
 
+                            // 2. Deckname, Kartenanzahl, Ersteller
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
+                                // Deckname und Kartenanzahl
                                 if (deckName.isNotEmpty)
                                   Text(
                                     "$deckName ($cardCount Karten)",
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.titleMedium,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium, // Titel für den Decknamen
                                   ),
 
+                                // Ersteller
                                 Text(
                                   deckCreator,
-                                  style: Theme.of(context).textTheme.bodySmall,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall, // Kleinerer Text für den Ersteller
                                 ),
                               ],
                             ),
@@ -420,6 +424,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         ),
                       ),
 
+                      // Rechte Seite: Aktionen (Bearbeiten/Löschen)
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [

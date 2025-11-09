@@ -1,4 +1,4 @@
-// deckservice.dart - OPTIMIERTE VERSION MIT NEUEM LAYOUT
+// deckservice.dart - MIT COVER-BILD FUNKTIONALITÄT
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -9,7 +9,7 @@ import 'package:tcg_app/class/common/buildCards.dart';
 import 'card_search_dialog.dart';
 
 // ============================================================================
-// DeckService bleibt unverändert
+// 1. DeckService - Firestore Service für Deck-Operationen
 // ============================================================================
 
 class DeckService {
@@ -182,6 +182,7 @@ class DeckService {
     String archetype,
     String description,
   ) {
+    // Entferne überflüssige Leerzeichen und trimme
     final combined = '$deckName $archetype $description'
         .toLowerCase()
         .trim()
@@ -223,6 +224,7 @@ class DeckService {
     return tokens;
   }
 
+  // Kommentar-Funktionen
   Future<void> addComment({
     required String deckId,
     required String comment,
@@ -296,7 +298,7 @@ class DeckService {
 }
 
 // ============================================================================
-// 2. DeckCreationScreen: NEUES OPTIMIERTES LAYOUT
+// 2. DeckCreationScreen: Formular-Inhalt MIT COVER-BILD
 // ============================================================================
 
 enum DeckType { main, extra, side, comments }
@@ -305,15 +307,12 @@ class DeckCreationScreen extends StatefulWidget {
   final String? initialDeckId;
   final void Function(Map<String, dynamic> data) onDataCollected;
   final void Function(bool isShowingDetail)? onDetailViewChanged;
-  final VoidCallback? onCancel;
-  final VoidCallback? onSaved;
 
   const DeckCreationScreen({
     super.key,
     this.initialDeckId,
     required this.onDataCollected,
     this.onDetailViewChanged,
-    this.onCancel, this.onSaved,
   });
 
   @override
@@ -321,6 +320,7 @@ class DeckCreationScreen extends StatefulWidget {
 }
 
 class DeckCreationScreenState extends State<DeckCreationScreen> {
+  // ✅ NEU: Public Getter
   bool get isShowingCardDetail => _selectedCardForDetail != null;
   final _formKey = GlobalKey<FormState>();
   final _deckNameController = TextEditingController();
@@ -335,6 +335,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
 
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _addToSideDeck = false;
   String? _currentDeckId;
   String? _coverImageUrl;
   Map<String, dynamic>? _selectedCardForDetail;
@@ -421,22 +422,20 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
     }
   }
 
-  // ✅ NEUE METHODE: Zeigt Card Search Dialog mit Side Deck Option
-  void _showCardSearchDialog({bool isSideDeck = false}) {
+  void _showCardSearchDialog() {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return CardSearchDialog(
-          isSideDeck: isSideDeck,
+          isSideDeck: _addToSideDeck,
           onCardSelected: (card, count) {
-            _addCardToDeck(card, count, addToSide: isSideDeck);
+            _addCardToDeck(card, count);
           },
         );
       },
     );
   }
 
-  // ✅ NEUE METHODE: Cover-Bild Selektor öffnen
   void _showCoverImageSelector() {
     final allCards = [..._mainDeck, ..._extraDeck];
 
@@ -467,11 +466,14 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                 final card = allCards[index];
                 final cardImages = card['card_images'] as List<dynamic>?;
 
+                // Sammle alle verfügbaren Bild-URLs aus ALLEN Array-Einträgen
                 List<String> availableUrls = [];
 
                 if (cardImages != null && cardImages.isNotEmpty) {
+                  // Durchlaufe ALLE Einträge im card_images Array (für Dark Magician Girl etc.)
                   for (var imageEntry in cardImages) {
                     if (imageEntry is Map<String, dynamic>) {
+                      // Priorität: image_url > image_url_small > image_url_cropped
                       final imageUrl = imageEntry['image_url'] as String?;
                       final smallUrl = imageEntry['image_url_small'] as String?;
                       final croppedUrl =
@@ -503,16 +505,17 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                       return;
                     }
 
+                    // Finde die erste funktionierende URL
                     String? workingUrl;
                     for (String url in availableUrls) {
                       try {
                         final downloadUrl = await _cardData.getImgPath(url);
                         if (downloadUrl.isNotEmpty) {
                           workingUrl = url;
-                          break;
+                          break; // Erste funktionierende gefunden!
                         }
                       } catch (e) {
-                        continue;
+                        continue; // Probiere die nächste
                       }
                     }
 
@@ -577,15 +580,11 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
     );
   }
 
-  void _addCardToDeck(
-    Map<String, dynamic> card,
-    int count, {
-    bool addToSide = false,
-  }) {
+  void _addCardToDeck(Map<String, dynamic> card, int count) {
     final frameType = (card['frameType'] as String? ?? '').toLowerCase();
     List<Map<String, dynamic>> targetDeck;
 
-    if (addToSide) {
+    if (_addToSideDeck) {
       targetDeck = _sideDeck;
     } else if (frameType == 'fusion' ||
         frameType == 'synchro' ||
@@ -918,35 +917,13 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ✅ NEUE HEADER-ZEILE mit Kartenzahl und + Buttons
         Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Row(
-            children: [
-              Text(
-                '$title ($totalCards Karten)',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const Spacer(),
-              // ✅ + Button für Main/Extra Deck
-              IconButton(
-                icon: const Icon(Icons.add_circle_outline),
-                color: Theme.of(context).colorScheme.primary,
-                onPressed: () => _showCardSearchDialog(isSideDeck: false),
-                tooltip: 'Karte hinzufügen',
-              ),
-              // ✅ Side Deck Button (nur bei Main/Extra sichtbar)
-              if (currentType != DeckType.side &&
-                  currentType != DeckType.comments)
-                IconButton(
-                  icon: const Icon(Icons.swap_horiz),
-                  color: Colors.orange,
-                  onPressed: () => _showCardSearchDialog(isSideDeck: true),
-                  tooltip: 'Zu Side Deck hinzufügen',
-                ),
-            ],
+          padding: const EdgeInsets.only(bottom: 8.0, left: 8.0, top: 8.0),
+          child: Text(
+            '$title ($totalCards Karten)',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
         ),
         Expanded(
@@ -958,97 +935,9 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
     );
   }
 
-  // ✅ NEUE METHODE: Speichern direkt aus DeckCreationScreen
-  Future<void> _handleSave() async {
-    final deckData = await collectDeckDataAndValidate();
-
-    if (deckData == null) return;
-
-    setState(() => _isSaving = true);
-
-    try {
-      if (_currentDeckId == null) {
-        // Neues Deck erstellen
-        final newDeckId = await _deckService.createDeck(
-          deckName: deckData['deckName'],
-          description: deckData['description'],
-          mainDeck: deckData['mainDeck'],
-          extraDeck: deckData['extraDeck'],
-          sideDeck: deckData['sideDeck'],
-          coverImageUrl: deckData['coverImageUrl'],
-        );
-
-        setState(() {
-          _currentDeckId = newDeckId;
-        });
-      } else {
-        // Bestehendes Deck aktualisieren
-        await _deckService.updateDeck(
-          deckId: _currentDeckId!,
-          deckName: deckData['deckName'],
-          description: deckData['description'],
-          mainDeck: deckData['mainDeck'],
-          extraDeck: deckData['extraDeck'],
-          sideDeck: deckData['sideDeck'],
-          coverImageUrl: deckData['coverImageUrl'],
-        );
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Deck erfolgreich gespeichert!')),
-        );
-        widget.onSaved?.call();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Fehler beim Speichern: $e')));
-      }
-    } finally {
-      setState(() => _isSaving = false);
-    }
-  }
-
-  // ✅ NEUE METHODE: Abbrechen/Zurück
-  void _handleCancel() {
-    // Frage ob wirklich abbrechen wenn Änderungen vorhanden
-    if (_mainDeck.isNotEmpty || _extraDeck.isNotEmpty || _sideDeck.isNotEmpty) {
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            backgroundColor: Theme.of(context).cardColor,
-            title: const Text('Änderungen verwerfen?'),
-            content: const Text(
-              'Möchten Sie die Bearbeitung wirklich abbrechen? Ungespeicherte Änderungen gehen verloren.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Weiter bearbeiten'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  widget.onCancel?.call();
-                },
-                style: TextButton.styleFrom(foregroundColor: Colors.red),
-                child: const Text('Abbrechen'),
-              ),
-            ],
-          );
-        },
-      );
-    } else {
-      widget.onCancel?.call(); // Direkt zurück wenn leer
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    // Wenn Detail-Ansicht, zeige NUR die Karte
+    // Wenn Detail-Ansicht, zeige NUR die Karte (OHNE obere Buttons)
     if (_selectedCardForDetail != null) {
       return CardDetailView(
         cardData: _selectedCardForDetail!,
@@ -1061,37 +950,38 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
       );
     }
 
+    // Ansonsten zeige die normale Editing-Ansicht
     if (_isLoading || _isSaving) {
       return const Center(child: CircularProgressIndicator());
     }
-
     return Column(
       children: [
-        // ✅ NEUER HEADER mit Cover-Bild, Deck-Name UND Icon-Buttons
-        Container(
-          color: Theme.of(context).cardColor,
+        Padding(
           padding: const EdgeInsets.all(16.0),
           child: Form(
             key: _formKey,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ✅ Cover-Bild (anklickbar zum Ändern)
-                GestureDetector(
-                  onTap: _showCoverImageSelector,
-                  child: Container(
-                    width: 60,
-                    height: 84,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: Theme.of(context).dividerColor,
-                        width: 2,
-                      ),
-                      color: Theme.of(context).scaffoldBackgroundColor,
-                    ),
-                    child: _coverImageUrl != null
-                        ? FutureBuilder<String>(
+                // Cover-Bild Anzeige
+                if (_coverImageUrl != null)
+                  Center(
+                    child: Stack(
+                      children: [
+                        Container(
+                          width: 120,
+                          height: 180,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: FutureBuilder<String>(
                             future: _cardData.getCorrectImgPath([
                               _coverImageUrl!,
                             ]),
@@ -1099,7 +989,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                               if (snapshot.hasData &&
                                   snapshot.data!.isNotEmpty) {
                                 return ClipRRect(
-                                  borderRadius: BorderRadius.circular(6),
+                                  borderRadius: BorderRadius.circular(8),
                                   child: Image.network(
                                     snapshot.data!,
                                     fit: BoxFit.cover,
@@ -1107,48 +997,78 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                                 );
                               }
                               return const Center(
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
+                                child: CircularProgressIndicator(),
                               );
                             },
-                          )
-                        : Icon(
-                            Icons.image_outlined,
-                            size: 32,
-                            color: Theme.of(context).hintColor,
                           ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                // ✅ Deck-Name Eingabefeld
-                Expanded(
-                  child: TextField(
-                    controller: _deckNameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Deck Name',
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
+                        ),
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: IconButton(
+                            icon: const Icon(Icons.close, color: Colors.white),
+                            style: IconButton.styleFrom(
+                              backgroundColor: Colors.black54,
+                              padding: const EdgeInsets.all(4),
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _coverImageUrl = null;
+                              });
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+
+                if (_coverImageUrl != null) const SizedBox(height: 16),
+
+                // Cover-Bild Button
+                OutlinedButton.icon(
+                  onPressed: _showCoverImageSelector,
+                  icon: const Icon(Icons.image),
+                  label: Text(
+                    _coverImageUrl == null
+                        ? 'Deck Cover-Bild auswählen'
+                        : 'Cover-Bild ändern',
+                  ),
                 ),
-                const SizedBox(width: 8),
-                // ✅ ABBRECHEN Button (Icon)
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  color: Colors.red,
-                  tooltip: 'Abbrechen',
-                  onPressed: _handleCancel,
+
+                const SizedBox(height: 16),
+
+                TextField(
+                  controller: _deckNameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Deck Name',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-                // ✅ SPEICHERN Button (Icon)
-                IconButton(
-                  icon: const Icon(Icons.save),
-                  color: Colors.green,
-                  tooltip: 'Speichern',
-                  onPressed: _handleSave,
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _showCardSearchDialog,
+                        icon: const Icon(Icons.add),
+                        label: const Text('Karte hinzufügen'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: _addToSideDeck,
+                          onChanged: (value) {
+                            setState(() {
+                              _addToSideDeck = value ?? false;
+                            });
+                          },
+                        ),
+                        const Text('Zum Side Deck'),
+                      ],
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -1164,7 +1084,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
 }
 
 // ============================================================================
-// CommentSection (unverändert)
+// CommentSection
 // ============================================================================
 
 class CommentSection extends StatefulWidget {
@@ -1341,7 +1261,7 @@ class _CommentSectionState extends State<CommentSection> {
 }
 
 // ============================================================================
-// Card Image Widget (unverändert)
+// Card Image Widget
 // ============================================================================
 
 class _CardImageWidget extends StatefulWidget {
