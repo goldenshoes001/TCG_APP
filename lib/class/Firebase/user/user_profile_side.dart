@@ -199,6 +199,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         setState(() {});
       },
 
+<<<<<<< HEAD
       onCancel: () {
         setState(() {
           _showDeckCreation = false;
@@ -213,6 +214,54 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           userData = userdb.readUser(uid!);
         });
       },
+=======
+    return Column(
+      children: [
+        // ✅ Zeige Buttons NUR wenn NICHT in Detail-Ansicht
+        if (!isShowingDetail)
+          Padding(
+            padding: const EdgeInsets.only(
+              left: 16.0,
+              right: 16.0,
+              top: 8.0,
+              bottom: 8.0,
+            ),
+            child: Row(
+              children: [
+                Text(
+                  _editingDeckId == null ? 'Neues Deck' : 'Deck bearbeiten',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const Spacer(),
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _showDeckCreation = false;
+                      _editingDeckId = null;
+                    });
+                  },
+                  child: const Text('Abbrechen'),
+                ),
+                const SizedBox(width: 8),
+                IconButton(onPressed: _saveDeck, icon: Icon(Icons.save)),
+              ],
+            ),
+          ),
+        Expanded(
+          child: DeckCreationScreen(
+            key: _deckCreationKey,
+            initialDeckId: _editingDeckId,
+            onDataCollected: (data) {},
+            onDetailViewChanged: (isShowing) {
+              // ✅ HINZUFÜGEN!
+              setState(() {
+                // Wird automatisch durch den Getter isShowingCardDetail abgefragt
+              });
+            },
+          ),
+        ),
+      ],
+>>>>>>> 25ccb01 (test)
     );
   }
 
