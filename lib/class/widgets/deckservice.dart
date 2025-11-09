@@ -589,10 +589,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
     } else if (frameType == 'fusion' ||
         frameType == 'synchro' ||
         frameType == 'xyz' ||
-        frameType == 'link' ||
-        frameType == 'fusion_pendulum' ||
-        frameType == 'synchro_pendulum' ||
-        frameType == 'xyz_pendulum') {
+        frameType == 'link') {
       targetDeck = _extraDeck;
     } else {
       targetDeck = _mainDeck;

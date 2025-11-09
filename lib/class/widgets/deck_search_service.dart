@@ -19,7 +19,6 @@ class DeckSearchService {
       final QuerySnapshot snapshot = await _firestore
           .collection('decks')
           .where('searchTokens', arrayContains: normalizedSearch)
-          .limit(100)
           .get();
 
       List<Map<String, dynamic>> results = snapshot.docs
@@ -31,7 +30,6 @@ class DeckSearchService {
         // Lade alle Decks und filtere clientseitig (nur für kleine Datenmengen!)
         final QuerySnapshot allDecks = await _firestore
             .collection('decks')
-            .limit(100)
             .get();
 
         results = allDecks.docs
@@ -110,7 +108,6 @@ class DeckSearchService {
       final QuerySnapshot snapshot = await _firestore
           .collection('decks')
           .where('searchTokens', arrayContains: normalizedArchetype)
-          .limit(100)
           .get();
 
       List<Map<String, dynamic>> results = snapshot.docs
@@ -126,7 +123,6 @@ class DeckSearchService {
       if (results.isEmpty) {
         final QuerySnapshot allDecks = await _firestore
             .collection('decks')
-            .limit(100)
             .get();
 
         results = allDecks.docs
@@ -154,12 +150,11 @@ class DeckSearchService {
   }
 
   /// Lädt die neuesten Decks
-  Future<List<Map<String, dynamic>>> getRecentDecks({int limit = 20}) async {
+  Future<List<Map<String, dynamic>>> getRecentDecks() async {
     try {
       final QuerySnapshot snapshot = await _firestore
           .collection('decks')
           .orderBy('updatedAt', descending: true)
-          .limit(limit)
           .get();
 
       return snapshot.docs
