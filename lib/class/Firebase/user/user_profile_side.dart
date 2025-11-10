@@ -181,7 +181,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     });
   }
 
-<<<<<<< HEAD
   Widget _buildDeckCreationView() {
     // Prüfe ob DeckCreationScreen eine Karte zeigt
     final isShowingDetail =
@@ -236,40 +235,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ),
         ),
       ],
-=======
-  // ✅ VEREINFACHT: Keine Buttons mehr hier - alles im DeckCreationScreen
-  Widget _buildDeckCreationView() {
-    return DeckCreationScreen(
-      key: _deckCreationKey,
-      initialDeckId: _editingDeckId,
-      onDataCollected: (data) {
-        // Callback wenn Deck gespeichert wird
-        setState(() {
-          _showDeckCreation = false;
-          _editingDeckId = null;
-          userData = userdb.readUser(uid!);
-        });
-      },
-      onDetailViewChanged: (isShowing) {
-        // Optional: Reagiere auf Detail-Ansicht
-        setState(() {});
-      },
-
-      onCancel: () {
-        setState(() {
-          _showDeckCreation = false;
-          _editingDeckId = null;
-        });
-      },
-      onSaved: () {
-        setState(() {
-          _showDeckCreation = false;
-          _editingDeckId = null;
-          // Daten neu laden, damit das neue Deck sichtbar ist
-          userData = userdb.readUser(uid!);
-        });
-      },
->>>>>>> b24fff5 (weiter bearbeitet)
     );
   }
 
