@@ -1,4 +1,4 @@
-// user_profile_side.dart - AKTUALISIERT MIT ARCHETYPES-ANZEIGE
+// user_profile_side.dart - AKTUALISIERT FÜR NEUES DECK LAYOUT
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 import 'package:tcg_app/class/Firebase/interfaces/FirebaseAuthRepository.dart';
@@ -38,9 +38,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   String? uid;
 
   String? _usernameFromDB;
-  bool _isLoadingUsername = true; // Ladezustand für den Namen
-
-  // ... (Restliche Final-Variablen)
+  bool _isLoadingUsername = true;
 
   @override
   void initState() {
@@ -52,19 +50,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       email = currentUser.displayName ?? currentUser.email;
       userData = userdb.readUser(uid!);
 
-      // 🆕 RUFE DEN NAMEN ASYNCHRON AB
       _loadUsernameFromFirestore(uid!);
     } else {
       uid = null;
       email = "Gast";
       userData = Future.value({});
-
-      // Wenn kein User, Ladezustand beenden
       _isLoadingUsername = false;
     }
   }
 
-  // 🆕 NEUE METHODE ZUM ASYNCHRONEN LADEN DES NAMENS
   Future<void> _loadUsernameFromFirestore(String userId) async {
     final firestore = FirebaseFirestore.instance;
     String? fetchedUsername;
@@ -76,7 +70,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           .get();
 
       if (doc.exists) {
-        // Nutze den gespeicherten 'username' aus Firestore
         fetchedUsername = doc.data()?['username'] as String?;
       }
     } catch (e) {
@@ -86,17 +79,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     if (mounted) {
       setState(() {
         _usernameFromDB = fetchedUsername;
-        _isLoadingUsername = false; // Ladevorgang beendet
+        _isLoadingUsername = false;
       });
-    }
-  }
-
-  void _saveDeck() {
-    final deckData = _deckCreationKey.currentState
-        ?.collectDeckDataAndValidate();
-
-    if (deckData != null) {
-      _handleDeckSave(deckData);
     }
   }
 
@@ -154,7 +138,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           mainDeck: deckData['mainDeck'],
           extraDeck: deckData['extraDeck'],
           sideDeck: deckData['sideDeck'],
-          coverImageUrl: deckData['coverImageUrl'], // ✅ HINZUGEFÜGT
+          coverImageUrl: deckData['coverImageUrl'],
         );
       } else {
         await _deckService.updateDeck(
@@ -164,20 +148,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           mainDeck: deckData['mainDeck'],
           extraDeck: deckData['extraDeck'],
           sideDeck: deckData['sideDeck'],
-          coverImageUrl: deckData['coverImageUrl'], // ✅ HINZUGEFÜGT
+          coverImageUrl: deckData['coverImageUrl'],
         );
       }
 
       if (mounted) {
-        setState(() {
-          _showDeckCreation = false;
-          _editingDeckId = null;
-          userData = userdb.readUser(uid!);
-        });
-
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Deck erfolgreich gespeichert!')),
         );
+        _deckCreationKey.currentState?.widget.onSaved?.call();
       }
     } catch (e) {
       if (mounted) {
@@ -197,8 +176,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     });
   }
 
+  // ✅ ANGEPASST: Prüft jetzt auch ob in Kartendetail-Ansicht
   Widget _buildDeckCreationView() {
-    // Prüfe ob DeckCreationScreen eine Karte zeigt
     final isShowingDetail =
         _deckCreationKey.currentState?.isShowingCardDetail ?? false;
 
@@ -206,34 +185,21 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       children: [
         // ✅ Zeige Buttons NUR wenn NICHT in Detail-Ansicht
         if (!isShowingDetail)
-          Padding(
-            padding: const EdgeInsets.only(
-              left: 16.0,
-              right: 16.0,
-              top: 8.0,
-              bottom: 8.0,
+          Container(
+            color: Theme.of(context).cardColor,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 8.0,
             ),
             child: Row(
               children: [
                 Text(
                   _editingDeckId == null ? 'Neues Deck' : 'Deck bearbeiten',
-                  style: Theme.of(context).textTheme.bodyMedium,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const Spacer(),
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      _showDeckCreation = false;
-                      _editingDeckId = null;
-                    });
-                  },
-                  child: const Text('Abbrechen'),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: _saveDeck,
-                  child: const Text('Speichern'),
-                ),
               ],
             ),
           ),
@@ -243,9 +209,23 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             initialDeckId: _editingDeckId,
             onDataCollected: (data) {},
             onDetailViewChanged: (isShowing) {
-              // ✅ HINZUFÜGEN!
               setState(() {
                 // Wird automatisch durch den Getter isShowingCardDetail abgefragt
+              });
+            },
+            onCancel: () {
+              setState(() {
+                _showDeckCreation = false;
+                _editingDeckId = null;
+              });
+            },
+            // 🎯 NEU: Aufruf nach erfolgreicher Speicherung
+            onSaved: () {
+              setState(() {
+                _showDeckCreation = false;
+                _editingDeckId = null;
+                // Wichtig: Daten neu laden, damit das neue Deck sichtbar ist
+                userData = userdb.readUser(uid!);
               });
             },
           ),
@@ -306,7 +286,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         .whereType<Map<String, dynamic>>()
         .toList();
 
-    // Wir verwenden den eingeloggten Benutzer als Ersteller, falls der Name nicht im Deck gespeichert ist.
     final String deckCreator = _usernameFromDB!;
 
     if (decks.isEmpty) {
@@ -331,17 +310,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         final cardCount = _getDeckCardCount(mainDeckList);
         final deckId = deck['deckId'] as String?;
         final deckName = deck['deckName'] as String;
-        // Die 'coverImageUrl' muss String sein, um das FutureBuilder zu vermeiden,
-        // falls null im JSON ist, behandeln wir es als leeren String.
         final String coverImage = deck["coverImageUrl"] as String? ?? '';
 
         Future<String?> imgpathFuture = cardData
             .getCorrectImgPath([coverImage])
             .then((result) {
-              print('=== DEBUG: Cover Image Loading ===');
-              print('Input URL: $coverImage');
-              print('Output URL: $result');
-              print('Is gs:// URL: ${coverImage.startsWith('gs://')}');
               return result;
             });
 
@@ -375,19 +348,16 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               padding: const EdgeInsets.all(12.0),
               margin: const EdgeInsets.symmetric(vertical: 4.0),
               child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start, // Wichtig für die Textausrichtung
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Linke Seite: Bild und Deck-Informationen
                       Expanded(
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // 1. Deck Cover Image
                             if (imageUrl != null && imageUrl.isNotEmpty)
                               Padding(
                                 padding: const EdgeInsets.only(right: 12.0),
@@ -398,25 +368,20 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                 ),
                               ),
 
-                            // 2. Deckname, Kartenanzahl, Ersteller
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // Deckname und Kartenanzahl
                                 if (deckName.isNotEmpty)
                                   Text(
                                     "$deckName ($cardCount Karten)",
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium, // Titel für den Decknamen
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleMedium,
                                   ),
 
-                                // Ersteller
                                 Text(
                                   deckCreator,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall, // Kleinerer Text für den Ersteller
+                                  style: Theme.of(context).textTheme.bodySmall,
                                 ),
                               ],
                             ),
@@ -424,7 +389,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         ),
                       ),
 
-                      // Rechte Seite: Aktionen (Bearbeiten/Löschen)
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
