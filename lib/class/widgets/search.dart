@@ -107,7 +107,7 @@ class _SearchState extends State<Search> with SingleTickerProviderStateMixin {
         TabBar(
           controller: _tabController,
           tabs: const [
-            Tab(text: 'Karten'),
+            Tab(text: 'Cards'),
             Tab(text: 'Decks'),
           ],
           onTap: (index) {
@@ -130,7 +130,7 @@ class _SearchState extends State<Search> with SingleTickerProviderStateMixin {
                     children: [
                       TextField(
                         decoration: const InputDecoration(
-                          hintText: "Karte suchen...",
+                          hintText: "Search Card..",
                           prefixIcon: Icon(Icons.search),
                           border: OutlineInputBorder(),
                           contentPadding: EdgeInsets.symmetric(

@@ -321,7 +321,7 @@ class _MetaState extends State<Meta>
         TabBar(
           controller: _tabController,
           tabs: const [
-            Tab(text: 'Karten'),
+            Tab(text: 'Cards'),
             Tab(text: 'Decks'),
           ],
           onTap: (index) {

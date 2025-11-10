@@ -40,7 +40,7 @@ class _MainAppState extends State<MainApp> {
 
   // Preload Status
   bool _isPreloading = true;
-  String _loadingMessage = 'App wird geladen...';
+  String _loadingMessage = 'loading App...';
 
   // Preloaded Data
   Map<String, List<dynamic>>? _tcgBannlist;
@@ -80,24 +80,24 @@ class _MainAppState extends State<MainApp> {
     try {
       // 1. Lade Bannlisten
       setState(() {
-        _loadingMessage = 'Lade TCG Bannliste...';
+        _loadingMessage = 'TCG Banlist is loading..';
       });
       _tcgBannlist = await _cardData.sortTCGBannCards();
 
       setState(() {
-        _loadingMessage = 'Lade OCG Bannliste...';
+        _loadingMessage = 'OCG Banlist is loading...';
       });
       _ocgBannlist = await _cardData.sortOCGBannCards();
 
       // 2. Preload Bannlisten-Bilder
       setState(() {
-        _loadingMessage = 'Lade Kartenbilder...';
+        _loadingMessage = 'loading Cardimages...';
       });
       await _preloadBannlistImages();
 
       // 3. Lade Filter-Daten
       setState(() {
-        _loadingMessage = 'Lade Filter-Optionen...';
+        _loadingMessage = 'loading Filteroptions..';
       });
 
       final results = await Future.wait([

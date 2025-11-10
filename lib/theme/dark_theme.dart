@@ -95,6 +95,8 @@ ThemeData darkTheme(BuildContext context) => generalTheme(context).copyWith(
     ),
   ),
 
+  iconTheme: IconThemeData(color: iconColor),
+
   listTileTheme: const ListTileThemeData(
     // Farbe für den gesamten ListTile-Inhalt (Titel, Untertitel, Icons)
     textColor: Colors.white,

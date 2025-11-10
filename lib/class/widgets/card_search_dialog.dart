@@ -447,7 +447,7 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
           children: [
             Row(
               children: [
-                Text('Karte suchen'),
+                Text('Search Card'),
                 const Spacer(),
                 IconButton(
                   icon: Icon(_showFilters ? Icons.search : Icons.filter_list),

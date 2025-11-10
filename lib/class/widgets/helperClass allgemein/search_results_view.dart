@@ -22,12 +22,7 @@ class SearchResultsView extends StatelessWidget {
       future: searchFuture,
       builder: (context, snapshot) {
         if (searchFuture == null) {
-          return const Center(
-            child: Text(
-              'Geben Sie einen Suchbegriff ein.',
-              style: TextStyle(color: Colors.white),
-            ),
-          );
+          return const Center(child: Text('Enter a keyword.'));
         }
 
         if (snapshot.connectionState == ConnectionState.waiting) {

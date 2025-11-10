@@ -30,6 +30,7 @@ ThemeData generalTheme(BuildContext context) {
       headlineSmall: TextStyle(
         fontFamily: fontFamily,
         fontSize: fontSizeHeadlineSmall,
+        fontWeight: FontWeight.bold,
       ),
     ),
   );
