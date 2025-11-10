@@ -42,14 +42,12 @@ class OperatorDropdown extends StatelessWidget {
               );
             }).toList(),
             onChanged: onOperatorChanged,
-            style: Theme.of(context).textTheme.bodyMedium,
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
           child: DropdownButtonFormField<String>(
             decoration: InputDecoration(
-              iconColor: Theme.of(context).textTheme.bodyMedium?.color,
               hintText: label,
               border: const OutlineInputBorder(),
               contentPadding: const EdgeInsets.symmetric(
@@ -68,7 +66,6 @@ class OperatorDropdown extends StatelessWidget {
               ),
             ],
             onChanged: onChanged,
-            style: Theme.of(context).textTheme.bodyMedium,
           ),
         ),
       ],

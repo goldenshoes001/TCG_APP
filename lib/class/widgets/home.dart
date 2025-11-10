@@ -119,10 +119,7 @@ class _HomeState extends State<Home> {
           return ListView(
             children: [
               if (banned.isNotEmpty) ...[
-                _buildSectionHeader(
-                  'Forbidden',
-                  Theme.of(context).textTheme.bodyMedium!.color!,
-                ),
+                _buildSectionHeader('Forbidden'),
                 _buildSectionContainer(
                   color: Colors.transparent,
                   cards: banned,
@@ -131,10 +128,7 @@ class _HomeState extends State<Home> {
                 ),
               ],
               if (limited.isNotEmpty) ...[
-                _buildSectionHeader(
-                  'Limited',
-                  Theme.of(context).textTheme.bodyMedium!.color!,
-                ),
+                _buildSectionHeader('Limited'),
                 _buildSectionContainer(
                   color: Colors.transparent,
                   cards: limited,
@@ -143,10 +137,7 @@ class _HomeState extends State<Home> {
                 ),
               ],
               if (semiLimited.isNotEmpty) ...[
-                _buildSectionHeader(
-                  'Semi-Limited',
-                  Theme.of(context).textTheme.bodyMedium!.color!,
-                ),
+                _buildSectionHeader('Semi-Limited'),
                 _buildSectionContainer(
                   color: Colors.transparent,
                   cards: semiLimited,
@@ -185,12 +176,7 @@ class _HomeState extends State<Home> {
           ...cards.map(
             (card) => Padding(
               padding: const EdgeInsets.all(8.0),
-              child: _buildCardItem(
-                card: card,
-                icon: icon,
-                iconText: iconText,
-                iconColor: Theme.of(context).textTheme.bodyMedium!.color!,
-              ),
+              child: _buildCardItem(card: card, icon: icon, iconText: iconText),
             ),
           ),
           const SizedBox(height: 8),
@@ -200,16 +186,12 @@ class _HomeState extends State<Home> {
   }
 
   /// Baut den Sektionstitel
-  Widget _buildSectionHeader(String title, Color color) {
+  Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
       child: Text(
         title,
-        style: TextStyle(
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-          color: color,
-        ),
+        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
       ),
     );
   }

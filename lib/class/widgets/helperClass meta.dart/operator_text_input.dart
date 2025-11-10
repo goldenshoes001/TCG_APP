@@ -38,7 +38,6 @@ class OperatorTextInput extends StatelessWidget {
               );
             }).toList(),
             onChanged: onOperatorChanged,
-            style: Theme.of(context).textTheme.bodyMedium,
           ),
         ),
         const SizedBox(width: 8),
@@ -46,7 +45,7 @@ class OperatorTextInput extends StatelessWidget {
           child: TextField(
             controller: controller,
             keyboardType: TextInputType.number,
-            style: Theme.of(context).textTheme.bodyMedium,
+
             decoration: InputDecoration(
               hintText: label,
               border: const OutlineInputBorder(),

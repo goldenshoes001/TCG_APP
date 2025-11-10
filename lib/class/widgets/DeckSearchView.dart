@@ -156,8 +156,6 @@ class _DeckSearchViewState extends State<DeckSearchView> {
 
   @override
   Widget build(BuildContext context) {
-  
-
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -257,11 +255,7 @@ class _DeckSearchViewState extends State<DeckSearchView> {
           children: [
             Icon(Icons.search, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
-            Text(
-              'Suche nach Decks oder wähle einen Archetyp',
-              style: Theme.of(context).textTheme.bodyLarge,
-              textAlign: TextAlign.center,
-            ),
+            Text('Suche nach Decks oder wähle einen Archetyp'),
           ],
         ),
       );
@@ -336,7 +330,6 @@ class _DeckSearchViewState extends State<DeckSearchView> {
             });
 
             return Card(
-              color: Theme.of(context).cardColor,
               margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
               child: ListTile(
                 leading: _buildDeckCoverImage(deck),
@@ -371,10 +364,7 @@ class _DeckSearchViewState extends State<DeckSearchView> {
                       ),
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        'Von: $username',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
+                      child: Text('Von: $username'),
                     ),
                     Padding(
                       padding: const EdgeInsets.only(top: 2),

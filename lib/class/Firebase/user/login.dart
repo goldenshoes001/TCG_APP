@@ -73,14 +73,11 @@ class _ProfileState extends State<Profile> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Padding(
       padding: EdgeInsets.all(MediaQuery.of(context).size.height / 120),
       child: Column(
         children: [
-          Text("User Login", style: Theme.of(context).textTheme.headlineLarge),
-          Icon(Icons.person, color: theme.cardColor, size: 250),
+          Icon(Icons.person, size: 250),
           Expanded(
             child: Form(
               key: _formKey,

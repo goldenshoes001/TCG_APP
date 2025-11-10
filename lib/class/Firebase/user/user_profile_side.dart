@@ -185,12 +185,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       children: [
         // ✅ Zeige Buttons NUR wenn NICHT in Detail-Ansicht
         if (!isShowingDetail)
-          Container(
-            color: Theme.of(context).cardColor,
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16.0,
-              vertical: 8.0,
-            ),
+          Card(
             child: Row(
               children: [
                 Text(
@@ -239,7 +234,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: Theme.of(context).cardColor,
           title: const Text('Deck löschen'),
           content: Text(
             'Sind Sie sicher, dass Sie das Deck "$deckName" unwiderruflich löschen möchten?',
@@ -343,10 +337,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
             final String? imageUrl = asyncSnapshot.data;
 
-            return Container(
-              color: Theme.of(context).cardColor,
-              padding: const EdgeInsets.all(12.0),
-              margin: const EdgeInsets.symmetric(vertical: 4.0),
+            return Card(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -379,10 +370,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                     ).textTheme.titleMedium,
                                   ),
 
-                                Text(
-                                  deckCreator,
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
+                                Text(deckCreator),
                               ],
                             ),
                           ],
@@ -444,10 +432,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'Willkommen, ${userMap['username'] ?? email}',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+            Text('Willkommen, ${userMap['username'] ?? email}'),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {
@@ -459,14 +444,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               child: const Text('Neues Deck erstellen'),
             ),
             const SizedBox(height: 24),
-            Text('Deine Decks', style: Theme.of(context).textTheme.bodyLarge),
+            Text('Deine Decks'),
             const SizedBox(height: 16),
             _buildDeckList(userMap),
             const SizedBox(height: 24),
-            Text(
-              'Account-Einstellungen',
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
+            Text('Account-Einstellungen'),
             const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: _handleLogout,

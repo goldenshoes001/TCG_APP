@@ -113,18 +113,8 @@ class CardListItem extends StatelessWidget {
             ),
 
             const SizedBox(width: 15),
-            Expanded(
-              child: Text(
-                cardName,
-                style: TextStyle(
-                  color: Theme.of(context).textTheme.bodyMedium?.color,
-                ),
-              ),
-            ),
-            Icon(
-              Icons.chevron_right,
-              color: Theme.of(context).textTheme.bodyMedium?.color,
-            ),
+            Expanded(child: Text(cardName)),
+            Icon(Icons.chevron_right),
           ],
         ),
       ),

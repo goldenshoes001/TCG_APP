@@ -312,16 +312,7 @@ class _MetaState extends State<Meta>
     }
 
     if (_filtersLoading && _tabController.index == 0) {
-      return Center(
-        child: Text(
-          'Filter werden geladen...',
-          style: TextStyle(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white
-                : Theme.of(context).textTheme.bodyMedium?.color,
-          ),
-        ),
-      );
+      return Center(child: Text('Filter werden geladen...'));
     }
 
     // NUR HIER werden die Tabs angezeigt
@@ -361,7 +352,7 @@ class _MetaState extends State<Meta>
                     children: [
                       TextField(
                         decoration: InputDecoration(
-                          hintText: "Karte suchen...", // Angepasster Hint
+                          hintText: "search Card...", // Angepasster Hint
                           prefixIcon: const Icon(Icons.search),
                           border: const OutlineInputBorder(),
                           contentPadding: const EdgeInsets.symmetric(
@@ -391,7 +382,7 @@ class _MetaState extends State<Meta>
                             });
                           },
                           icon: const Icon(Icons.filter_list),
-                          label: const Text('Filter anzeigen'),
+                          label: const Text('Show Filter'),
                         ),
                       ],
                     ),
@@ -418,7 +409,7 @@ class _MetaState extends State<Meta>
                                         child: ElevatedButton.icon(
                                           onPressed: _performCardSearch,
                                           icon: const Icon(Icons.search),
-                                          label: const Text('Suchen'),
+                                          label: const Text('search'),
                                         ),
                                       ),
                                       const SizedBox(width: 10),
@@ -426,7 +417,7 @@ class _MetaState extends State<Meta>
                                         child: OutlinedButton.icon(
                                           onPressed: _resetFilters,
                                           icon: const Icon(Icons.clear),
-                                          label: const Text('Zurücksetzen'),
+                                          label: const Text('reset'),
                                         ),
                                       ),
                                     ],
@@ -631,14 +622,12 @@ class _MetaState extends State<Meta>
               );
             }).toList(),
             onChanged: onOperatorChanged,
-            style: Theme.of(context).textTheme.bodyMedium,
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
           child: DropdownButtonFormField<String>(
             decoration: InputDecoration(
-              iconColor: Theme.of(context).textTheme.bodyMedium!.color,
               hintText: label,
               border: const OutlineInputBorder(),
               contentPadding: const EdgeInsets.symmetric(
@@ -657,7 +646,6 @@ class _MetaState extends State<Meta>
               ),
             ],
             onChanged: onChanged,
-            style: Theme.of(context).textTheme.bodyMedium,
           ),
         ),
       ],
@@ -688,7 +676,6 @@ class _MetaState extends State<Meta>
               );
             }).toList(),
             onChanged: onOperatorChanged,
-            style: Theme.of(context).textTheme.bodyMedium,
           ),
         ),
         const SizedBox(width: 8),
@@ -696,7 +683,7 @@ class _MetaState extends State<Meta>
           child: TextField(
             controller: controller,
             keyboardType: TextInputType.number,
-            style: Theme.of(context).textTheme.bodyMedium,
+
             decoration: InputDecoration(
               hintText: label,
               border: const OutlineInputBorder(),
@@ -719,7 +706,6 @@ class _MetaState extends State<Meta>
   }) {
     return DropdownButtonFormField<String>(
       decoration: InputDecoration(
-        iconColor: Theme.of(context).textTheme.bodyMedium!.color,
         hintText: label,
         border: const OutlineInputBorder(),
         contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -735,7 +721,6 @@ class _MetaState extends State<Meta>
         ),
       ],
       onChanged: onChanged,
-      style: Theme.of(context).textTheme.bodyMedium,
     );
   }
 

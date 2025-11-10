@@ -94,7 +94,7 @@ class _DeckViewerState extends State<DeckViewer> {
   }
   // --- ENDE HILFSFUNKTION ---
 
- @override
+  @override
   Widget build(BuildContext context) {
     // Wenn eine Karte ausgewählt wurde, zeige NUR CardDetailView (OHNE AppBar/Tabs)
     if (_selectedCardForDetail != null) {
@@ -117,6 +117,7 @@ class _DeckViewerState extends State<DeckViewer> {
       ],
     );
   }
+
   // Wählt die anzuzeigende Ansicht basierend auf _selectedDeckType
   Widget _buildCurrentView() {
     switch (_selectedDeckType) {
@@ -150,9 +151,6 @@ class _DeckViewerState extends State<DeckViewer> {
     const double toolbarHeight = kToolbarHeight;
 
     return Container(
-      color:
-          Theme.of(context).appBarTheme.backgroundColor ??
-          Theme.of(context).primaryColor,
       height: topPadding + toolbarHeight,
       padding: EdgeInsets.only(top: topPadding),
       child: Padding(
@@ -183,8 +181,7 @@ class _DeckViewerState extends State<DeckViewer> {
   }
 
   Widget _buildDeckTypeTabs() {
-    return Container(
-      color: Theme.of(context).cardColor,
+    return Card(
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: ViewDeckType.values.map((type) {
@@ -211,15 +208,7 @@ class _DeckViewerState extends State<DeckViewer> {
                 _selectedDeckType = type;
               });
             },
-            child: Text(
-              label,
-              style: TextStyle(
-                color: isSelected
-                    ? Theme.of(context).colorScheme.primary
-                    : Theme.of(context).textTheme.bodyLarge!.color,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
+            child: Text(label),
           );
         }).toList(),
       ),
@@ -277,10 +266,7 @@ class _DeckViewerState extends State<DeckViewer> {
         children: [
           Padding(
             padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
-            child: Text(
-              '$deckName (${currentDeck.length} Karten)',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+            child: Text('$deckName (${currentDeck.length} Karten)'),
           ),
           const Divider(),
 
@@ -292,13 +278,7 @@ class _DeckViewerState extends State<DeckViewer> {
               children: [
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Text(
-                    '$category (${cards.length})',
-                    style: Theme.of(context).textTheme.titleMedium!.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: _getCategoryColor(category),
-                    ),
-                  ),
+                  child: Text('$category (${cards.length})'),
                 ),
                 Column(
                   children: cards.map((card) {
@@ -327,19 +307,6 @@ class _DeckViewerState extends State<DeckViewer> {
         ],
       ),
     );
-  }
-
-  Color _getCategoryColor(String category) {
-    switch (category) {
-      case 'Monster':
-        return Colors.red;
-      case 'Zauber':
-        return Colors.green;
-      case 'Falle':
-        return Colors.purple;
-      default:
-        return Colors.grey;
-    }
   }
 
   // _buildCardDetail verwendet CardDetailView und setzt den State zurück
@@ -431,7 +398,7 @@ class _CommentSectionState extends State<CommentSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Kommentare', style: Theme.of(context).textTheme.titleLarge),
+          Text('Kommentare'),
           const SizedBox(height: 16),
 
           // Kommentar hinzufügen
@@ -491,8 +458,7 @@ class _CommentSectionState extends State<CommentSection> {
 
                   final canDelete = currentUserId == userId;
 
-                  return Container(
-                    color: Theme.of(context).cardColor,
+                  return Card(
                     margin: const EdgeInsets.symmetric(vertical: 4),
                     child: ListTile(
                       title: Text(username),
@@ -505,7 +471,6 @@ class _CommentSectionState extends State<CommentSection> {
                               DateFormat(
                                 'dd.MM.yyyy',
                               ).format(timestamp.toDate().toLocal()),
-                              style: Theme.of(context).textTheme.bodySmall,
                             ),
                         ],
                       ),

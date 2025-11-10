@@ -20,7 +20,6 @@ class FilterDropdown extends StatelessWidget {
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
       decoration: InputDecoration(
-        iconColor: Theme.of(context).textTheme.bodyMedium!.color,
         hintText: label,
         border: const OutlineInputBorder(),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -36,7 +35,6 @@ class FilterDropdown extends StatelessWidget {
         ),
       ],
       onChanged: onChanged,
-      style: Theme.of(context).textTheme.bodyMedium,
     );
   }
 }

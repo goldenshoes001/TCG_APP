@@ -216,7 +216,6 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: Theme.of(context).cardColor,
           title: const Text('Wie oft hinzufügen?'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -275,7 +274,6 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
         ),
       ],
       onChanged: onChanged,
-      style: Theme.of(context).textTheme.bodyMedium,
     );
   }
 
@@ -305,7 +303,6 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
               );
             }).toList(),
             onChanged: onOperatorChanged,
-            style: Theme.of(context).textTheme.bodyMedium,
           ),
         ),
         const SizedBox(width: 8),
@@ -331,7 +328,6 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
               ),
             ],
             onChanged: onChanged,
-            style: Theme.of(context).textTheme.bodyMedium,
           ),
         ),
       ],
@@ -443,7 +439,6 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       child: Container(
         width: MediaQuery.of(context).size.width * 0.9,
         height: MediaQuery.of(context).size.height * 0.8,
@@ -452,10 +447,7 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
           children: [
             Row(
               children: [
-                Text(
-                  'Karte suchen',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
+                Text('Karte suchen'),
                 const Spacer(),
                 IconButton(
                   icon: Icon(_showFilters ? Icons.search : Icons.filter_list),
@@ -493,7 +485,7 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
                   ? Center(
                       child: Text(
                         'Gib einen Kartennamen ein oder nutze die Filter',
-                        style: Theme.of(context).textTheme.bodyMedium,
+
                         textAlign: TextAlign.center,
                       ),
                     )

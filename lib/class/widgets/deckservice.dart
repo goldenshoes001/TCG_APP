@@ -666,7 +666,6 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
         final currentCount = card['count'] as int? ?? 0;
 
         return AlertDialog(
-          backgroundColor: Theme.of(context).cardColor,
           title: const Text('Karte entfernen'),
           content: Text('Wie viele Kopien von "${card['name']}" entfernen?'),
           actions: [
@@ -718,12 +717,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
     required List<Map<String, dynamic>> deck,
   }) {
     if (deck.isEmpty) {
-      return Center(
-        child: Text(
-          'Keine Karten im $title',
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-      );
+      return Center(child: Text('Keine Karten im $title'));
     }
 
     final Map<String, List<Map<String, dynamic>>> categorized = {
@@ -785,11 +779,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                         Container(
                           width: 30,
                           alignment: Alignment.center,
-                          child: Text(
-                            '${count}x',
-                            style: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                          ),
+                          child: Text('${count}x'),
                         ),
                         const SizedBox(width: 8),
                         _CardImageWidget(card: card, cardData: _cardData),
@@ -797,7 +787,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                         Expanded(
                           child: Text(
                             name,
-                            style: Theme.of(context).textTheme.bodyMedium,
+
                             overflow: TextOverflow.ellipsis,
                             maxLines: 2,
                           ),
@@ -833,8 +823,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
   }
 
   Widget _buildDeckTypeTabs() {
-    return Container(
-      color: Theme.of(context).cardColor,
+    return Card(
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: DeckType.values.map((type) {
@@ -865,15 +854,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                 _selectedDeckType = type;
               });
             },
-            child: Text(
-              label,
-              style: TextStyle(
-                color: isSelected
-                    ? Theme.of(context).colorScheme.primary
-                    : Theme.of(context).textTheme.bodyLarge!.color,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
+            child: Text(label),
           );
         }).toList(),
       ),
@@ -933,7 +914,6 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
               // ✅ + Button für Main/Extra Deck
               IconButton(
                 icon: const Icon(Icons.add_circle_outline),
-                color: Theme.of(context).colorScheme.primary,
                 onPressed: () => _showCardSearchDialog(isSideDeck: false),
                 tooltip: 'Karte hinzufügen',
               ),
@@ -1067,89 +1047,82 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
     return Column(
       children: [
         // ✅ NEUER HEADER mit Cover-Bild, Deck-Name UND Icon-Buttons
-        Container(
-          color: Theme.of(context).cardColor,
-          padding: const EdgeInsets.all(16.0),
-          child: Form(
-            key: _formKey,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // ✅ Cover-Bild (anklickbar zum Ändern)
-                GestureDetector(
-                  onTap: _showCoverImageSelector,
-                  child: Container(
-                    width: 60,
-                    height: 84,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: Theme.of(context).dividerColor,
-                        width: 2,
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Form(
+              key: _formKey,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // ✅ Cover-Bild (anklickbar zum Ändern)
+                  GestureDetector(
+                    onTap: _showCoverImageSelector,
+                    child: Container(
+                      width: 60,
+                      height: 84,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(width: 2),
                       ),
-                      color: Theme.of(context).scaffoldBackgroundColor,
-                    ),
-                    child: _coverImageUrl != null
-                        ? FutureBuilder<String>(
-                            future: _cardData.getCorrectImgPath([
-                              _coverImageUrl!,
-                            ]),
-                            builder: (context, snapshot) {
-                              if (snapshot.hasData &&
-                                  snapshot.data!.isNotEmpty) {
-                                return ClipRRect(
-                                  borderRadius: BorderRadius.circular(6),
-                                  child: Image.network(
-                                    snapshot.data!,
-                                    fit: BoxFit.cover,
+                      child: _coverImageUrl != null
+                          ? FutureBuilder<String>(
+                              future: _cardData.getCorrectImgPath([
+                                _coverImageUrl!,
+                              ]),
+                              builder: (context, snapshot) {
+                                if (snapshot.hasData &&
+                                    snapshot.data!.isNotEmpty) {
+                                  return ClipRRect(
+                                    borderRadius: BorderRadius.circular(6),
+                                    child: Image.network(
+                                      snapshot.data!,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  );
+                                }
+                                return const Center(
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
                                   ),
                                 );
-                              }
-                              return const Center(
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              );
-                            },
-                          )
-                        : Icon(
-                            Icons.image_outlined,
-                            size: 32,
-                            color: Theme.of(context).hintColor,
-                          ),
+                              },
+                            )
+                          : Icon(Icons.image_outlined, size: 32),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 16),
-                // ✅ Deck-Name Eingabefeld
-                Expanded(
-                  child: TextField(
-                    controller: _deckNameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Deck Name',
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
+                  const SizedBox(width: 16),
+                  // ✅ Deck-Name Eingabefeld
+                  Expanded(
+                    child: TextField(
+                      controller: _deckNameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Deck Name',
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                // ✅ ABBRECHEN Button (Icon)
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  color: Colors.red,
-                  tooltip: 'Abbrechen',
-                  onPressed: _handleCancel,
-                ),
-                // ✅ SPEICHERN Button (Icon)
-                IconButton(
-                  icon: const Icon(Icons.save),
-                  color: Colors.green,
-                  tooltip: 'Speichern',
-                  onPressed: _handleSave,
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  // ✅ ABBRECHEN Button (Icon)
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    color: Colors.red,
+                    tooltip: 'Abbrechen',
+                    onPressed: _handleCancel,
+                  ),
+                  // ✅ SPEICHERN Button (Icon)
+                  IconButton(
+                    icon: const Icon(Icons.save),
+                    color: Colors.green,
+                    tooltip: 'Speichern',
+                    onPressed: _handleSave,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -1237,7 +1210,7 @@ class _CommentSectionState extends State<CommentSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Kommentare', style: Theme.of(context).textTheme.titleLarge),
+          Text('Kommentare'),
           const SizedBox(height: 16),
           Row(
             children: [
@@ -1292,32 +1265,21 @@ class _CommentSectionState extends State<CommentSection> {
 
                   final canDelete = currentUserId == userId;
 
-                  return Container(
-                    color: Theme.of(context).cardColor,
+                  return Card(
                     margin: const EdgeInsets.symmetric(vertical: 4),
                     child: ListTile(
-                      title: Text(
-                        username,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      title: Text(username),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const SizedBox(height: 4),
-                          Text(
-                            commentText,
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
+                          Text(commentText),
                           const SizedBox(height: 4),
                           if (timestamp != null)
                             Text(
                               DateFormat(
                                 'dd.MM.yyyy HH:mm',
                               ).format(timestamp.toDate().toLocal()),
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(color: Colors.grey),
                             ),
                         ],
                       ),

@@ -67,13 +67,7 @@ class SearchResultsView extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '${cards.length} Karte(n) gefunden',
-              style: TextStyle(
-                color: Theme.of(context).textTheme.bodyMedium?.color,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            Text('${cards.length} Karte(n) gefunden'),
             const SizedBox(height: 10),
             Expanded(
               child: ListView.builder(
