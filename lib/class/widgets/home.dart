@@ -70,7 +70,7 @@ class _HomeState extends State<Home> {
                     _showOCGBannlist = false;
                   });
                 },
-                child: const Text("TCG Bannlist"),
+                child: const Text("TCG Banlist"),
               ),
               const SizedBox(width: 8),
               ElevatedButton(
@@ -80,7 +80,7 @@ class _HomeState extends State<Home> {
                     _showTCGBannlist = false;
                   });
                 },
-                child: const Text("OCG Bannlist"),
+                child: const Text("OCG Banlist"),
               ),
             ],
           ),
