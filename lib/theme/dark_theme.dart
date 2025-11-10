@@ -14,6 +14,16 @@ ThemeData darkTheme(BuildContext context) => generalTheme(context).copyWith(
   scaffoldBackgroundColor: bodyColor,
   canvasColor: cardColor,
 
+  dropdownMenuTheme: DropdownMenuThemeData(
+    disabledColor: Colors.white,
+    menuStyle: MenuStyle(),
+    textStyle: TextStyle(
+      color: Colors.orange,
+      fontFamily: "arial",
+      fontSize: 29,
+    ),
+  ),
+
   outlinedButtonTheme: OutlinedButtonThemeData(
     style: OutlinedButton.styleFrom(
       foregroundColor: labelcolor,
@@ -111,6 +121,10 @@ ThemeData darkTheme(BuildContext context) => generalTheme(context).copyWith(
     ),
   ), // <--- FEHLENDE KLAMMER UND KOMMA HINZUGEFÜGT
 
+
+
+
+
   textTheme: generalTheme(context).textTheme.copyWith(
     bodyLarge: generalTheme(
       context,
@@ -131,5 +145,13 @@ ThemeData darkTheme(BuildContext context) => generalTheme(context).copyWith(
     headlineSmall: generalTheme(
       context,
     ).textTheme.headlineSmall!.copyWith(color: colorHeadlineSmall),
+
+
+
+    titleMedium: TextStyle(
+      color: Colors.white,
+      fontFamily: fontFamily,
+      fontSize: 12, // Oder deine gewünschte Größe
+    ),
   ),
 );

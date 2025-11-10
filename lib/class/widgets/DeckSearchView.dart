@@ -163,7 +163,7 @@ class _DeckSearchViewState extends State<DeckSearchView> {
           TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              hintText: 'Deck-Name oder Archetyp suchen...',
+              hintText: "Search by Deckname",
               prefixIcon: const Icon(Icons.search),
               border: const OutlineInputBorder(),
               suffixIcon: _searchController.text.isNotEmpty
@@ -188,26 +188,15 @@ class _DeckSearchViewState extends State<DeckSearchView> {
               child: Center(child: CircularProgressIndicator()),
             )
           else if (_availableArchetypes.isNotEmpty)
-            DropdownButtonFormField<String>(
-              decoration: const InputDecoration(
-                labelText: 'Oder Archetyp auswählen',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.category),
-              ),
-              initialValue: _selectedArchetype,
-              items: [
-                const DropdownMenuItem<String>(
-                  value: null,
-                  child: Text('Alle Archetypen'),
-                ),
-                ..._availableArchetypes.map(
-                  (archetype) => DropdownMenuItem<String>(
-                    value: archetype,
-                    child: Text(archetype),
-                  ),
-                ),
-              ],
-              onChanged: (value) {
+            // NEUES DropdownMenu
+            DropdownMenu<String?>(
+              initialSelection: _selectedArchetype,
+              leadingIcon: const Icon(Icons.category),
+              label: const Text('or choose Archetype'),
+              width:
+                  MediaQuery.of(context).size.width -
+                  32, // Passt sich der Breite des Paddings an (16px links + 16px rechts)
+              onSelected: (String? value) {
                 setState(() {
                   _selectedArchetype = value;
                   if (value != null) {
@@ -215,6 +204,20 @@ class _DeckSearchViewState extends State<DeckSearchView> {
                   }
                 });
               },
+              dropdownMenuEntries: [
+                // Eintrag für "all Archetypes" (null value)
+                const DropdownMenuEntry<String?>(
+                  value: null,
+                  label: 'all Archetypes',
+                ),
+                // Alle verfügbaren Archetypen
+                ..._availableArchetypes.map(
+                  (archetype) => DropdownMenuEntry<String>(
+                    value: archetype,
+                    label: archetype,
+                  ),
+                ),
+              ],
             ),
 
           const SizedBox(height: 16),
