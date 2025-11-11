@@ -337,7 +337,7 @@ class DeckCreationScreen extends StatefulWidget {
 
 class DeckCreationScreenState extends State<DeckCreationScreen> {
   bool get isShowingCardDetail => _selectedCardForDetail != null;
-  final _formKey = GlobalKey<FormState>();
+
   final _deckNameController = TextEditingController();
   final _descriptionController = TextEditingController();
 
@@ -412,8 +412,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
   }
 
   Map<String, dynamic>? collectDeckDataAndValidate() {
-    if (_formKey.currentState!.validate() &&
-        _deckNameController.text.trim().isNotEmpty) {
+    if (_deckNameController.text.trim().isNotEmpty) {
       return {
         'deckName': _deckNameController.text.trim(),
         'description': _descriptionController.text.trim(),
@@ -1066,30 +1065,25 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
 
     return Column(
       children: [
+        // ✅ NEUER KOMPAKTER HEADER
         Card(
-          margin: const EdgeInsets.all(8.0),
+          margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
           child: Padding(
-            padding: const EdgeInsets.all(12.0),
+            padding: const EdgeInsets.all(8.0),
             child: Row(
               children: [
+                // Cover Image
                 GestureDetector(
                   onTap: _showCoverImageSelector,
                   child: Container(
-                    width: 50,
-                    height: 50,
+                    width: 40,
+                    height: 40,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(25),
+                      borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: Colors.grey.shade400,
                         width: 1.5,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 3,
-                          offset: const Offset(0, 1),
-                        ),
-                      ],
                     ),
                     child: ClipOval(
                       child: _coverImageUrl != null
@@ -1108,7 +1102,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                                         color: Colors.grey[200],
                                         child: const Icon(
                                           Icons.error_outline,
-                                          size: 20,
+                                          size: 16,
                                         ),
                                       );
                                     },
@@ -1117,8 +1111,12 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                                 return Container(
                                   color: Colors.grey[200],
                                   child: const Center(
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
+                                    child: SizedBox(
+                                      width: 12,
+                                      height: 12,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
                                     ),
                                   ),
                                 );
@@ -1128,98 +1126,97 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                               color: Colors.grey[100],
                               child: const Icon(
                                 Icons.add_photo_alternate_outlined,
-                                size: 20,
-                                color: Colors.grey,
+                                size: 16,
                               ),
                             ),
                     ),
                   ),
                 ),
 
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
 
+                // Deck Name Input
                 Expanded(
                   child: TextField(
                     controller: _deckNameController,
-                    decoration: InputDecoration(
-                      hintText: "Decknamen eingeben...",
+                    decoration: const InputDecoration(
+                      hintText: "Deckname...",
                       border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                      isDense: true,
-                    ),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 0,
+                      ),
                     ),
                   ),
                 ),
 
-                const SizedBox(width: 8),
+                // Cancel Button
+                IconButton(
+                  icon: const Icon(Icons.close, size: 20),
+                  color: Colors.red,
+                  tooltip: 'Abbrechen',
+                  onPressed: _handleCancel,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 32,
+                    minHeight: 32,
+                  ),
+                ),
 
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.close, size: 20),
-                      color: Colors.red,
-                      tooltip: 'Abbrechen',
-                      onPressed: _handleCancel,
-                      padding: const EdgeInsets.all(4),
-                      constraints: const BoxConstraints(
-                        minWidth: 36,
-                        minHeight: 36,
-                      ),
-                    ),
-
-                    IconButton(
-                      icon: const Icon(Icons.save, size: 20),
-                      color: Colors.green,
-                      tooltip: 'Speichern',
-                      onPressed: _handleSave,
-                      padding: const EdgeInsets.all(4),
-                      constraints: const BoxConstraints(
-                        minWidth: 36,
-                        minHeight: 36,
-                      ),
-                    ),
-                  ],
+                // Save Button
+                IconButton(
+                  icon: const Icon(Icons.save, size: 20),
+                  color: Colors.green,
+                  tooltip: 'Speichern',
+                  onPressed: _handleSave,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 32,
+                    minHeight: 32,
+                  ),
                 ),
               ],
             ),
           ),
         ),
 
+        // ✅ KOMPAKTE DECK STATS
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
           child: Row(
             children: [
               Text(
                 'Main: ${_getDeckCardCount(_mainDeck)}',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.grey[600],
+                  fontSize: 12,
+                ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Text(
                 'Extra: ${_getDeckCardCount(_extraDeck)}',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.grey[600],
+                  fontSize: 12,
+                ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Text(
                 'Side: ${_getDeckCardCount(_sideDeck)}',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.grey[600],
+                  fontSize: 12,
+                ),
               ),
             ],
           ),
         ),
 
-        const SizedBox(height: 8),
-
+        // Tabs (unverändert)
         _buildDeckTypeTabs(),
 
+        // MEHR PLATZ FÜR DIE KARTENLISTE!
         Expanded(child: _buildDynamicDeckView()),
       ],
     );

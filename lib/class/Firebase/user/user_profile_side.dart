@@ -188,29 +188,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     return Column(
       children: [
         // Container mit fester Höhe für den Back-Button
-        Container(
-          height: 56, // Standard AppBar Höhe
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                child: IconButton(
-                  icon: const Icon(Icons.arrow_back, size: 20),
-                  onPressed: () {
-                    setState(() {
-                      _showDeckCreation = false;
-                      _editingDeckId = null;
-                    });
-                  },
-                  padding: EdgeInsets.zero,
-                ),
-              ),
-              const SizedBox(width: 8),
-            ],
-          ),
-        ),
 
         // DeckCreationScreen nimmt den restlichen Platz ein
         Expanded(
