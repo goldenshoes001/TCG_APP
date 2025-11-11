@@ -9,7 +9,7 @@ import 'package:tcg_app/class/common/buildCards.dart';
 import 'card_search_dialog.dart';
 
 // ============================================================================
-// DeckService bleibt unverändert
+// DeckService
 // ============================================================================
 
 class DeckService {
@@ -310,7 +310,7 @@ class DeckService {
 }
 
 // ============================================================================
-// 2. DeckCreationScreen: NEUES OPTIMIERTES LAYOUT
+// DeckCreationScreen: OPTIMIERTES LAYOUT
 // ============================================================================
 
 enum DeckType { main, extra, side, comments }
@@ -436,7 +436,6 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
     }
   }
 
-  // ✅ NEUE METHODE: Zeigt Card Search Dialog mit Side Deck Option
   void _showCardSearchDialog({bool isSideDeck = false}) {
     showDialog(
       context: context,
@@ -448,7 +447,6 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
           },
           onShowSnackBar: (String message) {
             ScaffoldMessenger.of(context).showSnackBar(
-              // ← Parent Context!
               SnackBar(
                 content: Text(message),
                 duration: const Duration(seconds: 2),
@@ -460,7 +458,6 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
     );
   }
 
-  // ✅ NEUE METHODE: Cover-Bild Selektor öffnen
   void _showCoverImageSelector() {
     final allCards = [..._mainDeck, ..._extraDeck];
 
@@ -475,9 +472,9 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('choose Deck Cover'),
+          title: const Text('Deck Cover auswählen'),
           content: SizedBox(
-            width: 200,
+            width: double.maxFinite,
             height: 400,
             child: GridView.builder(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -489,34 +486,12 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
               itemCount: allCards.length,
               itemBuilder: (context, index) {
                 final card = allCards[index];
-                final cardImages = card['card_images'] as List<dynamic>?;
-
-                List<String> availableUrls = [];
-
-                if (cardImages != null && cardImages.isNotEmpty) {
-                  for (var imageEntry in cardImages) {
-                    if (imageEntry is Map<String, dynamic>) {
-                      final imageUrl = imageEntry['image_url'] as String?;
-                      final smallUrl = imageEntry['image_url_small'] as String?;
-                      final croppedUrl =
-                          imageEntry['image_url_cropped'] as String?;
-
-                      if (imageUrl != null && imageUrl.isNotEmpty) {
-                        availableUrls.add(imageUrl);
-                      }
-                      if (smallUrl != null && smallUrl.isNotEmpty) {
-                        availableUrls.add(smallUrl);
-                      }
-                      if (croppedUrl != null && croppedUrl.isNotEmpty) {
-                        availableUrls.add(croppedUrl);
-                      }
-                    }
-                  }
-                }
 
                 return InkWell(
                   onTap: () async {
-                    if (availableUrls.isEmpty) {
+                    final cardImages = card['card_images'] as List<dynamic>?;
+
+                    if (cardImages == null || cardImages.isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
@@ -528,15 +503,40 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                     }
 
                     String? workingUrl;
-                    for (String url in availableUrls) {
-                      try {
-                        final downloadUrl = await _cardData.getImgPath(url);
-                        if (downloadUrl.isNotEmpty) {
-                          workingUrl = url;
-                          break;
+                    for (var imageEntry in cardImages) {
+                      if (imageEntry is Map<String, dynamic>) {
+                        // PRIORITÄT: Cropped Image (nur Motiv)
+                        final croppedUrl =
+                            imageEntry['image_url_cropped'] as String?;
+                        if (croppedUrl != null && croppedUrl.isNotEmpty) {
+                          try {
+                            final downloadUrl = await _cardData.getImgPath(
+                              croppedUrl,
+                            );
+                            if (downloadUrl.isNotEmpty) {
+                              workingUrl = croppedUrl;
+                              break;
+                            }
+                          } catch (e) {
+                            continue;
+                          }
                         }
-                      } catch (e) {
-                        continue;
+
+                        // FALLBACK: Normales Bild
+                        final imageUrl = imageEntry['image_url'] as String?;
+                        if (imageUrl != null && imageUrl.isNotEmpty) {
+                          try {
+                            final downloadUrl = await _cardData.getImgPath(
+                              imageUrl,
+                            );
+                            if (downloadUrl.isNotEmpty) {
+                              workingUrl = imageUrl;
+                              break;
+                            }
+                          } catch (e) {
+                            continue;
+                          }
+                        }
                       }
                     }
 
@@ -562,20 +562,34 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                       );
                     }
                   },
-                  child: Container(
-                    width: 1500,
-                    height: 1500,
-                    color: Colors.red,
-                    child: Column(
-                      children: [
-                        Expanded(
+                  child: Column(
+                    children: [
+                      // RUNDES COVER-BILD in der Auswahl
+                      Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(30),
+                          border: Border.all(color: Colors.grey, width: 2),
+                        ),
+                        child: ClipOval(
                           child: _CardImageWidget(
                             card: card,
                             cardData: _cardData,
+                            fit: BoxFit.cover,
+                            useCroppedImage: true,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        card['name'] ?? 'Unbekannt',
+                        style: const TextStyle(fontSize: 10),
+                        maxLines: 2,
+                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
                 );
               },
@@ -802,7 +816,6 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                         Expanded(
                           child: Text(
                             name,
-
                             overflow: TextOverflow.ellipsis,
                             maxLines: 2,
                           ),
@@ -914,7 +927,6 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ✅ NEUE HEADER-ZEILE mit Kartenzahl und + Buttons
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: Row(
@@ -926,13 +938,11 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                 ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const Spacer(),
-              // ✅ + Button für Main/Extra Deck
               IconButton(
                 icon: const Icon(Icons.add_circle_outline),
                 onPressed: () => _showCardSearchDialog(isSideDeck: false),
                 tooltip: 'Karte hinzufügen',
               ),
-              // ✅ Side Deck Button (nur bei Main/Extra sichtbar)
               if (currentType != DeckType.side &&
                   currentType != DeckType.comments)
                 IconButton(
@@ -953,7 +963,6 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
     );
   }
 
-  // ✅ NEUE METHODE: Speichern direkt aus DeckCreationScreen
   Future<void> _handleSave() async {
     final deckData = collectDeckDataAndValidate();
 
@@ -963,7 +972,6 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
 
     try {
       if (_currentDeckId == null) {
-        // Neues Deck erstellen
         final newDeckId = await _deckService.createDeck(
           deckName: deckData['deckName'],
           description: deckData['description'],
@@ -977,7 +985,6 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
           _currentDeckId = newDeckId;
         });
       } else {
-        // Bestehendes Deck aktualisieren
         await _deckService.updateDeck(
           deckId: _currentDeckId!,
           deckName: deckData['deckName'],
@@ -1006,9 +1013,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
     }
   }
 
-  // ✅ NEUE METHODE: Abbrechen/Zurück
   void _handleCancel() {
-    // Frage ob wirklich abbrechen wenn Änderungen vorhanden
     if (_mainDeck.isNotEmpty || _extraDeck.isNotEmpty || _sideDeck.isNotEmpty) {
       showDialog(
         context: context,
@@ -1038,13 +1043,11 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
       );
     } else {
       widget.onCancel?.call();
-      // Direkt zurück wenn leer
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Wenn Detail-Ansicht, zeige NUR die Karte
     if (_selectedCardForDetail != null) {
       return CardDetailView(
         cardData: _selectedCardForDetail!,
@@ -1063,26 +1066,32 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
 
     return Column(
       children: [
-        // ✅ NEUER HEADER mit Cover-Bild, Deck-Name UND Icon-Buttons
         Card(
-          color: Colors.transparent,
+          margin: const EdgeInsets.all(8.0),
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Form(
-              key: _formKey,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // ✅ Cover-Bild (anklickbar zum Ändern)
-                  GestureDetector(
-                    onTap: _showCoverImageSelector,
-                    child: Container(
-                      width: 60,
-                      height: 84,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(width: 2),
+            padding: const EdgeInsets.all(12.0),
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: _showCoverImageSelector,
+                  child: Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(25),
+                      border: Border.all(
+                        color: Colors.grey.shade400,
+                        width: 1.5,
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 3,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    child: ClipOval(
                       child: _coverImageUrl != null
                           ? FutureBuilder<String>(
                               future: _cardData.getCorrectImgPath([
@@ -1091,53 +1100,123 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                               builder: (context, snapshot) {
                                 if (snapshot.hasData &&
                                     snapshot.data!.isNotEmpty) {
-                                  return Image.network(snapshot.data!);
+                                  return Image.network(
+                                    snapshot.data!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        color: Colors.grey[200],
+                                        child: const Icon(
+                                          Icons.error_outline,
+                                          size: 20,
+                                        ),
+                                      );
+                                    },
+                                  );
                                 }
-                                return const Center(
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
+                                return Container(
+                                  color: Colors.grey[200],
+                                  child: const Center(
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
                                   ),
                                 );
                               },
                             )
-                          : Icon(Icons.image_outlined, size: 32),
+                          : Container(
+                              color: Colors.grey[100],
+                              child: const Icon(
+                                Icons.add_photo_alternate_outlined,
+                                size: 20,
+                                color: Colors.grey,
+                              ),
+                            ),
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  // ✅ Deck-Name Eingabefeld
-                  Expanded(
-                    child: TextField(
-                      controller: _deckNameController,
-                      decoration: const InputDecoration(
-                        hintText: "Deckname",
-                        border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
+                ),
+
+                const SizedBox(width: 12),
+
+                Expanded(
+                  child: TextField(
+                    controller: _deckNameController,
+                    decoration: InputDecoration(
+                      hintText: "Decknamen eingeben...",
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                      isDense: true,
+                    ),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 8),
+
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20),
+                      color: Colors.red,
+                      tooltip: 'Abbrechen',
+                      onPressed: _handleCancel,
+                      padding: const EdgeInsets.all(4),
+                      constraints: const BoxConstraints(
+                        minWidth: 36,
+                        minHeight: 36,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  // ✅ ABBRECHEN Button (Icon)
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    color: Colors.red,
-                    tooltip: 'Abbrechen',
-                    onPressed: _handleCancel,
-                  ),
-                  // ✅ SPEICHERN Button (Icon)
-                  IconButton(
-                    icon: const Icon(Icons.save),
-                    color: Colors.green,
-                    tooltip: 'Speichern',
-                    onPressed: _handleSave,
-                  ),
-                ],
-              ),
+
+                    IconButton(
+                      icon: const Icon(Icons.save, size: 20),
+                      color: Colors.green,
+                      tooltip: 'Speichern',
+                      onPressed: _handleSave,
+                      padding: const EdgeInsets.all(4),
+                      constraints: const BoxConstraints(
+                        minWidth: 36,
+                        minHeight: 36,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ),
+
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Row(
+            children: [
+              Text(
+                'Main: ${_getDeckCardCount(_mainDeck)}',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Extra: ${_getDeckCardCount(_extraDeck)}',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Side: ${_getDeckCardCount(_sideDeck)}',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 8),
 
         _buildDeckTypeTabs(),
 
@@ -1145,10 +1224,14 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
       ],
     );
   }
+
+  int _getDeckCardCount(List<Map<String, dynamic>> deck) {
+    return deck.fold(0, (sum, card) => sum + (card['count'] as int? ?? 0));
+  }
 }
 
 // ============================================================================
-// CommentSection (unverändert)
+// CommentSection
 // ============================================================================
 
 class CommentSection extends StatefulWidget {
@@ -1314,18 +1397,20 @@ class _CommentSectionState extends State<CommentSection> {
 }
 
 // ============================================================================
-// Card Image Widget (unverändert)
+// Card Image Widget
 // ============================================================================
 
 class _CardImageWidget extends StatefulWidget {
   final Map<String, dynamic> card;
   final CardData cardData;
   final BoxFit fit;
+  final bool useCroppedImage;
 
   const _CardImageWidget({
     required this.card,
     required this.cardData,
     this.fit = BoxFit.cover,
+    this.useCroppedImage = false,
   });
 
   @override
@@ -1371,19 +1456,28 @@ class _CardImageWidgetState extends State<_CardImageWidget> {
 
     for (var imageEntry in cardImages) {
       if (imageEntry is Map<String, dynamic>) {
+        if (widget.useCroppedImage) {
+          final croppedUrl = imageEntry['image_url_cropped'] as String?;
+          if (croppedUrl != null && croppedUrl.isNotEmpty) {
+            allImageUrls.add(croppedUrl);
+          }
+        }
+
         final normalUrl = imageEntry['image_url'] as String?;
         if (normalUrl != null && normalUrl.isNotEmpty) {
           allImageUrls.add(normalUrl);
         }
 
-        final croppedUrl = imageEntry['image_url_cropped'] as String?;
-        if (croppedUrl != null && croppedUrl.isNotEmpty) {
-          allImageUrls.add(croppedUrl);
-        }
-
         final smallUrl = imageEntry['image_url_small'] as String?;
         if (smallUrl != null && smallUrl.isNotEmpty) {
           allImageUrls.add(smallUrl);
+        }
+
+        if (widget.useCroppedImage) {
+          final normalUrl = imageEntry['image_url'] as String?;
+          if (normalUrl != null && normalUrl.isNotEmpty) {
+            allImageUrls.add(normalUrl);
+          }
         }
       }
     }

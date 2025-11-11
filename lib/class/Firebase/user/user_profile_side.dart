@@ -182,89 +182,44 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   // ✅ ANGEPASST: Prüft jetzt auch ob in Kartendetail-Ansicht
+  // In der _buildDeckCreationView() Methode:
+  // ✅ ALTERNATIVE: Mit minimalem Back-Button
   Widget _buildDeckCreationView() {
-    final isShowingDetail =
-        _deckCreationKey.currentState?.isShowingCardDetail ?? false;
-
-    // ✅ WENN in Detail-Ansicht: Zeige NUR DeckCreationScreen (der zeigt dann die Karte)
-    if (isShowingDetail) {
-      return Expanded(
-        child: DeckCreationScreen(
-          key: _deckCreationKey,
-          initialDeckId: _editingDeckId,
-          onDataCollected: (data) {},
-          onDetailViewChanged: (isShowing) {
-            setState(() {
-              // State wird automatisch aktualisiert
-            });
-          },
-          onCancel: () {
-            setState(() {
-              _showDeckCreation = false;
-              _editingDeckId = null;
-              userData = userdb.readUser(uid!);
-            });
-          },
-          onSaved: () {
-            setState(() {
-              _showDeckCreation = false;
-              _editingDeckId = null;
-              userData = userdb.readUser(uid!);
-            });
-          },
-        ),
-      );
-    }
-
-    // ✅ SONST: Zeige normale Ansicht mit Buttons
     return Column(
       children: [
-        // Zurück-Button und Info
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back),
+        // Container mit fester Höhe für den Back-Button
+        Container(
+          height: 56, // Standard AppBar Höhe
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back, size: 20),
                   onPressed: () {
                     setState(() {
                       _showDeckCreation = false;
                       _editingDeckId = null;
                     });
                   },
+                  padding: EdgeInsets.zero,
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _editingDeckId != null
-                            ? 'Deck bearbeiten'
-                            : 'Neues Deck erstellen',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 4),
-                      const Text('Klicke auf eine Karte für Details'),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 8),
+            ],
           ),
         ),
 
-        // DeckCreationScreen
+        // DeckCreationScreen nimmt den restlichen Platz ein
         Expanded(
           child: DeckCreationScreen(
             key: _deckCreationKey,
             initialDeckId: _editingDeckId,
             onDataCollected: (data) {},
             onDetailViewChanged: (isShowing) {
-              setState(() {
-                // State wird automatisch aktualisiert
-              });
+              setState(() {});
             },
             onCancel: () {
               setState(() {

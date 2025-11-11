@@ -84,73 +84,65 @@ class _DeckSearchViewState extends State<DeckSearchView> {
   Widget _buildDeckCoverImage(Map<String, dynamic> deck) {
     final coverImageUrl = deck['coverImageUrl'] as String?;
 
-    if (coverImageUrl == null || coverImageUrl.isEmpty) {
-      return Container(
-        width: 50,
-        height: 70,
-        decoration: BoxDecoration(
-          color: Colors.grey[300],
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Icon(Icons.style, size: 30, color: Colors.grey[600]),
-      );
-    }
+    return Container(
+      width: 50,
+      height: 50,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(25),
+        border: Border.all(color: Colors.grey.shade300, width: 1),
+      ),
+      child: ClipOval(
+        child: coverImageUrl == null || coverImageUrl.isEmpty
+            ? Container(
+                color: Colors.grey[200],
+                child: const Icon(Icons.style, size: 20, color: Colors.grey),
+              )
+            : FutureBuilder<String>(
+                future: _cardData.getImgPath(coverImageUrl),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Container(
+                      color: Colors.grey[200],
+                      child: const Center(
+                        child: SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                    );
+                  }
 
-    return FutureBuilder<String>(
-      future: _cardData.getImgPath(coverImageUrl),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Container(
-            width: 50,
-            height: 70,
-            decoration: BoxDecoration(
-              color: Colors.grey[300],
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: const Center(
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                  if (snapshot.hasError ||
+                      !snapshot.hasData ||
+                      snapshot.data!.isEmpty) {
+                    return Container(
+                      color: Colors.grey[200],
+                      child: const Icon(
+                        Icons.broken_image,
+                        size: 20,
+                        color: Colors.grey,
+                      ),
+                    );
+                  }
+
+                  return Image.network(
+                    snapshot.data!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: Colors.grey[200],
+                        child: const Icon(
+                          Icons.broken_image,
+                          size: 20,
+                          color: Colors.grey,
+                        ),
+                      );
+                    },
+                  );
+                },
               ),
-            ),
-          );
-        }
-
-        if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
-          return Container(
-            width: 50,
-            height: 70,
-            decoration: BoxDecoration(
-              color: Colors.grey[300],
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Icon(Icons.broken_image, size: 30, color: Colors.grey[600]),
-          );
-        }
-
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: Image.network(
-            snapshot.data!,
-            width: 50,
-            height: 70,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                width: 50,
-                height: 70,
-                color: Colors.grey[300],
-                child: Icon(
-                  Icons.broken_image,
-                  size: 30,
-                  color: Colors.grey[600],
-                ),
-              );
-            },
-          ),
-        );
-      },
+      ),
     );
   }
 
