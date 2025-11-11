@@ -32,7 +32,7 @@ class SearchResultsView extends StatelessWidget {
               children: const [
                 CircularProgressIndicator(),
                 SizedBox(height: 16),
-                Text('Laden...', style: TextStyle(color: Colors.white)),
+                Text('loading...', style: TextStyle(color: Colors.white)),
               ],
             ),
           );
@@ -41,7 +41,7 @@ class SearchResultsView extends StatelessWidget {
         if (snapshot.hasError) {
           return Center(
             child: Text(
-              'Fehler beim Laden: ${snapshot.error}',
+              'Error on loading: ${snapshot.error}',
               style: const TextStyle(color: Colors.white),
             ),
           );
@@ -52,7 +52,7 @@ class SearchResultsView extends StatelessWidget {
         if (cards == null || cards.isEmpty) {
           return const Center(
             child: Text(
-              'Keine Karten gefunden.',
+              'No Cards found.',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.white),
             ),
@@ -62,7 +62,7 @@ class SearchResultsView extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('${cards.length} Karte(n) gefunden'),
+            Text('${cards.length} Card(s) found'),
             const SizedBox(height: 10),
             Expanded(
               child: ListView.builder(

@@ -47,7 +47,7 @@ class _sortedCardListState extends State<sortedCardList> {
             } else if (snapshot.hasError) {
               return Center(
                 child: Text(
-                  "Fehler: ${snapshot.error}",
+                  "Error: ${snapshot.error}",
                   style: const TextStyle(color: Colors.transparent),
                 ),
               );
@@ -91,7 +91,7 @@ class _sortedCardListState extends State<sortedCardList> {
                 ],
               );
             } else {
-              return const Center(child: Text("Keine Karten gefunden"));
+              return const Center(child: Text("No Cards found"));
             }
           },
     );

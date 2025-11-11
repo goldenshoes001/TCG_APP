@@ -44,7 +44,7 @@ class _ProfileState extends State<Profile> {
           ScaffoldMessenger.of(context).clearSnackBars();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text("Anmeldung erfolgreich!"),
+              content: Text("Login  succesful!"),
               backgroundColor: Colors.green,
               duration: Duration(seconds: 2),
             ),
@@ -128,7 +128,6 @@ class _ProfileState extends State<Profile> {
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      const Text("Passwort vergessen?"),
                       const Spacer(),
                       GestureDetector(
                         onTap: () {
@@ -143,7 +142,7 @@ class _ProfileState extends State<Profile> {
                             ),
                           );
                         },
-                        child: const Text("Registrieren"),
+                        child: const Text("Registration"),
                       ),
                     ],
                   ),
@@ -152,7 +151,7 @@ class _ProfileState extends State<Profile> {
                     width: MediaQuery.of(context).size.width * 0.65,
                     child: OutlinedButton(
                       onPressed: handleLogin,
-                      child: const Text("Anmelden"),
+                      child: const Text("Login"),
                     ),
                   ),
                 ],
