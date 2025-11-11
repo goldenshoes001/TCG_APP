@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:tcg_app/class/Firebase/user/user.dart';
+
 import 'package:uuid/uuid.dart';
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 import 'package:tcg_app/class/common/buildCards.dart';
@@ -56,7 +56,7 @@ class DeckService {
     if (user == null) {
       throw Exception('Benutzer nicht angemeldet');
     }
-
+    String? username = await _getUsernameFromFirestore(user.uid);
     final archetypes = _extractArchetypes(mainDeck, extraDeck);
     final archetypeString = archetypes.join(', ');
 
@@ -72,6 +72,7 @@ class DeckService {
     );
 
     await _firestore.collection('decks').doc(deckId).update({
+      "username": username,
       'deckName': deckName,
       'archetype': archetypeString,
       'description': description,
@@ -129,7 +130,7 @@ class DeckService {
     if (user == null) {
       throw Exception('Benutzer nicht angemeldet');
     }
-
+    String? username = await _getUsernameFromFirestore(user.uid);
     final isDuplicate = await isDeckNameDuplicate(
       deckName: deckName,
       deckNameLower: deckNameLower,
@@ -159,7 +160,7 @@ class DeckService {
     await _firestore.collection('decks').doc(deckId).set({
       'deckId': deckId,
       'userId': user.uid,
-      'username': user.displayName ?? user.email,
+      'username': username,
       'littleName': deckNameLower,
       'deckName': deckName,
       'archetype': archetypeString,
@@ -292,6 +293,19 @@ class DeckService {
         .collection('comments')
         .doc(commentId)
         .delete();
+  }
+
+  Future<String?> _getUsernameFromFirestore(String userId) async {
+    try {
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      if (userDoc.exists) {
+        return userDoc.data()?['username'] as String?;
+      }
+      return null;
+    } catch (e) {
+      print('Fehler beim Laden des Usernamens: $e');
+      return null;
+    }
   }
 }
 
@@ -1030,7 +1044,8 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
         },
       );
     } else {
-      Navigator.of(context).pop(); // Direkt zurück wenn leer
+      widget.onCancel?.call();
+      // Direkt zurück wenn leer
     }
   }
 

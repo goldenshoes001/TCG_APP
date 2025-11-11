@@ -343,28 +343,6 @@ class _DeckSearchViewState extends State<DeckSearchView> {
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (archetype.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Wrap(
-                          spacing: 4,
-                          runSpacing: 4,
-                          children: archetype.split(',').map((arch) {
-                            return Chip(
-                              label: Text(
-                                arch.trim(),
-                                style: const TextStyle(fontSize: 11),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 0,
-                              ),
-                              materialTapTargetSize:
-                                  MaterialTapTargetSize.shrinkWrap,
-                            );
-                          }).toList(),
-                        ),
-                      ),
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
                       child: Text('Von: $username'),

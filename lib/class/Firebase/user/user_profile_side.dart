@@ -47,7 +47,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
     if (currentUser != null) {
       uid = currentUser.uid;
-      email = currentUser.displayName ?? currentUser.email;
+      email = currentUser.email;
       userData = userdb.readUser(uid!);
 
       _loadUsernameFromFirestore(uid!);
@@ -162,8 +162,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           // Daten neu laden, damit das neue Deck sichtbar ist
           userData = userdb.readUser(uid!);
         });
-
-        
       }
     } catch (e) {
       if (mounted) {
@@ -428,7 +426,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Willkommen, ${userMap['username'] ?? email}'),
+            Text('Willkommen, ${_usernameFromDB ?? email ?? "unbekannt"}'),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {

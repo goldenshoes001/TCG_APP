@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+Color dropdownBorderColor = Colors.grey.shade600;
+Color dropdownFocusedBorderColor = Colors.lightBlue;
+Color dropdownErrorBorderColor = Colors.red;
 Color barColor = Color(0xFF121926);
 Color bodyColor = Color(0xFF0d1421);
 

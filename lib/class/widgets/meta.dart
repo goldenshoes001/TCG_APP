@@ -608,10 +608,6 @@ class _MetaState extends State<Meta>
               return DropdownMenuEntry<String>(value: op, label: op);
             }).toList(),
             onSelected: onOperatorChanged,
-            inputDecorationTheme: const InputDecorationTheme(
-              border: OutlineInputBorder(),
-              contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-            ),
           ),
         ),
         const SizedBox(width: 8),
@@ -625,10 +621,6 @@ class _MetaState extends State<Meta>
               return DropdownMenuEntry<String>(value: item, label: item);
             }).toList(),
             onSelected: onChanged,
-            inputDecorationTheme: const InputDecorationTheme(
-              border: OutlineInputBorder(),
-              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            ),
           ),
         ),
       ],
@@ -652,10 +644,6 @@ class _MetaState extends State<Meta>
               return DropdownMenuEntry<String>(value: op, label: op);
             }).toList(),
             onSelected: onOperatorChanged,
-            inputDecorationTheme: const InputDecorationTheme(
-              border: OutlineInputBorder(),
-              contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-            ),
           ),
         ),
         const SizedBox(width: 8),
@@ -692,10 +680,6 @@ class _MetaState extends State<Meta>
         return DropdownMenuEntry<String>(value: item, label: item);
       }).toList(),
       onSelected: onChanged,
-      inputDecorationTheme: const InputDecorationTheme(
-        border: OutlineInputBorder(),
-        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      ),
     );
   }
 

@@ -15,18 +15,36 @@ ThemeData darkTheme(BuildContext context) => generalTheme(context).copyWith(
   canvasColor: cardColor,
 
   dropdownMenuTheme: DropdownMenuThemeData(
-    
     inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: cardColor,
+
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.all(Radius.circular(20)),
-        borderSide: BorderSide(color: Colors.red),
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: dropdownBorderColor, width: 1.5),
       ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: dropdownBorderColor, width: 1.5),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: dropdownFocusedBorderColor, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: dropdownErrorBorderColor, width: 1.5),
+      ),
+
+      labelStyle: TextStyle(color: inputField),
+      hintStyle: TextStyle(color: inputField),
+      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     ),
 
     textStyle: TextStyle(
-      fontFamily: "arial",
-      fontSize: 14,
       color: Colors.lightBlue,
+      fontFamily: fontFamily,
+      fontSize: 14,
     ),
   ),
 

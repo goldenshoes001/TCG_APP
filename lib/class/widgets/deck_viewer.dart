@@ -49,7 +49,20 @@ class _DeckViewerState extends State<DeckViewer> {
   Map<String, List<Map<String, dynamic>>> _sortAndCategorizeCards(
     List<Map<String, dynamic>> cards,
   ) {
-    // 1. Kategorisierung
+    // ✅ FÜR EXTRA DECK: NUR MONSTER ANZEIGEN (OHNE UNTERKATEGORIEN)
+    if (_selectedDeckType == ViewDeckType.extra) {
+      // Einfach alle Karten als "Monster" zurückgeben
+      final List<Map<String, dynamic>> sortedCards = List.from(cards)
+        ..sort(
+          (a, b) => (a['name'] as String? ?? '').compareTo(
+            b['name'] as String? ?? '',
+          ),
+        );
+
+      return {'Monster': sortedCards};
+    }
+
+    // ✅ FÜR MAIN DECK: NORMALE KATEGORISIERUNG BEIBEHALTEN
     final Map<String, List<Map<String, dynamic>>> categorized = {
       'Monster': [],
       'Zauber': [],
@@ -78,7 +91,7 @@ class _DeckViewerState extends State<DeckViewer> {
       }
     }
 
-    // 2. Alphabetisch sortieren innerhalb jeder Kategorie
+    // Alphabetisch sortieren innerhalb jeder Kategorie
     categorized.forEach((key, list) {
       list.sort(
         (a, b) =>
@@ -237,48 +250,48 @@ class _DeckViewerState extends State<DeckViewer> {
         deckName = 'Unbekannt';
     }
 
+    // ✅ GESAMTANZAHL DER KARTEN BERECHNEN (MIT COUNT)
+    final totalCardCount = currentDeck.fold<int>(0, (sum, card) {
+      return sum +
+          (card['count'] as int? ?? 1); // count oder 1 falls nicht vorhanden
+    });
+
+    // ✅ ANZAHL UNTERSCHIEDLICHER KARTEN
+    final uniqueCardCount = currentDeck.length;
+
     if (currentDeck.isEmpty) {
       return Center(child: Text('$deckName ist leer.'));
     }
 
     final categorizedCards = _sortAndCategorizeCards(currentDeck);
 
-    final List<String> primaryKeys = ['Monster', 'Zauber', 'Falle'];
-    final List<String> sortedKeys = [];
-
-    for (var key in primaryKeys) {
-      if (categorizedCards.containsKey(key) &&
-          categorizedCards[key]!.isNotEmpty) {
-        sortedKeys.add(key);
-      }
-    }
-
-    for (var key in categorizedCards.keys) {
-      if (!sortedKeys.contains(key)) {
-        sortedKeys.add(key);
-      }
-    }
-
     return SingleChildScrollView(
       padding: const EdgeInsets.all(8.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ✅ GESAMTANZAHL ANZEIGEN
           Padding(
             padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
-            child: Text('$deckName (${currentDeck.length} Karten)'),
+            child: Text('$deckName ($totalCardCount Karten)'),
           ),
           const Divider(),
 
-          ...sortedKeys.map((category) {
-            final cards = categorizedCards[category]!;
+          ...categorizedCards.entries.map((entry) {
+            final category = entry.key;
+            final cards = entry.value;
+
+            // ✅ ANZAHL IN DER KATEGORIE BERECHNEN (MIT COUNT)
+            final categoryCardCount = cards.fold<int>(0, (sum, card) {
+              return sum + (card['count'] as int? ?? 1);
+            });
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Text('$category (${cards.length})'),
+                  child: Text('$category ($categoryCardCount)'),
                 ),
                 Column(
                   children: cards.map((card) {
@@ -293,8 +306,7 @@ class _DeckViewerState extends State<DeckViewer> {
                       trailing: Text('x$count'),
                       onTap: () {
                         setState(() {
-                          _selectedCardForDetail =
-                              card; // Setzt die Detailansicht
+                          _selectedCardForDetail = card;
                         });
                       },
                     );
