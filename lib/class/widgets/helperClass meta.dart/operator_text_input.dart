@@ -1,4 +1,4 @@
-// operator_text_input.dart
+// operator_text_input.dart - Updated to DropdownMenu
 
 import 'package:flutter/material.dart';
 
@@ -24,28 +24,25 @@ class OperatorTextInput extends StatelessWidget {
       children: [
         Expanded(
           flex: 1,
-          child: DropdownButtonFormField<String>(
-            isExpanded: true,
-            decoration: const InputDecoration(
+          child: DropdownMenu<String>(
+            initialSelection: operator,
+            expandedInsets: EdgeInsets.zero,
+            dropdownMenuEntries: operators.map((op) {
+              return DropdownMenuEntry<String>(value: op, label: op);
+            }).toList(),
+            onSelected: onOperatorChanged,
+            inputDecorationTheme: const InputDecorationTheme(
               border: OutlineInputBorder(),
               contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             ),
-            initialValue: operator,
-            items: operators.map((op) {
-              return DropdownMenuItem<String>(
-                value: op,
-                child: Text(op, textAlign: TextAlign.center),
-              );
-            }).toList(),
-            onChanged: onOperatorChanged,
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
+          flex: 2,
           child: TextField(
             controller: controller,
             keyboardType: TextInputType.number,
-
             decoration: InputDecoration(
               hintText: label,
               border: const OutlineInputBorder(),

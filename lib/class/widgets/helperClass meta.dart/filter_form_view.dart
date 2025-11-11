@@ -151,6 +151,7 @@ class FilterFormView extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        SizedBox(height: spacing),
         FilterDropdown(
           label: 'Type',
           value: selectedType,

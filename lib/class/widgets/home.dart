@@ -70,7 +70,7 @@ class _HomeState extends State<Home> {
                     _showOCGBannlist = false;
                   });
                 },
-                child: const Text("TCG Bannlist"),
+                child: const Text("TCG Banlist"),
               ),
               const SizedBox(width: 8),
               ElevatedButton(
@@ -80,7 +80,7 @@ class _HomeState extends State<Home> {
                     _showTCGBannlist = false;
                   });
                 },
-                child: const Text("OCG Bannlist"),
+                child: const Text("OCG Banlist"),
               ),
             ],
           ),
@@ -121,7 +121,6 @@ class _HomeState extends State<Home> {
               if (banned.isNotEmpty) ...[
                 _buildSectionHeader('Forbidden'),
                 _buildSectionContainer(
-                  color: Colors.transparent,
                   cards: banned,
                   icon: Icons.cancel,
                   iconText: null,
@@ -130,7 +129,6 @@ class _HomeState extends State<Home> {
               if (limited.isNotEmpty) ...[
                 _buildSectionHeader('Limited'),
                 _buildSectionContainer(
-                  color: Colors.transparent,
                   cards: limited,
                   icon: null,
                   iconText: '1',
@@ -139,7 +137,6 @@ class _HomeState extends State<Home> {
               if (semiLimited.isNotEmpty) ...[
                 _buildSectionHeader('Semi-Limited'),
                 _buildSectionContainer(
-                  color: Colors.transparent,
                   cards: semiLimited,
                   icon: null,
                   iconText: '2',
@@ -156,19 +153,13 @@ class _HomeState extends State<Home> {
 
   /// Baut den Container für die Kartenliste
   Widget _buildSectionContainer({
-    required Color color,
     required List<dynamic> cards,
     IconData? icon,
     String? iconText,
   }) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
       padding: const EdgeInsets.only(top: 4.0),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color, width: 2),
-      ),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisAlignment: MainAxisAlignment.center,
@@ -189,10 +180,7 @@ class _HomeState extends State<Home> {
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-      child: Text(
-        title,
-        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-      ),
+      child: Text(title, style: Theme.of(context).textTheme.headlineSmall),
     );
   }
 
@@ -201,7 +189,6 @@ class _HomeState extends State<Home> {
     required Map<String, dynamic> card,
     IconData? icon,
     String? iconText,
-    Color? iconColor,
   }) {
     final Future<String> imgPathFuture = _cardData.getImgPath(
       card["card_images"][0]["image_url"],
@@ -220,19 +207,10 @@ class _HomeState extends State<Home> {
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
           // Icon oder Zahl
-          Center(
-            child: icon != null
-                ? Icon(icon, color: iconColor, size: 20)
-                : Text(
-                    iconText ?? '',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: iconColor,
-                    ),
-                  ),
-          ),
-          const SizedBox(width: 8),
+          icon != null
+              ? Icon(icon, size: 12, fontWeight: FontWeight.w100)
+              : Text(iconText!, style: TextStyle(fontWeight: FontWeight.bold)),
+
           // Kartenbild
           FutureBuilder<String>(
             future: imgPathFuture,

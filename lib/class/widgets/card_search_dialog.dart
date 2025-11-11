@@ -1,4 +1,4 @@
-// card_search_dialog.dart - Dialog zur Kartensuche mit Filtern
+// card_search_dialog.dart - Updated to DropdownMenu
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 
@@ -240,7 +240,7 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
               return TextButton(
                 onPressed: () {
                   widget.onCardSelected(card, count);
-                  Navigator.of(context).pop(); // Schließt NUR den Count-Dialog
+                  Navigator.of(context).pop();
                 },
                 child: Text('${count}x'),
               );
@@ -257,23 +257,18 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
     required List<String> items,
     required void Function(String?) onChanged,
   }) {
-    return DropdownButtonFormField<String>(
-      decoration: InputDecoration(
-        hintText: label,
-        border: const OutlineInputBorder(),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    return DropdownMenu<String>(
+      label: Text(label),
+      initialSelection: value,
+      expandedInsets: EdgeInsets.zero,
+      dropdownMenuEntries: items.map((item) {
+        return DropdownMenuEntry<String>(value: item, label: item);
+      }).toList(),
+      onSelected: onChanged,
+      inputDecorationTheme: const InputDecorationTheme(
+        border: OutlineInputBorder(),
+        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
-      initialValue: value,
-      items: [
-        DropdownMenuItem<String>(value: null, child: Text(label)),
-        ...items.map(
-          (item) => DropdownMenuItem<String>(
-            value: item,
-            child: Text(item, overflow: TextOverflow.ellipsis),
-          ),
-        ),
-      ],
-      onChanged: onChanged,
     );
   }
 
@@ -289,45 +284,34 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
       children: [
         Expanded(
           flex: 1,
-          child: DropdownButtonFormField<String>(
-            isExpanded: true,
-            decoration: const InputDecoration(
+          child: DropdownMenu<String>(
+            initialSelection: operator,
+            expandedInsets: EdgeInsets.zero,
+            dropdownMenuEntries: _operators.map((op) {
+              return DropdownMenuEntry<String>(value: op, label: op);
+            }).toList(),
+            onSelected: onOperatorChanged,
+            inputDecorationTheme: const InputDecorationTheme(
               border: OutlineInputBorder(),
               contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             ),
-            initialValue: operator,
-            items: _operators.map((op) {
-              return DropdownMenuItem<String>(
-                value: op,
-                child: Text(op, textAlign: TextAlign.center),
-              );
-            }).toList(),
-            onChanged: onOperatorChanged,
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
           flex: 2,
-          child: DropdownButtonFormField<String>(
-            decoration: InputDecoration(
-              hintText: label,
-              border: const OutlineInputBorder(),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 8,
-              ),
+          child: DropdownMenu<String>(
+            label: Text(label),
+            initialSelection: value,
+            expandedInsets: EdgeInsets.zero,
+            dropdownMenuEntries: items.map((item) {
+              return DropdownMenuEntry<String>(value: item, label: item);
+            }).toList(),
+            onSelected: onChanged,
+            inputDecorationTheme: const InputDecorationTheme(
+              border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             ),
-            initialValue: value,
-            items: [
-              DropdownMenuItem<String>(value: null, child: Text(label)),
-              ...items.map(
-                (item) => DropdownMenuItem<String>(
-                  value: item,
-                  child: Text(item, overflow: TextOverflow.ellipsis),
-                ),
-              ),
-            ],
-            onChanged: onChanged,
           ),
         ),
       ],
@@ -447,7 +431,7 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
           children: [
             Row(
               children: [
-                Text('Karte suchen'),
+                Text('Search Card'),
                 const Spacer(),
                 IconButton(
                   icon: Icon(_showFilters ? Icons.search : Icons.filter_list),
@@ -485,7 +469,6 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
                   ? Center(
                       child: Text(
                         'Gib einen Kartennamen ein oder nutze die Filter',
-
                         textAlign: TextAlign.center,
                       ),
                     )
@@ -541,7 +524,6 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
   }
 }
 
-// VERBESSERTE Card Image Widget mit intelligenter Fallback-Logik
 class _CardImageWidget extends StatefulWidget {
   final Map<String, dynamic> card;
   final CardData cardData;
@@ -587,24 +569,20 @@ class _CardImageWidgetState extends State<_CardImageWidget> {
       return;
     }
 
-    // Sammle alle möglichen Bild-URLs in Prioritätsreihenfolge
     final List<String> allImageUrls = [];
 
     for (var imageEntry in cardImages) {
       if (imageEntry is Map<String, dynamic>) {
-        // Priorität 1: image_url (hohe Auflösung)
         final normalUrl = imageEntry['image_url'] as String?;
         if (normalUrl != null && normalUrl.isNotEmpty) {
           allImageUrls.add(normalUrl);
         }
 
-        // Priorität 2: image_url_cropped (zugeschnitten)
         final croppedUrl = imageEntry['image_url_cropped'] as String?;
         if (croppedUrl != null && croppedUrl.isNotEmpty) {
           allImageUrls.add(croppedUrl);
         }
 
-        // Priorität 3: image_url_small (falls vorhanden)
         final smallUrl = imageEntry['image_url_small'] as String?;
         if (smallUrl != null && smallUrl.isNotEmpty) {
           allImageUrls.add(smallUrl);
@@ -612,7 +590,6 @@ class _CardImageWidgetState extends State<_CardImageWidget> {
       }
     }
 
-    // Versuche jede URL nacheinander bis eine funktioniert
     for (var imageUrl in allImageUrls) {
       try {
         final downloadUrl = await widget.cardData.getImgPath(imageUrl);
@@ -623,15 +600,13 @@ class _CardImageWidgetState extends State<_CardImageWidget> {
             _isLoading = false;
             _hasError = false;
           });
-          return; // Erfolgreich geladen, beende Schleife
+          return;
         }
       } catch (e) {
-        // Fehler beim Laden dieser URL, versuche nächste
         continue;
       }
     }
 
-    // Keine URL hat funktioniert
     if (mounted) {
       setState(() {
         _isLoading = false;

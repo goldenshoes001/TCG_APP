@@ -1,4 +1,4 @@
-// filter_dropdown.dart
+// filter_dropdown.dart - Updated to DropdownMenu
 
 import 'package:flutter/material.dart';
 
@@ -18,23 +18,18 @@ class FilterDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DropdownButtonFormField<String>(
-      decoration: InputDecoration(
-        hintText: label,
-        border: const OutlineInputBorder(),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    return DropdownMenu<String>(
+      label: Text(label),
+      initialSelection: value,
+      expandedInsets: EdgeInsets.zero,
+      dropdownMenuEntries: items.map((item) {
+        return DropdownMenuEntry<String>(value: item, label: item);
+      }).toList(),
+      onSelected: onChanged,
+      inputDecorationTheme: const InputDecorationTheme(
+        border: OutlineInputBorder(),
+        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
-      initialValue: value,
-      items: [
-        DropdownMenuItem<String>(value: null, child: Text(label)),
-        ...items.map(
-          (item) => DropdownMenuItem<String>(
-            value: item,
-            child: Text(item, overflow: TextOverflow.ellipsis),
-          ),
-        ),
-      ],
-      onChanged: onChanged,
     );
   }
 }

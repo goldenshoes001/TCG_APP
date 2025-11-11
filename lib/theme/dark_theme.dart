@@ -14,6 +14,16 @@ ThemeData darkTheme(BuildContext context) => generalTheme(context).copyWith(
   scaffoldBackgroundColor: bodyColor,
   canvasColor: cardColor,
 
+  dropdownMenuTheme: DropdownMenuThemeData(
+    disabledColor: Colors.white,
+    menuStyle: MenuStyle(),
+    textStyle: TextStyle(
+      color: Colors.lightBlue,
+      fontFamily: "arial",
+      fontSize: 14,
+    ),
+  ),
+
   outlinedButtonTheme: OutlinedButtonThemeData(
     style: OutlinedButton.styleFrom(
       foregroundColor: labelcolor,
@@ -95,6 +105,8 @@ ThemeData darkTheme(BuildContext context) => generalTheme(context).copyWith(
     ),
   ),
 
+  iconTheme: IconThemeData(color: iconColor),
+
   listTileTheme: const ListTileThemeData(
     // Farbe für den gesamten ListTile-Inhalt (Titel, Untertitel, Icons)
     textColor: Colors.white,
@@ -129,5 +141,13 @@ ThemeData darkTheme(BuildContext context) => generalTheme(context).copyWith(
     headlineSmall: generalTheme(
       context,
     ).textTheme.headlineSmall!.copyWith(color: colorHeadlineSmall),
+
+    titleMedium: TextStyle(
+      color: Colors.white,
+      fontFamily: fontFamily,
+      fontSize: 12, // Oder deine gewünschte Größe
+    ),
   ),
+
+  //cardTheme: CardThemeData(color: Colors.transparent),
 );
