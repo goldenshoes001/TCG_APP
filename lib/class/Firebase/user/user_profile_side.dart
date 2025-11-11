@@ -47,7 +47,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
     if (currentUser != null) {
       uid = currentUser.uid;
-      email = currentUser.displayName ?? currentUser.email;
+      email = currentUser.email;
       userData = userdb.readUser(uid!);
 
       _loadUsernameFromFirestore(uid!);
@@ -162,8 +162,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           // Daten neu laden, damit das neue Deck sichtbar ist
           userData = userdb.readUser(uid!);
         });
-
-        
       }
     } catch (e) {
       if (mounted) {
@@ -184,43 +182,61 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   // ✅ ANGEPASST: Prüft jetzt auch ob in Kartendetail-Ansicht
+  // In der _buildDeckCreationView() Methode:
+  // ✅ ALTERNATIVE: Mit minimalem Back-Button
   Widget _buildDeckCreationView() {
-    final isShowingDetail =
-        _deckCreationKey.currentState?.isShowingCardDetail ?? false;
-
     return Column(
       children: [
-        // ✅ Zeige Buttons NUR wenn NICHT in Detail-Ansicht
-        if (!isShowingDetail)
-          Expanded(
-            child: DeckCreationScreen(
-              key: _deckCreationKey,
-              initialDeckId: _editingDeckId,
-              onDataCollected: (data) {},
-              onDetailViewChanged: (isShowing) {
-                setState(() {
-                  // Wird automatisch durch den Getter isShowingCardDetail abgefragt
-                });
-              },
-              onCancel: () {
-                setState(() {
-                  _showDeckCreation = false;
-                  _editingDeckId = null;
-                  userData = userdb.readUser(uid!);
-                });
-              },
-              // 🎯 NEU: Aufruf nach erfolgreicher Speicherung
-              onSaved: () {
-                setState(() {
-                  _showDeckCreation = false;
-                  _editingDeckId = null;
-                  // Wichtig: Daten neu laden, damit das neue Deck sichtbar ist
-
-                  userData = userdb.readUser(uid!);
-                });
-              },
-            ),
+        // Container mit fester Höhe für den Back-Button
+        Container(
+          height: 56, // Standard AppBar Höhe
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back, size: 20),
+                  onPressed: () {
+                    setState(() {
+                      _showDeckCreation = false;
+                      _editingDeckId = null;
+                    });
+                  },
+                  padding: EdgeInsets.zero,
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
           ),
+        ),
+
+        // DeckCreationScreen nimmt den restlichen Platz ein
+        Expanded(
+          child: DeckCreationScreen(
+            key: _deckCreationKey,
+            initialDeckId: _editingDeckId,
+            onDataCollected: (data) {},
+            onDetailViewChanged: (isShowing) {
+              setState(() {});
+            },
+            onCancel: () {
+              setState(() {
+                _showDeckCreation = false;
+                _editingDeckId = null;
+                userData = userdb.readUser(uid!);
+              });
+            },
+            onSaved: () {
+              setState(() {
+                _showDeckCreation = false;
+                _editingDeckId = null;
+                userData = userdb.readUser(uid!);
+              });
+            },
+          ),
+        ),
       ],
     );
   }
@@ -428,7 +444,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Willkommen, ${userMap['username'] ?? email}'),
+            Text('Willkommen, ${_usernameFromDB ?? email ?? "unbekannt"}'),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {

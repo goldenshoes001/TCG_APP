@@ -26,10 +26,6 @@ class FilterDropdown extends StatelessWidget {
         return DropdownMenuEntry<String>(value: item, label: item);
       }).toList(),
       onSelected: onChanged,
-      inputDecorationTheme: const InputDecorationTheme(
-        border: OutlineInputBorder(),
-        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      ),
     );
   }
 }

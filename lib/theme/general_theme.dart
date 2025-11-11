@@ -47,5 +47,13 @@ ThemeData generalTheme(BuildContext context) {
         fontWeight: FontWeight.bold,
       ),
     ),
+
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: Colors.black,
+        overlayColor: Colors.transparent,
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      ),
+    ),
   );
 }

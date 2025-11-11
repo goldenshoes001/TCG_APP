@@ -130,4 +130,12 @@ ThemeData lightTheme(BuildContext context) => generalTheme(context).copyWith(
       context,
     ).textTheme.headlineSmall!.copyWith(color: colorHeadlineSmall),
   ),
+
+  textButtonTheme: TextButtonThemeData(
+    style: TextButton.styleFrom(
+      foregroundColor: Colors.black,
+      overlayColor: Colors.transparent,
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    ),
+  ),
 );

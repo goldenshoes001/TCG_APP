@@ -5,11 +5,13 @@ import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 class CardSearchDialog extends StatefulWidget {
   final Function(Map<String, dynamic> card, int count) onCardSelected;
   final bool isSideDeck;
+  final Function(String message)? onShowSnackBar;
 
   const CardSearchDialog({
     super.key,
     required this.onCardSelected,
     this.isSideDeck = false,
+    this.onShowSnackBar,
   });
 
   @override
@@ -20,6 +22,7 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
   final CardData _cardData = CardData();
   final TextEditingController _searchController = TextEditingController();
   Future<List<Map<String, dynamic>>>? _searchFuture;
+  int dropdownResetkey = 0;
 
   bool _showFilters = false;
   bool _filtersLoading = true;
@@ -107,6 +110,7 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
   }
 
   void _performFilterSearch() {
+    // VALIDIERUNG: Mindestens ein Filter muss ausgewählt sein
     if (_selectedType == null &&
         _selectedRace == null &&
         _selectedAttribute == null &&
@@ -114,12 +118,15 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
         _selectedLevel == null &&
         _selectedScale == null &&
         _selectedLinkRating == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(Overlay.of(context).context).showSnackBar(
         const SnackBar(
           content: Text('Bitte wählen Sie mindestens einen Filter aus.'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 2),
         ),
       );
-      return;
+
+      return; // Abbrechen, wenn keine Filter gesetzt sind
     }
 
     int? levelValue;
@@ -172,6 +179,7 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
 
   void _resetFilters() {
     setState(() {
+      // Alle Filter auf Standardwerte zurücksetzen
       _selectedType = null;
       _selectedRace = null;
       _selectedAttribute = null;
@@ -179,10 +187,22 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
       _selectedLevel = null;
       _selectedScale = null;
       _selectedLinkRating = null;
+
+      // Operatoren auf Standardwert zurücksetzen
       _levelOperator = '=';
       _scaleOperator = '=';
       _linkRatingOperator = '=';
+      dropdownResetkey++;
     });
+
+    // Erfolgsmeldung anzeigen
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Filter wurden zurückgesetzt'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 1),
+      ),
+    );
   }
 
   int _getMaxAllowedCount(Map<String, dynamic> card) {
@@ -265,10 +285,6 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
         return DropdownMenuEntry<String>(value: item, label: item);
       }).toList(),
       onSelected: onChanged,
-      inputDecorationTheme: const InputDecorationTheme(
-        border: OutlineInputBorder(),
-        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      ),
     );
   }
 
@@ -291,10 +307,6 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
               return DropdownMenuEntry<String>(value: op, label: op);
             }).toList(),
             onSelected: onOperatorChanged,
-            inputDecorationTheme: const InputDecorationTheme(
-              border: OutlineInputBorder(),
-              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            ),
           ),
         ),
         const SizedBox(width: 8),
@@ -308,10 +320,6 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
               return DropdownMenuEntry<String>(value: item, label: item);
             }).toList(),
             onSelected: onChanged,
-            inputDecorationTheme: const InputDecorationTheme(
-              border: OutlineInputBorder(),
-              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            ),
           ),
         ),
       ],
@@ -327,6 +335,7 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
 
     return SingleChildScrollView(
       child: Column(
+        key: ValueKey(dropdownResetkey),
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _buildDropdown(
@@ -422,102 +431,113 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      child: Container(
-        width: MediaQuery.of(context).size.width * 0.9,
-        height: MediaQuery.of(context).size.height * 0.8,
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Text('Search Card'),
-                const Spacer(),
-                IconButton(
-                  icon: Icon(_showFilters ? Icons.search : Icons.filter_list),
-                  onPressed: () {
-                    setState(() {
-                      _showFilters = !_showFilters;
-                    });
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            if (!_showFilters) ...[
-              TextField(
-                controller: _searchController,
-                decoration: const InputDecoration(
-                  hintText: "Kartenname eingeben...",
-                  prefixIcon: Icon(Icons.search),
-                  border: OutlineInputBorder(),
-                ),
-                onSubmitted: _performTextSearch,
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            Expanded(
-              child: _showFilters
-                  ? _buildFilterSection()
-                  : _searchFuture == null
-                  ? Center(
-                      child: Text(
-                        'Gib einen Kartennamen ein oder nutze die Filter',
-                        textAlign: TextAlign.center,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 100.0),
+      child: Dialog(
+        insetPadding: EdgeInsets.zero,
+        child: Scaffold(
+          body: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Container(
+              width: double.infinity,
+              height: MediaQuery.of(context).size.height,
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Text('Filter Search'),
+                      const Spacer(),
+                      IconButton(
+                        icon: Icon(
+                          _showFilters ? Icons.search : Icons.filter_list,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _showFilters = !_showFilters;
+                          });
+                        },
                       ),
-                    )
-                  : FutureBuilder<List<Map<String, dynamic>>>(
-                      future: _searchFuture,
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Center(
-                            child: CircularProgressIndicator(),
-                          );
-                        }
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
 
-                        if (snapshot.hasError) {
-                          return Center(
-                            child: Text('Fehler: ${snapshot.error}'),
-                          );
-                        }
-
-                        final cards = snapshot.data ?? [];
-
-                        if (cards.isEmpty) {
-                          return const Center(
-                            child: Text('Keine Karten gefunden'),
-                          );
-                        }
-
-                        return ListView.builder(
-                          itemCount: cards.length,
-                          itemBuilder: (context, index) {
-                            final card = cards[index];
-
-                            return Card(
-                              child: ListTile(
-                                leading: _CardImageWidget(
-                                  card: card,
-                                  cardData: _cardData,
-                                ),
-                                title: Text(card['name'] ?? 'Unbekannt'),
-                                subtitle: Text(card['type'] ?? ''),
-                                onTap: () => _showCardCountDialog(card),
-                              ),
-                            );
-                          },
-                        );
-                      },
+                  if (!_showFilters) ...[
+                    TextField(
+                      controller: _searchController,
+                      decoration: const InputDecoration(
+                        hintText: "Cardname...",
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(),
+                      ),
+                      onSubmitted: _performTextSearch,
                     ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  Expanded(
+                    child: _showFilters
+                        ? _buildFilterSection()
+                        : _searchFuture == null
+                        ? Center(
+                            child: Text(
+                              'Gib einen Kartennamen ein oder nutze die Filter',
+                              textAlign: TextAlign.center,
+                            ),
+                          )
+                        : FutureBuilder<List<Map<String, dynamic>>>(
+                            future: _searchFuture,
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return const Center(
+                                  child: CircularProgressIndicator(),
+                                );
+                              }
+
+                              if (snapshot.hasError) {
+                                return Center(
+                                  child: Text('Fehler: ${snapshot.error}'),
+                                );
+                              }
+
+                              final cards = snapshot.data ?? [];
+
+                              if (cards.isEmpty) {
+                                return const Center(
+                                  child: Text('Keine Karten gefunden'),
+                                );
+                              }
+
+                              return ListView.builder(
+                                itemCount: cards.length,
+                                itemBuilder: (context, index) {
+                                  final card = cards[index];
+
+                                  return Card(
+                                    child: ListTile(
+                                      leading: _CardImageWidget(
+                                        card: card,
+                                        cardData: _cardData,
+                                      ),
+                                      title: Text(card['name'] ?? 'Unbekannt'),
+                                      subtitle: Text(card['type'] ?? ''),
+                                      onTap: () => _showCardCountDialog(card),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
             ),
-          ],
+          ),
         ),
       ),
     );

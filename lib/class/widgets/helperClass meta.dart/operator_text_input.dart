@@ -31,10 +31,6 @@ class OperatorTextInput extends StatelessWidget {
               return DropdownMenuEntry<String>(value: op, label: op);
             }).toList(),
             onSelected: onOperatorChanged,
-            inputDecorationTheme: const InputDecorationTheme(
-              border: OutlineInputBorder(),
-              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            ),
           ),
         ),
         const SizedBox(width: 8),

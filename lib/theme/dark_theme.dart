@@ -15,11 +15,35 @@ ThemeData darkTheme(BuildContext context) => generalTheme(context).copyWith(
   canvasColor: cardColor,
 
   dropdownMenuTheme: DropdownMenuThemeData(
-    disabledColor: Colors.white,
-    menuStyle: MenuStyle(),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: cardColor,
+
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: dropdownBorderColor, width: 1.5),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: dropdownBorderColor, width: 1.5),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: dropdownFocusedBorderColor, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: dropdownErrorBorderColor, width: 1.5),
+      ),
+
+      labelStyle: TextStyle(color: inputField),
+      hintStyle: TextStyle(color: inputField),
+      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    ),
+
     textStyle: TextStyle(
       color: Colors.lightBlue,
-      fontFamily: "arial",
+      fontFamily: fontFamily,
       fontSize: 14,
     ),
   ),
@@ -149,5 +173,14 @@ ThemeData darkTheme(BuildContext context) => generalTheme(context).copyWith(
     ),
   ),
 
-  //cardTheme: CardThemeData(color: Colors.transparent),
+  textButtonTheme: TextButtonThemeData(
+    style: TextButton.styleFrom(
+      foregroundColor: Colors.white, // Textfarbe aller TextButtons
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    ),
+  ),
+
+  dialogTheme: DialogThemeData(backgroundColor: cardColor),
+
+  cardTheme: CardThemeData(color: Colors.transparent),
 );
