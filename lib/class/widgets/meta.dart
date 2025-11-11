@@ -176,9 +176,7 @@ class _MetaState extends State<Meta>
         _selectedBanlistTCG == null &&
         _selectedBanlistOCG == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Bitte wählen Sie mindestens einen Filter aus.'),
-        ),
+        const SnackBar(content: Text('Pls choose at least one Filter.')),
       );
       return;
     }
@@ -308,7 +306,7 @@ class _MetaState extends State<Meta>
     }
 
     if (_filtersLoading && _tabController.index == 0) {
-      return Center(child: Text('Filter werden geladen...'));
+      return Center(child: Text('Filter get loaded...'));
     }
 
     return Column(

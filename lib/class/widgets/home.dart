@@ -107,7 +107,7 @@ class _HomeState extends State<Home> {
         } else if (snapshot.hasError) {
           return Center(
             child: Text(
-              "Fehler: ${snapshot.error}",
+              "Error: ${snapshot.error}",
               style: const TextStyle(color: Colors.red),
             ),
           );
@@ -145,7 +145,7 @@ class _HomeState extends State<Home> {
             ],
           );
         } else {
-          return const Center(child: Text("Keine Karten gefunden"));
+          return const Center(child: Text("No Cardss found"));
         }
       },
     );

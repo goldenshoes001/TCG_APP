@@ -1,4 +1,3 @@
-// user_profile_side.dart - AKTUALISIERT FÜR NEUES DECK LAYOUT
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 import 'package:tcg_app/class/Firebase/interfaces/FirebaseAuthRepository.dart';
@@ -88,16 +87,16 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     try {
       await authRepo.signOut();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Erfolgreich abgemeldet!")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("successfull logout!")));
         widget.onItemTapped(0);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text("Fehler beim Abmelden: $e")));
+        ).showSnackBar(SnackBar(content: Text("Error on logout: $e")));
       }
     }
   }
@@ -110,7 +109,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       await userdb.deleteUserCompletely(currentUid);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Account erfolgreich gelöscht!")),
+          const SnackBar(content: Text("accout successfull deleted!")),
         );
         widget.onItemTapped(0);
       }
@@ -118,7 +117,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text("Fehler beim Löschen: $e")));
+        ).showSnackBar(SnackBar(content: Text("Error on delete: $e")));
       }
     }
   }
@@ -154,7 +153,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Deck erfolgreich gespeichert!')),
+          const SnackBar(content: Text('Deck successfull saved!')),
         );
         setState(() {
           _showDeckCreation = false;
@@ -167,7 +166,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Fehler beim Speichern: $e')));
+        ).showSnackBar(SnackBar(content: Text('Error on saving: $e')));
       }
     } finally {
       _deckCreationKey.currentState?.setSaving(false);
@@ -223,19 +222,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Deck löschen'),
-          content: Text(
-            'Sind Sie sicher, dass Sie das Deck "$deckName" unwiderruflich löschen möchten?',
-          ),
+          title: const Text('delete Deck'),
+          content: Text('Are you sure you want to delete "$deckName"?'),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Abbrechen'),
+              child: const Text('cancel'),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
               style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Löschen'),
+              child: const Text('Delete'),
             ),
           ],
         );
@@ -247,7 +244,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         await _deckService.deleteDeck(deckId);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Deck "$deckName" erfolgreich gelöscht!')),
+            SnackBar(content: Text('"$deckName" successfull deleted!')),
           );
           setState(() {
             userData = userdb.readUser(uid!);
@@ -255,9 +252,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Fehler beim Löschen des Decks: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error on deleting Deck: $e')));
         }
       }
     }
@@ -275,7 +272,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(16.0),
-          child: Text('Du hast noch keine Decks erstellt.'),
+          child: Text('You havent created a Deck yet'),
         ),
       );
     }
@@ -317,9 +314,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 padding: const EdgeInsets.all(12.0),
                 margin: const EdgeInsets.symmetric(vertical: 4.0),
                 child: Center(
-                  child: Text(
-                    "Fehler beim Laden des Bildes: ${asyncSnapshot.error}",
-                  ),
+                  child: Text("Error on loading Image ${asyncSnapshot.error}"),
                 ),
               );
             }
@@ -334,26 +329,41 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      SizedBox(width: 10),
                       Expanded(
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             if (imageUrl != null && imageUrl.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(right: 12.0),
-                                child: Image.network(
-                                  imageUrl,
-                                  width: 50,
-                                  height: 50,
+                              Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(
+                                    25,
+                                  ), // Macht es rund
+                                  border: Border.all(
+                                    color: Colors.grey,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: ClipOval(
+                                  child: Image.network(
+                                    imageUrl,
+                                    width: 50,
+                                    height: 50,
+                                    fit: BoxFit.cover,
+                                  ),
                                 ),
                               ),
+                            SizedBox(width: 15),
 
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 if (deckName.isNotEmpty)
                                   Text(
-                                    "$deckName ($cardCount Karten)",
+                                    "$deckName ($cardCount Cards)",
                                     style: Theme.of(
                                       context,
                                     ).textTheme.titleMedium,
@@ -377,7 +387,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text(
-                                      'Deck ID fehlt! Bearbeitung nicht möglich.',
+                                      'Deck ID missing! editing not possible ',
                                     ),
                                   ),
                                 );
@@ -421,7 +431,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Willkommen, ${_usernameFromDB ?? email ?? "unbekannt"}'),
+            Text('Welcome, ${_usernameFromDB ?? email ?? "unbekannt"}'),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {
@@ -430,19 +440,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   _showDeckCreation = true;
                 });
               },
-              child: const Text('Neues Deck erstellen'),
+              child: const Text('create new Deck'),
             ),
             const SizedBox(height: 24),
-            Text('Deine Decks'),
+            Text('Your Decks'),
             const SizedBox(height: 16),
             _buildDeckList(userMap),
             const SizedBox(height: 24),
-            Text('Account-Einstellungen'),
+            Text('Account-Settings'),
             const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: _handleLogout,
               icon: const Icon(Icons.logout),
-              label: const Text("Abmelden"),
+              label: const Text("Logout"),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
@@ -451,7 +461,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             OutlinedButton.icon(
               onPressed: _deleteUser,
               icon: const Icon(Icons.delete_forever),
-              label: const Text("Account löschen"),
+              label: const Text("delete Account"),
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.red,
                 side: const BorderSide(color: Colors.red),
@@ -473,7 +483,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
-          return Center(child: Text('Fehler: ${snapshot.error}'));
+          return Center(child: Text('Error: ${snapshot.error}'));
         }
 
         final userMap = snapshot.data ?? {};

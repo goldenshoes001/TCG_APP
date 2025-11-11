@@ -129,7 +129,7 @@ class FilterFormView extends StatelessWidget {
                 child: ElevatedButton.icon(
                   onPressed: performSearch,
                   icon: const Icon(Icons.search),
-                  label: const Text('Suchen'),
+                  label: const Text('Search'),
                 ),
               ),
               const SizedBox(width: 10),
@@ -137,7 +137,7 @@ class FilterFormView extends StatelessWidget {
                 child: OutlinedButton.icon(
                   onPressed: resetFilters,
                   icon: const Icon(Icons.clear),
-                  label: const Text('Zurücksetzen'),
+                  label: const Text('reset'),
                 ),
               ),
             ],

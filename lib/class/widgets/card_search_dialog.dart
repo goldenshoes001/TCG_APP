@@ -120,8 +120,8 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
         _selectedLinkRating == null) {
       ScaffoldMessenger.of(Overlay.of(context).context).showSnackBar(
         const SnackBar(
-          content: Text('Bitte wählen Sie mindestens einen Filter aus.'),
-          backgroundColor: Colors.orange,
+          content: Text('Pls choose at least one Filter.'),
+          backgroundColor: Colors.red,
           duration: Duration(seconds: 2),
         ),
       );
@@ -198,7 +198,7 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
     // Erfolgsmeldung anzeigen
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Filter wurden zurückgesetzt'),
+        content: Text('Filter reseted'),
         backgroundColor: Colors.green,
         duration: Duration(seconds: 1),
       ),
@@ -236,12 +236,12 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Wie oft hinzufügen?'),
+          title: const Text('how often adding?'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(card['name'] ?? 'Unbekannte Karte'),
+              Text(card['name'] ?? 'unknown Card'),
               const SizedBox(height: 16),
               if (maxCount < 3)
                 Text(
@@ -253,7 +253,7 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Abbrechen'),
+              child: const Text('cancel'),
             ),
             ...List.generate(maxCount, (index) {
               final count = index + 1;
@@ -411,7 +411,7 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
                 child: ElevatedButton.icon(
                   onPressed: _performFilterSearch,
                   icon: const Icon(Icons.search),
-                  label: const Text('Suchen'),
+                  label: const Text('Search'),
                 ),
               ),
               const SizedBox(width: 10),
@@ -419,7 +419,7 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
                 child: OutlinedButton.icon(
                   onPressed: _resetFilters,
                   icon: const Icon(Icons.clear),
-                  label: const Text('Zurücksetzen'),
+                  label: const Text('reset'),
                 ),
               ),
             ],
@@ -485,7 +485,7 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
                         : _searchFuture == null
                         ? Center(
                             child: Text(
-                              'Gib einen Kartennamen ein oder nutze die Filter',
+                              'Write a Cardname or use the filters',
                               textAlign: TextAlign.center,
                             ),
                           )
@@ -501,7 +501,7 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
 
                               if (snapshot.hasError) {
                                 return Center(
-                                  child: Text('Fehler: ${snapshot.error}'),
+                                  child: Text('Error: ${snapshot.error}'),
                                 );
                               }
 
@@ -509,7 +509,7 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
 
                               if (cards.isEmpty) {
                                 return const Center(
-                                  child: Text('Keine Karten gefunden'),
+                                  child: Text('No Cards found'),
                                 );
                               }
 
@@ -524,7 +524,7 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
                                         card: card,
                                         cardData: _cardData,
                                       ),
-                                      title: Text(card['name'] ?? 'Unbekannt'),
+                                      title: Text(card['name'] ?? 'unknown'),
 
                                       onTap: () => _showCardCountDialog(card),
                                     ),

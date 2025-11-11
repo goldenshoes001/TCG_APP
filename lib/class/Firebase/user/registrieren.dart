@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/Firebase/interfaces/FirebaseAuthRepository.dart';
 import 'package:tcg_app/class/Firebase/user/user.dart';
@@ -8,7 +7,6 @@ import 'package:tcg_app/class/common/lists.dart';
 
 import 'package:tcg_app/theme/sizing.dart';
 // Importiere deine FirebaseAuthRepository
-
 
 // Stelle sicher, dass du das Benutzerprofil importierst
 
@@ -521,7 +519,7 @@ class _RegistrierenState extends State<Registrieren> {
                   width: MediaQuery.of(context).size.width * 0.96,
                   child: OutlinedButton(
                     onPressed: handleRegistrieren,
-                    child: const Text("Registrieren"),
+                    child: const Text("Registration"),
                   ),
                 ),
 
@@ -550,9 +548,7 @@ class _RegistrierenState extends State<Registrieren> {
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            "Bitte korrigieren Sie alle Fehler vor der Registrierung.",
-          ),
+          content: Text("Pls correct all Fields"),
           backgroundColor: Colors.red,
         ),
       );
@@ -580,7 +576,7 @@ class _RegistrierenState extends State<Registrieren> {
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("Registrierung erfolgreich!"),
+            content: Text("Registration successfull!"),
             backgroundColor: Colors.green,
           ),
         );
