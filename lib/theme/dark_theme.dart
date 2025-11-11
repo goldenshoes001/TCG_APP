@@ -18,9 +18,9 @@ ThemeData darkTheme(BuildContext context) => generalTheme(context).copyWith(
     disabledColor: Colors.white,
     menuStyle: MenuStyle(),
     textStyle: TextStyle(
-      color: Colors.orange,
+      color: Colors.lightBlue,
       fontFamily: "arial",
-      fontSize: 29,
+      fontSize: 14,
     ),
   ),
 
@@ -121,10 +121,6 @@ ThemeData darkTheme(BuildContext context) => generalTheme(context).copyWith(
     ),
   ), // <--- FEHLENDE KLAMMER UND KOMMA HINZUGEFÜGT
 
-
-
-
-
   textTheme: generalTheme(context).textTheme.copyWith(
     bodyLarge: generalTheme(
       context,
@@ -146,12 +142,12 @@ ThemeData darkTheme(BuildContext context) => generalTheme(context).copyWith(
       context,
     ).textTheme.headlineSmall!.copyWith(color: colorHeadlineSmall),
 
-
-
     titleMedium: TextStyle(
       color: Colors.white,
       fontFamily: fontFamily,
       fontSize: 12, // Oder deine gewünschte Größe
     ),
   ),
+
+  //cardTheme: CardThemeData(color: Colors.transparent),
 );

@@ -1,4 +1,4 @@
-// operator_dropdown.dart
+// operator_dropdown.dart - Updated to DropdownMenu
 
 import 'package:flutter/material.dart';
 
@@ -28,44 +28,34 @@ class OperatorDropdown extends StatelessWidget {
       children: [
         Expanded(
           flex: 1,
-          child: DropdownButtonFormField<String>(
-            isExpanded: true,
-            decoration: const InputDecoration(
+          child: DropdownMenu<String>(
+            initialSelection: operator,
+            expandedInsets: EdgeInsets.zero,
+            dropdownMenuEntries: operators.map((op) {
+              return DropdownMenuEntry<String>(value: op, label: op);
+            }).toList(),
+            onSelected: onOperatorChanged,
+            inputDecorationTheme: const InputDecorationTheme(
               border: OutlineInputBorder(),
               contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             ),
-            initialValue: operator,
-            items: operators.map((op) {
-              return DropdownMenuItem<String>(
-                value: op,
-                child: Text(op, textAlign: TextAlign.center),
-              );
-            }).toList(),
-            onChanged: onOperatorChanged,
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: DropdownButtonFormField<String>(
-            decoration: InputDecoration(
-              hintText: label,
-              border: const OutlineInputBorder(),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 8,
-              ),
+          flex: 2,
+          child: DropdownMenu<String>(
+            label: Text(label),
+            initialSelection: value,
+            expandedInsets: EdgeInsets.zero,
+            dropdownMenuEntries: items.map((item) {
+              return DropdownMenuEntry<String>(value: item, label: item);
+            }).toList(),
+            onSelected: onChanged,
+            inputDecorationTheme: const InputDecorationTheme(
+              border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             ),
-            initialValue: value,
-            items: [
-              DropdownMenuItem<String>(value: null, child: Text(label)),
-              ...items.map(
-                (item) => DropdownMenuItem<String>(
-                  value: item,
-                  child: Text(item, overflow: TextOverflow.ellipsis),
-                ),
-              ),
-            ],
-            onChanged: onChanged,
           ),
         ),
       ],

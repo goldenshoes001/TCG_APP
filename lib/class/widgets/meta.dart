@@ -1,8 +1,8 @@
-// meta.dart - AKTUALISIERT MIT DECKVIEWER
+// meta.dart - Updated with DropdownMenu
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 import 'package:tcg_app/class/common/buildCards.dart';
-import 'package:tcg_app/class/widgets/DeckSearchView.dart'; // WIEDER EINGEFÜGT
+import 'package:tcg_app/class/widgets/DeckSearchView.dart';
 import 'package:tcg_app/class/widgets/helperClass%20allgemein/search_results_view.dart';
 import 'package:tcg_app/class/widgets/deck_search_service.dart';
 import 'package:tcg_app/class/widgets/deck_viewer.dart';
@@ -65,6 +65,9 @@ class _MetaState extends State<Meta>
   String _scaleOperator = '=';
   String _linkRatingOperator = '=';
   String _levelOperator = '=';
+
+  // Key für Dropdown Reset
+  int _dropdownResetKey = 0;
 
   @override
   bool get wantKeepAlive => true;
@@ -156,6 +159,7 @@ class _MetaState extends State<Meta>
       _scaleOperator = '=';
       _linkRatingOperator = '=';
       _levelOperator = '=';
+      _dropdownResetKey++; // Erhöhe den Key, um Dropdowns neu zu bauen
     });
   }
 
@@ -258,8 +262,6 @@ class _MetaState extends State<Meta>
       return;
     }
 
-    // ACHTUNG: Das globale Suchfeld ist jetzt nur für Tab 0 sichtbar.
-    // Daher sollte hier nur noch die Kartensuche ausgelöst werden.
     if (_tabController.index == 0) {
       setState(() {
         _cardSearchFuture = _cardData.ergebniseAnzeigen(trimmedValue).then((
@@ -273,7 +275,6 @@ class _MetaState extends State<Meta>
         _showFilters = false;
       });
     }
-    // Der ELSE-Block (Deck-Suche) ist nicht mehr nötig, da das Feld nur in Tab 0 existiert
   }
 
   void _resetFilters() {
@@ -287,10 +288,6 @@ class _MetaState extends State<Meta>
     });
   }
 
-  // Die _buildDeckResults() ist für die Ergebnisse des *globalen* Suchfeldes und
-  // ist in dieser Logik nicht mehr relevant, da wir DeckSearchView verwenden.
-  // Ich lasse sie, falls sie woanders benötigt wird, aber sie wird hier nicht mehr aufgerufen.
-
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -299,7 +296,6 @@ class _MetaState extends State<Meta>
       return _buildCardDetail();
     }
 
-    // NEU: Wenn ein Deck ausgewählt ist, zeige NUR DeckViewer (OHNE Tabs)
     if (_selectedDeck != null) {
       return DeckViewer(
         deckData: _selectedDeck!,
@@ -315,7 +311,6 @@ class _MetaState extends State<Meta>
       return Center(child: Text('Filter werden geladen...'));
     }
 
-    // NUR HIER werden die Tabs angezeigt
     return Column(
       children: [
         TabBar(
@@ -331,7 +326,6 @@ class _MetaState extends State<Meta>
               _selectedCard = null;
               _selectedDeck = null;
               _showFilters = index == 0;
-              // Der Suchfeld-Text bleibt im Controller, aber die onSubmitted-Logik ist auf Tab 0 beschränkt
               _suchfeld.clear();
             });
           },
@@ -345,14 +339,13 @@ class _MetaState extends State<Meta>
               children: [
                 SizedBox(height: MediaQuery.of(context).size.height / 350),
 
-                // GEÄNDERT: Bedingte Anzeige des globalen Suchfelds
                 if (_tabController.index == 0)
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       TextField(
                         decoration: InputDecoration(
-                          hintText: "search Card...", // Angepasster Hint
+                          hintText: "search Card...",
                           prefixIcon: const Icon(Icons.search),
                           border: const OutlineInputBorder(),
                           contentPadding: const EdgeInsets.symmetric(
@@ -363,11 +356,10 @@ class _MetaState extends State<Meta>
                         onSubmitted: _performTextSearch,
                         controller: _suchfeld,
                       ),
-                      SizedBox(height: MediaQuery.of(context).size.height / 55),
+                      SizedBox(height: 30),
                     ],
                   ),
 
-                // ENDE: Bedingte Anzeige
                 if (_tabController.index == 0 &&
                     !_showFilters &&
                     _cardSearchFuture != null)
@@ -392,7 +384,6 @@ class _MetaState extends State<Meta>
                   child: TabBarView(
                     controller: _tabController,
                     children: [
-                      // TAB 1: KARTEN (Bleibt gleich)
                       _showFilters
                           ? SingleChildScrollView(
                               child: Column(
@@ -435,15 +426,13 @@ class _MetaState extends State<Meta>
                               },
                             ),
 
-                      // TAB 2: DECKS (Wiederhergestellt)
                       DeckSearchView(
                         onDeckSelected: (deck) {
-                          // NEU!
                           setState(() {
                             _selectedDeck = deck;
                           });
                         },
-                      ), // Das Suchfeld ist hier intern im Widget enthalten
+                      ),
                     ],
                   ),
                 ),
@@ -459,13 +448,17 @@ class _MetaState extends State<Meta>
     const double spacing = 12.0;
 
     return Column(
+      key: ValueKey(_dropdownResetKey), // Key für komplette Filter-Grid
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildDropdown(
-          label: 'Type',
-          value: _selectedType,
-          items: _types,
-          onChanged: (value) => setState(() => _selectedType = value),
+        Padding(
+          padding: const EdgeInsets.only(top: 5.0),
+          child: _buildDropdown(
+            label: 'Type',
+            value: _selectedType,
+            items: _types,
+            onChanged: (value) => setState(() => _selectedType = value),
+          ),
         ),
         const SizedBox(height: spacing),
 
@@ -608,44 +601,34 @@ class _MetaState extends State<Meta>
       children: [
         Expanded(
           flex: 1,
-          child: DropdownButtonFormField<String>(
-            isExpanded: true,
-            decoration: const InputDecoration(
+          child: DropdownMenu<String>(
+            initialSelection: operator,
+            expandedInsets: EdgeInsets.zero,
+            dropdownMenuEntries: _operators.map((op) {
+              return DropdownMenuEntry<String>(value: op, label: op);
+            }).toList(),
+            onSelected: onOperatorChanged,
+            inputDecorationTheme: const InputDecorationTheme(
               border: OutlineInputBorder(),
               contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
             ),
-            initialValue: operator,
-            items: _operators.map((op) {
-              return DropdownMenuItem<String>(
-                value: op,
-                child: Text(op, textAlign: TextAlign.center),
-              );
-            }).toList(),
-            onChanged: onOperatorChanged,
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: DropdownButtonFormField<String>(
-            decoration: InputDecoration(
-              hintText: label,
-              border: const OutlineInputBorder(),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: 8,
-              ),
+          flex: 2,
+          child: DropdownMenu<String>(
+            label: Text(label),
+            initialSelection: value,
+            expandedInsets: EdgeInsets.zero,
+            dropdownMenuEntries: items.map((item) {
+              return DropdownMenuEntry<String>(value: item, label: item);
+            }).toList(),
+            onSelected: onChanged,
+            inputDecorationTheme: const InputDecorationTheme(
+              border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             ),
-            initialValue: value,
-            items: [
-              DropdownMenuItem<String>(value: null, child: Text(label)),
-              ...items.map(
-                (item) => DropdownMenuItem<String>(
-                  value: item,
-                  child: Text(item, overflow: TextOverflow.ellipsis),
-                ),
-              ),
-            ],
-            onChanged: onChanged,
           ),
         ),
       ],
@@ -662,28 +645,25 @@ class _MetaState extends State<Meta>
       children: [
         Expanded(
           flex: 1,
-          child: DropdownButtonFormField<String>(
-            isExpanded: true,
-            decoration: const InputDecoration(
+          child: DropdownMenu<String>(
+            initialSelection: operator,
+            expandedInsets: EdgeInsets.zero,
+            dropdownMenuEntries: _operators.map((op) {
+              return DropdownMenuEntry<String>(value: op, label: op);
+            }).toList(),
+            onSelected: onOperatorChanged,
+            inputDecorationTheme: const InputDecorationTheme(
               border: OutlineInputBorder(),
               contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
             ),
-            initialValue: operator,
-            items: _operators.map((op) {
-              return DropdownMenuItem<String>(
-                value: op,
-                child: Text(op, textAlign: TextAlign.center),
-              );
-            }).toList(),
-            onChanged: onOperatorChanged,
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
+          flex: 2,
           child: TextField(
             controller: controller,
             keyboardType: TextInputType.number,
-
             decoration: InputDecoration(
               hintText: label,
               border: const OutlineInputBorder(),
@@ -704,23 +684,18 @@ class _MetaState extends State<Meta>
     required List<String> items,
     required void Function(String?) onChanged,
   }) {
-    return DropdownButtonFormField<String>(
-      decoration: InputDecoration(
-        hintText: label,
-        border: const OutlineInputBorder(),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+    return DropdownMenu<String>(
+      label: Text(label),
+      initialSelection: value,
+      expandedInsets: EdgeInsets.zero,
+      dropdownMenuEntries: items.map((item) {
+        return DropdownMenuEntry<String>(value: item, label: item);
+      }).toList(),
+      onSelected: onChanged,
+      inputDecorationTheme: const InputDecorationTheme(
+        border: OutlineInputBorder(),
+        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       ),
-      initialValue: value,
-      items: [
-        DropdownMenuItem<String>(value: null, child: Text(label)),
-        ...items.map(
-          (item) => DropdownMenuItem<String>(
-            value: item,
-            child: Text(item, overflow: TextOverflow.ellipsis),
-          ),
-        ),
-      ],
-      onChanged: onChanged,
     );
   }
 

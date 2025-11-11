@@ -5,6 +5,20 @@ import 'textstyle.dart';
 
 ThemeData generalTheme(BuildContext context) {
   return ThemeData(
+    cardTheme: CardThemeData(
+      color: Colors.transparent,
+      elevation: 0,
+      margin: EdgeInsets.all(0),
+      shadowColor: Colors.transparent,
+      clipBehavior: Clip.none,
+    ),
+    tabBarTheme: TabBarThemeData(
+      // Dies entfernt die visuelle Linie des Indicators
+      indicator: BoxDecoration(),
+      // ... (andere Eigenschaften bleiben)
+      labelColor: Colors.lightBlue,
+    ),
+
     textTheme: TextTheme(
       bodyMedium: TextStyle(
         fontSize: fontSizeBodyMedium,

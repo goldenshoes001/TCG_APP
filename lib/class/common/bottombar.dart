@@ -10,7 +10,7 @@ class Bottombar extends StatelessWidget {
     super.key,
     required this.currentIndex,
     required this.valueChanged,
-    required this.navigationItems, 
+    required this.navigationItems,
   });
 
   @override

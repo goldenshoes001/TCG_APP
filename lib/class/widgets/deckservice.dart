@@ -1,7 +1,10 @@
+import 'dart:nativewrappers/_internal/vm/lib/ffi_allocation_patch.dart';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:tcg_app/class/Firebase/user/user.dart';
 import 'package:uuid/uuid.dart';
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 import 'package:tcg_app/class/common/buildCards.dart';
@@ -451,7 +454,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Deck Cover-Bild auswählen'),
+          title: const Text('choose Deck Cover'),
           content: SizedBox(
             width: double.maxFinite,
             height: 400,
@@ -539,14 +542,12 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                     }
                   },
                   child: Card(
-                    clipBehavior: Clip.antiAlias,
                     child: Column(
                       children: [
                         Expanded(
                           child: _CardImageWidget(
                             card: card,
                             cardData: _cardData,
-                            fit: BoxFit.cover,
                           ),
                         ),
                         Padding(
@@ -978,6 +979,9 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Deck erfolgreich gespeichert!')),
         );
+
+        Navigator.pop(context);
+        widget.onSaved?.call();
       }
     } catch (e) {
       if (mounted) {
@@ -1048,6 +1052,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
       children: [
         // ✅ NEUER HEADER mit Cover-Bild, Deck-Name UND Icon-Buttons
         Card(
+          color: Colors.transparent,
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Form(
@@ -1097,7 +1102,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                     child: TextField(
                       controller: _deckNameController,
                       decoration: const InputDecoration(
-                        labelText: 'Deck Name',
+                        hintText: "Deckname",
                         border: OutlineInputBorder(),
                         contentPadding: EdgeInsets.symmetric(
                           horizontal: 12,
