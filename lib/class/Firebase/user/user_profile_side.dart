@@ -284,10 +284,20 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       itemBuilder: (context, index) {
         final deck = decks[index];
         final mainDeckData = deck['mainDeck'] as List<dynamic>? ?? [];
+        final extraDeckData = deck['extraDeck'] as List<dynamic>? ?? [];
+
         final mainDeckList = mainDeckData
             .whereType<Map<String, dynamic>>()
             .toList();
-        final cardCount = _getDeckCardCount(mainDeckList);
+        final extraDeckList = extraDeckData
+            .whereType<Map<String, dynamic>>()
+            .toList();
+
+        // ✅ BERECHNE GESAMTANZAHL: Main Deck + Extra Deck
+        final mainCardCount = _getDeckCardCount(mainDeckList);
+        final extraCardCount = _getDeckCardCount(extraDeckList);
+        final totalCardCount = mainCardCount + extraCardCount;
+
         final deckId = deck['deckId'] as String?;
         final deckName = deck['deckName'] as String;
         final String coverImage = deck["coverImageUrl"] as String? ?? '';
@@ -339,9 +349,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                 width: 50,
                                 height: 50,
                                 decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(
-                                    25,
-                                  ), // Macht es rund
+                                  borderRadius: BorderRadius.circular(25),
                                   border: Border.all(
                                     color: Colors.grey,
                                     width: 2,
@@ -363,7 +371,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                               children: [
                                 if (deckName.isNotEmpty)
                                   Text(
-                                    "$deckName ($cardCount Cards)",
+                                    "$deckName ($totalCardCount Cards)", // ✅ GEÄNDERT
                                     style: Theme.of(
                                       context,
                                     ).textTheme.titleMedium,
