@@ -525,7 +525,7 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
                                         cardData: _cardData,
                                       ),
                                       title: Text(card['name'] ?? 'Unbekannt'),
-                                      subtitle: Text(card['type'] ?? ''),
+
                                       onTap: () => _showCardCountDialog(card),
                                     ),
                                   );

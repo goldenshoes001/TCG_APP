@@ -5,4 +5,4 @@ const double sizeLabels = 14;
 const double elevation = 0;
 const double widthSizedBoxAppBar = 0.005;
 const double bottombarSize = 0.1;
-const double borderRadius = 15;
+const double borderRadius = 0;

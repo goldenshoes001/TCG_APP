@@ -19,26 +19,8 @@ ThemeData darkTheme(BuildContext context) => generalTheme(context).copyWith(
       filled: true,
       fillColor: cardColor,
 
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: dropdownBorderColor, width: 1.5),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: dropdownBorderColor, width: 1.5),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: dropdownFocusedBorderColor, width: 2),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: dropdownErrorBorderColor, width: 1.5),
-      ),
-
       labelStyle: TextStyle(color: inputField),
       hintStyle: TextStyle(color: inputField),
-      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     ),
 
     textStyle: TextStyle(
@@ -52,9 +34,7 @@ ThemeData darkTheme(BuildContext context) => generalTheme(context).copyWith(
     style: OutlinedButton.styleFrom(
       foregroundColor: labelcolor,
       backgroundColor: cardColor,
-      side: BorderSide(color: cardColor, width: 2),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+
       textStyle: Theme.of(context).textTheme.bodyLarge,
     ),
   ),
@@ -181,6 +161,4 @@ ThemeData darkTheme(BuildContext context) => generalTheme(context).copyWith(
   ),
 
   dialogTheme: DialogThemeData(backgroundColor: cardColor),
-
-  cardTheme: CardThemeData(color: Colors.transparent),
 );

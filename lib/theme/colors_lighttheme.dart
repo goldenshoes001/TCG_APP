@@ -4,7 +4,7 @@ Color dropdownBorderColor = Colors.grey.shade600;
 Color dropdownFocusedBorderColor = Colors.lightBlue;
 Color dropdownErrorBorderColor = Colors.red;
 Color barColor = Color(0XFF2563EB);
-Color bodyColor = Color.fromARGB(216, 249, 250, 251);
+Color bodyColor = Color.fromARGB(214, 232, 232, 232);
 
 Color textBar = const Color.fromARGB(255, 255, 255, 255);
 Color textColor = Color.fromARGB(255, 255, 255, 255);
@@ -35,3 +35,7 @@ Color containerColor = Colors.white;
 Color inputField = Color.fromARGB(255, 0, 0, 0);
 
 Color errorColor = Colors.red;
+
+// ⭐ NEU: Farbe für ListTile Texte im Light Theme
+Color listTileTextColor = Color.fromARGB(255, 0, 0, 0);
+Color listTileIconColor = Color.fromARGB(255, 0, 0, 0);

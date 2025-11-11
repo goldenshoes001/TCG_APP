@@ -14,13 +14,27 @@ ThemeData lightTheme(BuildContext context) => generalTheme(context).copyWith(
   scaffoldBackgroundColor: bodyColor,
   canvasColor: cardColor,
 
+  dropdownMenuTheme: DropdownMenuThemeData(
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: cardColor,
+
+      labelStyle: TextStyle(color: inputField),
+      hintStyle: TextStyle(color: inputField),
+    ),
+
+    textStyle: TextStyle(
+      color: Colors.lightBlue,
+      fontFamily: fontFamily,
+      fontSize: 14,
+    ),
+  ),
+
   outlinedButtonTheme: OutlinedButtonThemeData(
     style: OutlinedButton.styleFrom(
       foregroundColor: labelcolor,
       backgroundColor: cardColor,
-      side: BorderSide(color: cardColor, width: 2),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+
       textStyle: Theme.of(context).textTheme.bodyLarge,
     ),
   ),
@@ -35,6 +49,7 @@ ThemeData lightTheme(BuildContext context) => generalTheme(context).copyWith(
       textStyle: Theme.of(context).textTheme.bodyLarge,
     ),
   ),
+
   inputDecorationTheme: InputDecorationTheme(
     filled: true,
     fillColor: cardColor,
@@ -42,28 +57,21 @@ ThemeData lightTheme(BuildContext context) => generalTheme(context).copyWith(
     prefixIconColor: inputField,
     suffixIconColor: inputField,
     hoverColor: inputField,
-    labelStyle: TextStyle(
-      color: inputField,
-      fontFamily: fontFamily,
-      // Passen Sie die Schriftgröße bei Bedarf an
-    ),
+    labelStyle: TextStyle(color: inputField, fontFamily: fontFamily),
     border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(borderRadius),
+      borderRadius: BorderRadius.circular(0), // ← AUF 0 ÄNDERN
       borderSide: BorderSide(color: inputField),
     ),
-
     focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(borderRadius),
+      borderRadius: BorderRadius.circular(0), // ← AUF 0 ÄNDERN
       borderSide: BorderSide(color: inputField, width: 2.0),
     ),
-
     enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(borderRadius),
+      borderRadius: BorderRadius.circular(0), // ← BLEIBT 0
       borderSide: BorderSide(color: cardColor),
     ),
-
     errorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(borderRadius),
+      borderRadius: BorderRadius.circular(0), // ← BLEIBT 0
       borderSide: BorderSide(color: errorColor),
     ),
   ),
@@ -77,6 +85,7 @@ ThemeData lightTheme(BuildContext context) => generalTheme(context).copyWith(
     toolbarHeight: MediaQuery.sizeOf(context).height * appbarSize,
     iconTheme: IconThemeData(color: Colors.white),
   ),
+
   navigationBarTheme: NavigationBarThemeData(
     backgroundColor: barColor,
     height: MediaQuery.sizeOf(context).height * bottombarSize,
@@ -95,19 +104,13 @@ ThemeData lightTheme(BuildContext context) => generalTheme(context).copyWith(
     ),
   ),
 
-  listTileTheme: const ListTileThemeData(
-    // Farbe für den gesamten ListTile-Inhalt (Titel, Untertitel, Icons)
-    textColor: Colors.white,
-    iconColor: Colors.white70,
+  iconTheme: IconThemeData(color: listTileIconColor),
 
-    // Die beste Methode: Den Stil für den Titel direkt festlegen.
-    titleTextStyle: TextStyle(
-      color: Colors.white,
-      // Optional: Weitere Anpassungen basierend auf Ihrem bodyLarge
-      // fontSize: 16,
-      // fontWeight: FontWeight.w500,
-    ),
-  ), // <--- FEHLENDE KLAMMER UND KOMMA HINZUGEFÜGT
+  listTileTheme: ListTileThemeData(
+    textColor: listTileTextColor,
+    iconColor: listTileIconColor,
+    titleTextStyle: TextStyle(color: listTileTextColor),
+  ),
 
   textTheme: generalTheme(context).textTheme.copyWith(
     bodyLarge: generalTheme(
@@ -129,13 +132,20 @@ ThemeData lightTheme(BuildContext context) => generalTheme(context).copyWith(
     headlineSmall: generalTheme(
       context,
     ).textTheme.headlineSmall!.copyWith(color: colorHeadlineSmall),
+
+    titleMedium: TextStyle(
+      color: listTileTextColor,
+      fontFamily: fontFamily,
+      fontSize: 12,
+    ),
   ),
 
   textButtonTheme: TextButtonThemeData(
     style: TextButton.styleFrom(
-      foregroundColor: Colors.black,
-      overlayColor: Colors.transparent,
+      foregroundColor: listTileTextColor,
       padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     ),
   ),
+
+  dialogTheme: DialogThemeData(backgroundColor: cardColor),
 );
