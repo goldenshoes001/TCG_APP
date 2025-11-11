@@ -273,7 +273,7 @@ class _DeckViewerState extends State<DeckViewer> {
           // ✅ GESAMTANZAHL ANZEIGEN
           Padding(
             padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
-            child: Text('$deckName ($totalCardCount Karten)'),
+            child: Text('$deckName ($totalCardCount Cards)'),
           ),
           const Divider(),
 

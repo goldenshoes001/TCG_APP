@@ -461,9 +461,9 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
     final allCards = [..._mainDeck, ..._extraDeck];
 
     if (allCards.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Füge zuerst Karten zum Deck hinzu')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("First add a Card")));
       return;
     }
 
@@ -745,7 +745,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
     required List<Map<String, dynamic>> deck,
   }) {
     if (deck.isEmpty) {
-      return Center(child: Text('Keine Karten im $title'));
+      return Center(child: Text('No Cards at $title'));
     }
 
     final Map<String, List<Map<String, dynamic>>> categorized = {
@@ -931,7 +931,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
           child: Row(
             children: [
               Text(
-                '$title ($totalCards Karten)',
+                '$title ($totalCards Cards)',
                 style: Theme.of(
                   context,
                 ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),

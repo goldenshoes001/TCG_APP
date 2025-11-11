@@ -352,16 +352,7 @@ class _DeckSearchViewState extends State<DeckSearchView> {
                   children: [
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
-                      child: Text('Von: $username'),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Text(
-                        'Main: $mainCount | Extra: $extraCount | Side: $sideCount',
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodySmall?.copyWith(color: Colors.grey),
-                      ),
+                      child: Text('From: $username'),
                     ),
                   ],
                 ),

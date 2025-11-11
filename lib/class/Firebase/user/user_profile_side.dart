@@ -363,7 +363,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                               children: [
                                 if (deckName.isNotEmpty)
                                   Text(
-                                    "$deckName ($cardCount Karten)",
+                                    "$deckName ($cardCount Cards)",
                                     style: Theme.of(
                                       context,
                                     ).textTheme.titleMedium,
