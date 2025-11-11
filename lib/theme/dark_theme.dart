@@ -13,20 +13,29 @@ ThemeData darkTheme(BuildContext context) => generalTheme(context).copyWith(
   cardColor: cardColor,
   scaffoldBackgroundColor: bodyColor,
   canvasColor: cardColor,
-
   dropdownMenuTheme: DropdownMenuThemeData(
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: cardColor,
-
       labelStyle: TextStyle(color: inputField),
       hintStyle: TextStyle(color: inputField),
     ),
 
+    // ✅ TEXT-STYLE FÜR DEN AUSGEWÄHLTEN TEXT IM INPUT-FELD
     textStyle: TextStyle(
       color: Colors.lightBlue,
       fontFamily: fontFamily,
       fontSize: 14,
+    ),
+
+    menuStyle: MenuStyle(
+      backgroundColor: WidgetStateProperty.all(cardColor),
+      surfaceTintColor: WidgetStateProperty.all(Colors.transparent),
+
+      // ✅ BREITE DER DROPDOWN-LISTE
+      fixedSize: WidgetStateProperty.all(
+        Size(MediaQuery.of(context).size.width, 270),
+      ),
     ),
   ),
 
@@ -138,7 +147,6 @@ ThemeData darkTheme(BuildContext context) => generalTheme(context).copyWith(
     headlineLarge: generalTheme(
       context,
     ).textTheme.headlineLarge!.copyWith(color: colorHeadlineLarge),
-
     headlineMedium: generalTheme(
       context,
     ).textTheme.headlineMedium!.copyWith(color: colorHeadlineLarge),
@@ -146,10 +154,17 @@ ThemeData darkTheme(BuildContext context) => generalTheme(context).copyWith(
       context,
     ).textTheme.headlineSmall!.copyWith(color: colorHeadlineSmall),
 
+    // ✅ DROPDOWN ITEM TEXT-STYLES
     titleMedium: TextStyle(
-      color: Colors.white,
+      color: inputField, // Farbe für normale/nicht-ausgewählte Items
       fontFamily: fontFamily,
-      fontSize: 12, // Oder deine gewünschte Größe
+      fontSize: 14,
+    ),
+    titleSmall: TextStyle(
+      color: Colors.black, // Farbe für ausgewählte Items (im Light-Theme)
+      fontFamily: fontFamily,
+      fontSize: 14,
+      fontWeight: FontWeight.bold,
     ),
   ),
 
@@ -161,4 +176,21 @@ ThemeData darkTheme(BuildContext context) => generalTheme(context).copyWith(
   ),
 
   dialogTheme: DialogThemeData(backgroundColor: cardColor),
+
+  menuButtonTheme: MenuButtonThemeData(
+    style: ButtonStyle(
+      // 1. Textfarbe (Foreground Color) ändern
+      foregroundColor: WidgetStateProperty.resolveWith((states) {
+        // Beispiel: Standard-Textfarbe ist lila
+        return Colors.white;
+      }),
+
+      // 2. Hintergrundfarbe beim Hovern/Fokussieren (Background Color) ändern
+
+      // Transparente Standard-Hintergrundfarbe (oder null, um das MenuStyle zu verwenden)
+
+      // 3. Textstil direkt anpassen (z.B. Schriftgröße)
+      textStyle: WidgetStateProperty.all(const TextStyle(fontSize: 16)),
+    ),
+  ),
 );

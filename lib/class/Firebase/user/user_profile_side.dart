@@ -1,4 +1,3 @@
-// user_profile_side.dart - AKTUALISIERT FÜR NEUES DECK LAYOUT
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 import 'package:tcg_app/class/Firebase/interfaces/FirebaseAuthRepository.dart';
@@ -334,19 +333,34 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      SizedBox(width: 10),
                       Expanded(
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             if (imageUrl != null && imageUrl.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(right: 12.0),
-                                child: Image.network(
-                                  imageUrl,
-                                  width: 50,
-                                  height: 50,
+                              Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(
+                                    25,
+                                  ), // Macht es rund
+                                  border: Border.all(
+                                    color: Colors.grey,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: ClipOval(
+                                  child: Image.network(
+                                    imageUrl,
+                                    width: 50,
+                                    height: 50,
+                                    fit: BoxFit.cover,
+                                  ),
                                 ),
                               ),
+                            SizedBox(width: 15),
 
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,

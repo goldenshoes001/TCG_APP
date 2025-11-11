@@ -11,22 +11,35 @@ extension MyLightThemeDataExtension on ThemeData {
 ThemeData lightTheme(BuildContext context) => generalTheme(context).copyWith(
   brightness: Brightness.light,
   cardColor: cardColor,
-  scaffoldBackgroundColor: bodyColor,
+  scaffoldBackgroundColor: cardColor,
   canvasColor: cardColor,
 
   dropdownMenuTheme: DropdownMenuThemeData(
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: cardColor,
-
       labelStyle: TextStyle(color: inputField),
       hintStyle: TextStyle(color: inputField),
     ),
 
+    // ✅ TEXT-STYLE FÜR DEN AUSGEWÄHLTEN TEXT IM INPUT-FELD
     textStyle: TextStyle(
       color: Colors.lightBlue,
       fontFamily: fontFamily,
       fontSize: 14,
+    ),
+
+    menuStyle: MenuStyle(
+      backgroundColor: WidgetStateProperty.all(cardColor),
+      surfaceTintColor: WidgetStateProperty.all(Colors.transparent),
+
+      // ✅ BREITE DER DROPDOWN-LISTE
+      fixedSize: WidgetStateProperty.all(
+        Size(
+          MediaQuery.of(context).size.height,
+          MediaQuery.of(context).size.width,
+        ),
+      ),
     ),
   ),
 
@@ -44,7 +57,7 @@ ThemeData lightTheme(BuildContext context) => generalTheme(context).copyWith(
       foregroundColor: labelcolor,
       backgroundColor: cardColor,
       side: BorderSide(color: cardColor, width: 2),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       textStyle: Theme.of(context).textTheme.bodyLarge,
     ),
@@ -58,22 +71,6 @@ ThemeData lightTheme(BuildContext context) => generalTheme(context).copyWith(
     suffixIconColor: inputField,
     hoverColor: inputField,
     labelStyle: TextStyle(color: inputField, fontFamily: fontFamily),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(0), // ← AUF 0 ÄNDERN
-      borderSide: BorderSide(color: inputField),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(0), // ← AUF 0 ÄNDERN
-      borderSide: BorderSide(color: inputField, width: 2.0),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(0), // ← BLEIBT 0
-      borderSide: BorderSide(color: cardColor),
-    ),
-    errorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(0), // ← BLEIBT 0
-      borderSide: BorderSide(color: errorColor),
-    ),
   ),
   appBarTheme: AppBarTheme(
     backgroundColor: barColor,
@@ -148,4 +145,21 @@ ThemeData lightTheme(BuildContext context) => generalTheme(context).copyWith(
   ),
 
   dialogTheme: DialogThemeData(backgroundColor: cardColor),
+
+  menuButtonTheme: MenuButtonThemeData(
+    style: ButtonStyle(
+      // 1. Textfarbe (Foreground Color) ändern
+      foregroundColor: WidgetStateProperty.resolveWith((states) {
+        // Beispiel: Standard-Textfarbe ist lila
+        return Colors.black;
+      }),
+
+      // 2. Hintergrundfarbe beim Hovern/Fokussieren (Background Color) ändern
+
+      // Transparente Standard-Hintergrundfarbe (oder null, um das MenuStyle zu verwenden)
+
+      // 3. Textstil direkt anpassen (z.B. Schriftgröße)
+      textStyle: WidgetStateProperty.all(const TextStyle(fontSize: 16)),
+    ),
+  ),
 );
