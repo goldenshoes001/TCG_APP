@@ -6,11 +6,9 @@ import 'textstyle.dart';
 ThemeData generalTheme(BuildContext context) {
   return ThemeData(
     cardTheme: CardThemeData(
+      margin: EdgeInsets.all(5),
       color: Colors.transparent,
       elevation: 0,
-      margin: EdgeInsets.all(0),
-      shadowColor: Colors.transparent,
-      clipBehavior: Clip.none,
     ),
     tabBarTheme: TabBarThemeData(
       // Dies entfernt die visuelle Linie des Indicators

@@ -1,4 +1,4 @@
-// DeckSearchView.dart - MIT COVER-BILD ANZEIGE
+// DeckSearchView.dart - KOMPAKTE VERSION MIT MEHR PLATZ FÜR DECKS
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/widgets/deck_search_service.dart';
 import 'package:tcg_app/class/widgets/deck_viewer.dart';
@@ -87,10 +87,7 @@ class _DeckSearchViewState extends State<DeckSearchView> {
     return Container(
       width: 50,
       height: 50,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(25),
-        border: Border.all(color: Colors.grey.shade300, width: 1),
-      ),
+      decoration: BoxDecoration(),
       child: ClipOval(
         child: coverImageUrl == null || coverImageUrl.isEmpty
             ? Container(
@@ -149,60 +146,88 @@ class _DeckSearchViewState extends State<DeckSearchView> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(12.0),
       child: Column(
         children: [
-          TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: "Search by Deckname",
-              prefixIcon: const Icon(Icons.search),
-              border: const OutlineInputBorder(),
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        _searchController.clear();
-                        setState(() {});
-                      },
-                    )
-                  : null,
-            ),
-            onSubmitted: (_) => _performSearch(),
-            onChanged: (_) => setState(() {}),
+          // Kompakter Suchbereich in einer Zeile
+          Row(
+            children: [
+              // TextField für Deckname-Suche
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: "Search by Deckname",
+                    prefixIcon: const Icon(Icons.search, size: 20),
+                    border: const OutlineInputBorder(),
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 12,
+                    ),
+                    isDense: true,
+                  ),
+                  onSubmitted: (_) => _performSearch(),
+                ),
+              ),
+
+              const SizedBox(width: 8),
+
+              // Search Icon Button
+              IconButton(
+                onPressed: _performSearch,
+                icon: const Icon(Icons.search),
+                style: IconButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.all(12),
+                ),
+                tooltip: 'Suchen',
+              ),
+
+              const SizedBox(width: 4),
+
+              // Reset Icon Button
+              IconButton(
+                onPressed: _resetFilters,
+                icon: const Icon(Icons.clear),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.grey[300],
+                  padding: const EdgeInsets.all(12),
+                ),
+                tooltip: 'Zurücksetzen',
+              ),
+            ],
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
 
+          // Dropdown für Archetypen
           if (_isLoadingArchetypes)
             const SizedBox(
-              height: 50,
+              height: 40,
               child: Center(child: CircularProgressIndicator()),
             )
           else if (_availableArchetypes.isNotEmpty)
-            // NEUES DropdownMenu
             DropdownMenu<String?>(
               initialSelection: _selectedArchetype,
-              leadingIcon: const Icon(Icons.category),
-              label: const Text('or choose Archetype'),
-              width:
-                  MediaQuery.of(context).size.width -
-                  32, // Passt sich der Breite des Paddings an (16px links + 16px rechts)
+              leadingIcon: const Icon(Icons.category, size: 18),
+              label: const Text('Archetype'),
+              width: MediaQuery.of(context).size.width - 24,
+              menuHeight: 300,
               onSelected: (String? value) {
                 setState(() {
                   _selectedArchetype = value;
                   if (value != null) {
                     _searchController.clear();
+                    _performSearch();
                   }
                 });
               },
               dropdownMenuEntries: [
-                // Eintrag für "all Archetypes" (null value)
                 const DropdownMenuEntry<String?>(
                   value: null,
-                  label: 'all Archetypes',
+                  label: 'All Archetypes',
                 ),
-                // Alle verfügbaren Archetypen
                 ..._availableArchetypes.map(
                   (archetype) => DropdownMenuEntry<String>(
                     value: archetype,
@@ -212,30 +237,9 @@ class _DeckSearchViewState extends State<DeckSearchView> {
               ],
             ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
 
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _performSearch,
-                  icon: const Icon(Icons.search),
-                  label: const Text('Suchen'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _resetFilters,
-                  icon: const Icon(Icons.clear),
-                  label: const Text('Zurücksetzen'),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
+          // Erweiterter Bereich für Ergebnisse
           Expanded(child: _buildResults()),
         ],
       ),
@@ -248,9 +252,13 @@ class _DeckSearchViewState extends State<DeckSearchView> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.search, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text('Suche nach Decks oder wähle einen Archetyp'),
+            Icon(Icons.search, size: 48, color: Colors.grey[400]),
+            const SizedBox(height: 12),
+            Text(
+              'Suche nach Decks oder wähle einen Archetyp',
+              style: Theme.of(context).textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       );
@@ -268,9 +276,13 @@ class _DeckSearchViewState extends State<DeckSearchView> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                const SizedBox(height: 16),
-                Text('Fehler: ${snapshot.error}'),
+                const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                const SizedBox(height: 12),
+                Text(
+                  'Fehler: ${snapshot.error}',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  textAlign: TextAlign.center,
+                ),
               ],
             ),
           );
@@ -283,9 +295,12 @@ class _DeckSearchViewState extends State<DeckSearchView> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.inbox_outlined, size: 64, color: Colors.grey[400]),
-                const SizedBox(height: 16),
-                const Text('Keine Decks gefunden'),
+                Icon(Icons.inbox_outlined, size: 48, color: Colors.grey[400]),
+                const SizedBox(height: 12),
+                Text(
+                  'Keine Decks gefunden',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
               ],
             ),
           );
@@ -325,7 +340,7 @@ class _DeckSearchViewState extends State<DeckSearchView> {
             });
 
             return Card(
-              margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+              margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 0),
               child: ListTile(
                 leading: _buildDeckCoverImage(deck),
                 title: Text(
@@ -352,9 +367,7 @@ class _DeckSearchViewState extends State<DeckSearchView> {
                 ),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                 onTap: () {
-                  setState(() {
-                    widget.onDeckSelected?.call(deck);
-                  });
+                  widget.onDeckSelected?.call(deck);
                 },
               ),
             );
