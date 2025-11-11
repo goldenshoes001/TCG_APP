@@ -211,7 +211,7 @@ class _DeckViewerState extends State<DeckViewer> {
               label = 'SIDE';
               break;
             case ViewDeckType.notes: // REITER 'NOTES'
-              label = 'KOMMENTARE';
+              label = 'Comments';
               break;
           }
 
@@ -410,7 +410,7 @@ class _CommentSectionState extends State<CommentSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Kommentare'),
+          Text('Comments'),
           const SizedBox(height: 16),
 
           // Kommentar hinzufügen
@@ -420,7 +420,7 @@ class _CommentSectionState extends State<CommentSection> {
                 child: TextField(
                   controller: _commentController,
                   decoration: const InputDecoration(
-                    hintText: 'Kommentar schreiben...',
+                    hintText: "Write a Comment",
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -450,7 +450,7 @@ class _CommentSectionState extends State<CommentSection> {
                 return const Center(
                   child: Padding(
                     padding: EdgeInsets.all(16.0),
-                    child: Text('Noch keine Kommentare'),
+                    child: Text("No Comments"),
                   ),
                 );
               }

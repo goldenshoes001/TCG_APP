@@ -871,7 +871,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
               label = 'SIDE';
               break;
             case DeckType.comments:
-              label = 'KOMMENTARE';
+              label = 'COMMENTS';
               break;
           }
 
@@ -907,11 +907,11 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
         deck = _sideDeck;
         break;
       case DeckType.comments:
-        title = 'Kommentare';
+        title = 'Comments';
         if (_currentDeckId == null) {
           return const Center(
             child: Text(
-              'Deck muss zuerst gespeichert werden, um Kommentare anzuzeigen.',
+              'You have to save the deck before showing the comments',
             ),
           );
         }
@@ -1302,7 +1302,7 @@ class _CommentSectionState extends State<CommentSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Kommentare'),
+          Text('Comments'),
           const SizedBox(height: 16),
           Row(
             children: [
@@ -1310,7 +1310,7 @@ class _CommentSectionState extends State<CommentSection> {
                 child: TextField(
                   controller: _commentController,
                   decoration: const InputDecoration(
-                    hintText: 'Kommentar schreiben...',
+                    hintText: "Write a Comment",
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -1337,7 +1337,7 @@ class _CommentSectionState extends State<CommentSection> {
                 return const Center(
                   child: Padding(
                     padding: EdgeInsets.all(16.0),
-                    child: Text('Noch keine Kommentare'),
+                    child: Text('No Comments'),
                   ),
                 );
               }
