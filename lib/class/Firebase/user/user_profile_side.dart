@@ -186,39 +186,102 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final isShowingDetail =
         _deckCreationKey.currentState?.isShowingCardDetail ?? false;
 
+    // ✅ WENN in Detail-Ansicht: Zeige NUR DeckCreationScreen (der zeigt dann die Karte)
+    if (isShowingDetail) {
+      return Expanded(
+        child: DeckCreationScreen(
+          key: _deckCreationKey,
+          initialDeckId: _editingDeckId,
+          onDataCollected: (data) {},
+          onDetailViewChanged: (isShowing) {
+            setState(() {
+              // State wird automatisch aktualisiert
+            });
+          },
+          onCancel: () {
+            setState(() {
+              _showDeckCreation = false;
+              _editingDeckId = null;
+              userData = userdb.readUser(uid!);
+            });
+          },
+          onSaved: () {
+            setState(() {
+              _showDeckCreation = false;
+              _editingDeckId = null;
+              userData = userdb.readUser(uid!);
+            });
+          },
+        ),
+      );
+    }
+
+    // ✅ SONST: Zeige normale Ansicht mit Buttons
     return Column(
       children: [
-        // ✅ Zeige Buttons NUR wenn NICHT in Detail-Ansicht
-        if (!isShowingDetail)
-          Expanded(
-            child: DeckCreationScreen(
-              key: _deckCreationKey,
-              initialDeckId: _editingDeckId,
-              onDataCollected: (data) {},
-              onDetailViewChanged: (isShowing) {
-                setState(() {
-                  // Wird automatisch durch den Getter isShowingCardDetail abgefragt
-                });
-              },
-              onCancel: () {
-                setState(() {
-                  _showDeckCreation = false;
-                  _editingDeckId = null;
-                  userData = userdb.readUser(uid!);
-                });
-              },
-              // 🎯 NEU: Aufruf nach erfolgreicher Speicherung
-              onSaved: () {
-                setState(() {
-                  _showDeckCreation = false;
-                  _editingDeckId = null;
-                  // Wichtig: Daten neu laden, damit das neue Deck sichtbar ist
-
-                  userData = userdb.readUser(uid!);
-                });
-              },
+        // Zurück-Button und Info
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () {
+                    setState(() {
+                      _showDeckCreation = false;
+                      _editingDeckId = null;
+                    });
+                  },
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _editingDeckId != null
+                            ? 'Deck bearbeiten'
+                            : 'Neues Deck erstellen',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 4),
+                      const Text('Klicke auf eine Karte für Details'),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
+        ),
+
+        // DeckCreationScreen
+        Expanded(
+          child: DeckCreationScreen(
+            key: _deckCreationKey,
+            initialDeckId: _editingDeckId,
+            onDataCollected: (data) {},
+            onDetailViewChanged: (isShowing) {
+              setState(() {
+                // State wird automatisch aktualisiert
+              });
+            },
+            onCancel: () {
+              setState(() {
+                _showDeckCreation = false;
+                _editingDeckId = null;
+                userData = userdb.readUser(uid!);
+              });
+            },
+            onSaved: () {
+              setState(() {
+                _showDeckCreation = false;
+                _editingDeckId = null;
+                userData = userdb.readUser(uid!);
+              });
+            },
+          ),
+        ),
       ],
     );
   }

@@ -477,7 +477,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
         return AlertDialog(
           title: const Text('choose Deck Cover'),
           content: SizedBox(
-            width: double.maxFinite,
+            width: 200,
             height: 400,
             child: GridView.builder(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -562,23 +562,16 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                       );
                     }
                   },
-                  child: Card(
+                  child: Container(
+                    width: 1500,
+                    height: 1500,
+                    color: Colors.red,
                     child: Column(
                       children: [
                         Expanded(
                           child: _CardImageWidget(
                             card: card,
                             cardData: _cardData,
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(4.0),
-                          child: Text(
-                            card['name'] as String? ?? '',
-                            style: const TextStyle(fontSize: 10),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
                           ),
                         ),
                       ],
@@ -1098,13 +1091,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                               builder: (context, snapshot) {
                                 if (snapshot.hasData &&
                                     snapshot.data!.isNotEmpty) {
-                                  return ClipRRect(
-                                    borderRadius: BorderRadius.circular(6),
-                                    child: Image.network(
-                                      snapshot.data!,
-                                      fit: BoxFit.cover,
-                                    ),
-                                  );
+                                  return Image.network(snapshot.data!);
                                 }
                                 return const Center(
                                   child: CircularProgressIndicator(
