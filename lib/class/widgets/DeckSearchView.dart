@@ -157,7 +157,7 @@ class _DeckSearchViewState extends State<DeckSearchView> {
                 child: TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
-                    hintText: "Search by Deckname",
+                    hintText: "Deckname",
                     prefixIcon: const Icon(Icons.search, size: 20),
                     border: const OutlineInputBorder(),
                     contentPadding: const EdgeInsets.symmetric(
@@ -255,7 +255,7 @@ class _DeckSearchViewState extends State<DeckSearchView> {
             Icon(Icons.search, size: 48, color: Colors.grey[400]),
             const SizedBox(height: 12),
             Text(
-              'Suche nach Decks oder wähle einen Archetyp',
+              'search by name or archetype',
               style: Theme.of(context).textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),
@@ -279,7 +279,7 @@ class _DeckSearchViewState extends State<DeckSearchView> {
                 const Icon(Icons.error_outline, size: 48, color: Colors.red),
                 const SizedBox(height: 12),
                 Text(
-                  'Fehler: ${snapshot.error}',
+                  'Error: ${snapshot.error}',
                   style: Theme.of(context).textTheme.bodyMedium,
                   textAlign: TextAlign.center,
                 ),
@@ -298,7 +298,7 @@ class _DeckSearchViewState extends State<DeckSearchView> {
                 Icon(Icons.inbox_outlined, size: 48, color: Colors.grey[400]),
                 const SizedBox(height: 12),
                 Text(
-                  'Keine Decks gefunden',
+                  'No Decks found',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ],
@@ -339,12 +339,13 @@ class _DeckSearchViewState extends State<DeckSearchView> {
               return sum;
             });
 
+            final totalcards = mainCount + extraCount;
             return Card(
               margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 0),
               child: ListTile(
                 leading: _buildDeckCoverImage(deck),
                 title: Text(
-                  deckName,
+                  "$deckName ($totalcards Cards)",
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 subtitle: Column(
@@ -352,7 +353,7 @@ class _DeckSearchViewState extends State<DeckSearchView> {
                   children: [
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
-                      child: Text('From: $username'),
+                      child: Text(username),
                     ),
                   ],
                 ),
