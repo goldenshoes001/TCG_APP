@@ -15,12 +15,18 @@ ThemeData darkTheme(BuildContext context) => generalTheme(context).copyWith(
   canvasColor: cardColor,
 
   dropdownMenuTheme: DropdownMenuThemeData(
-    disabledColor: Colors.white,
-    menuStyle: MenuStyle(),
+    
+    inputDecorationTheme: InputDecorationTheme(
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.all(Radius.circular(20)),
+        borderSide: BorderSide(color: Colors.red),
+      ),
+    ),
+
     textStyle: TextStyle(
-      color: Colors.lightBlue,
       fontFamily: "arial",
       fontSize: 14,
+      color: Colors.lightBlue,
     ),
   ),
 
@@ -149,5 +155,14 @@ ThemeData darkTheme(BuildContext context) => generalTheme(context).copyWith(
     ),
   ),
 
-  //cardTheme: CardThemeData(color: Colors.transparent),
+  textButtonTheme: TextButtonThemeData(
+    style: TextButton.styleFrom(
+      foregroundColor: Colors.white, // Textfarbe aller TextButtons
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    ),
+  ),
+
+  dialogTheme: DialogThemeData(backgroundColor: cardColor),
+
+  cardTheme: CardThemeData(color: Colors.transparent),
 );

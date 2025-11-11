@@ -1,5 +1,3 @@
-import 'dart:nativewrappers/_internal/vm/lib/ffi_allocation_patch.dart';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -433,6 +431,15 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
           isSideDeck: isSideDeck,
           onCardSelected: (card, count) {
             _addCardToDeck(card, count, addToSide: isSideDeck);
+          },
+          onShowSnackBar: (String message) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              // ← Parent Context!
+              SnackBar(
+                content: Text(message),
+                duration: const Duration(seconds: 2),
+              ),
+            );
           },
         );
       },
@@ -979,8 +986,6 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Deck erfolgreich gespeichert!')),
         );
-
-        Navigator.pop(context);
         widget.onSaved?.call();
       }
     } catch (e) {
@@ -1014,7 +1019,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
               ),
               TextButton(
                 onPressed: () {
-                  Navigator.pop(context);
+                  Navigator.of(context).pop();
                   widget.onCancel?.call();
                 },
                 style: TextButton.styleFrom(foregroundColor: Colors.red),

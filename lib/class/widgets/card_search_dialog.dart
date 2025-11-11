@@ -5,11 +5,13 @@ import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 class CardSearchDialog extends StatefulWidget {
   final Function(Map<String, dynamic> card, int count) onCardSelected;
   final bool isSideDeck;
+  final Function(String message)? onShowSnackBar;
 
   const CardSearchDialog({
     super.key,
     required this.onCardSelected,
     this.isSideDeck = false,
+    this.onShowSnackBar,
   });
 
   @override
@@ -107,6 +109,7 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
   }
 
   void _performFilterSearch() {
+    final navigatorContext = Navigator.of(context).context;
     if (_selectedType == null &&
         _selectedRace == null &&
         _selectedAttribute == null &&
@@ -114,9 +117,11 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
         _selectedLevel == null &&
         _selectedScale == null &&
         _selectedLinkRating == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(navigatorContext).showSnackBar(
         const SnackBar(
           content: Text('Bitte wählen Sie mindestens einen Filter aus.'),
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating, // 👈 Wichtig für sichtbarkeit
         ),
       );
       return;
@@ -423,15 +428,16 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
+      insetPadding: EdgeInsets.zero,
       child: Container(
-        width: MediaQuery.of(context).size.width * 0.9,
-        height: MediaQuery.of(context).size.height * 0.8,
+        width: double.infinity,
+        height: double.infinity,
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             Row(
               children: [
-                Text('Search Card'),
+                Text('Filter Search'),
                 const Spacer(),
                 IconButton(
                   icon: Icon(_showFilters ? Icons.search : Icons.filter_list),
@@ -453,7 +459,7 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
               TextField(
                 controller: _searchController,
                 decoration: const InputDecoration(
-                  hintText: "Kartenname eingeben...",
+                  hintText: "Cardname...",
                   prefixIcon: Icon(Icons.search),
                   border: OutlineInputBorder(),
                 ),
