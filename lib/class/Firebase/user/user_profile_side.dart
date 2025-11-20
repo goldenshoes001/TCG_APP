@@ -37,7 +37,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   String? uid;
 
   String? _usernameFromDB;
-  bool _isLoadingUsername = true;
 
   @override
   void initState() {
@@ -54,7 +53,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       uid = null;
       email = "Gast";
       userData = Future.value({});
-      _isLoadingUsername = false;
     }
   }
 
@@ -78,7 +76,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     if (mounted) {
       setState(() {
         _usernameFromDB = fetchedUsername;
-        _isLoadingUsername = false;
       });
     }
   }
@@ -124,53 +121,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   int _getDeckCardCount(List<Map<String, dynamic>> deck) {
     return deck.fold(0, (sum, card) => sum + (card['count'] as int? ?? 0));
-  }
-
-  Future<void> _handleDeckSave(Map<String, dynamic> deckData) async {
-    try {
-      _deckCreationKey.currentState?.setSaving(true);
-
-      if (_editingDeckId == null) {
-        await _deckService.createDeck(
-          deckName: deckData['deckName'],
-          description: deckData['description'],
-          mainDeck: deckData['mainDeck'],
-          extraDeck: deckData['extraDeck'],
-          sideDeck: deckData['sideDeck'],
-          coverImageUrl: deckData['coverImageUrl'],
-        );
-      } else {
-        await _deckService.updateDeck(
-          deckId: _editingDeckId!,
-          deckName: deckData['deckName'],
-          description: deckData['description'],
-          mainDeck: deckData['mainDeck'],
-          extraDeck: deckData['extraDeck'],
-          sideDeck: deckData['sideDeck'],
-          coverImageUrl: deckData['coverImageUrl'],
-        );
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Deck successfull saved!')),
-        );
-        setState(() {
-          _showDeckCreation = false;
-          _editingDeckId = null;
-          // Daten neu laden, damit das neue Deck sichtbar ist
-          userData = userdb.readUser(uid!);
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error on saving: $e')));
-      }
-    } finally {
-      _deckCreationKey.currentState?.setSaving(false);
-    }
   }
 
   void _openDeckForEdit(String deckId) {
