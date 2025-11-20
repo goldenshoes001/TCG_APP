@@ -37,7 +37,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   String? uid;
 
   String? _usernameFromDB;
-  bool _isLoadingUsername = true;
 
   @override
   void initState() {
@@ -54,7 +53,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       uid = null;
       email = "Gast";
       userData = Future.value({});
-      _isLoadingUsername = false;
     }
   }
 
@@ -78,7 +76,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     if (mounted) {
       setState(() {
         _usernameFromDB = fetchedUsername;
-        _isLoadingUsername = false;
       });
     }
   }
@@ -124,53 +121,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   int _getDeckCardCount(List<Map<String, dynamic>> deck) {
     return deck.fold(0, (sum, card) => sum + (card['count'] as int? ?? 0));
-  }
-
-  Future<void> _handleDeckSave(Map<String, dynamic> deckData) async {
-    try {
-      _deckCreationKey.currentState?.setSaving(true);
-
-      if (_editingDeckId == null) {
-        await _deckService.createDeck(
-          deckName: deckData['deckName'],
-          description: deckData['description'],
-          mainDeck: deckData['mainDeck'],
-          extraDeck: deckData['extraDeck'],
-          sideDeck: deckData['sideDeck'],
-          coverImageUrl: deckData['coverImageUrl'],
-        );
-      } else {
-        await _deckService.updateDeck(
-          deckId: _editingDeckId!,
-          deckName: deckData['deckName'],
-          description: deckData['description'],
-          mainDeck: deckData['mainDeck'],
-          extraDeck: deckData['extraDeck'],
-          sideDeck: deckData['sideDeck'],
-          coverImageUrl: deckData['coverImageUrl'],
-        );
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Deck successfull saved!')),
-        );
-        setState(() {
-          _showDeckCreation = false;
-          _editingDeckId = null;
-          // Daten neu laden, damit das neue Deck sichtbar ist
-          userData = userdb.readUser(uid!);
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error on saving: $e')));
-      }
-    } finally {
-      _deckCreationKey.currentState?.setSaving(false);
-    }
   }
 
   void _openDeckForEdit(String deckId) {
@@ -284,10 +234,20 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       itemBuilder: (context, index) {
         final deck = decks[index];
         final mainDeckData = deck['mainDeck'] as List<dynamic>? ?? [];
+        final extraDeckData = deck['extraDeck'] as List<dynamic>? ?? [];
+
         final mainDeckList = mainDeckData
             .whereType<Map<String, dynamic>>()
             .toList();
-        final cardCount = _getDeckCardCount(mainDeckList);
+        final extraDeckList = extraDeckData
+            .whereType<Map<String, dynamic>>()
+            .toList();
+
+        // ✅ BERECHNE GESAMTANZAHL: Main Deck + Extra Deck
+        final mainCardCount = _getDeckCardCount(mainDeckList);
+        final extraCardCount = _getDeckCardCount(extraDeckList);
+        final totalCardCount = mainCardCount + extraCardCount;
+
         final deckId = deck['deckId'] as String?;
         final deckName = deck['deckName'] as String;
         final String coverImage = deck["coverImageUrl"] as String? ?? '';
@@ -339,9 +299,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                 width: 50,
                                 height: 50,
                                 decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(
-                                    25,
-                                  ), // Macht es rund
+                                  borderRadius: BorderRadius.circular(25),
                                   border: Border.all(
                                     color: Colors.grey,
                                     width: 2,
@@ -363,7 +321,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                               children: [
                                 if (deckName.isNotEmpty)
                                   Text(
-                                    "$deckName ($cardCount Cards)",
+                                    "$deckName ($totalCardCount Cards)", // ✅ GEÄNDERT
                                     style: Theme.of(
                                       context,
                                     ).textTheme.titleMedium,

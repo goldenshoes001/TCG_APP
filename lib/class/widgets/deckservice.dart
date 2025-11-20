@@ -191,6 +191,7 @@ class DeckService {
   }
 
   Future<void> deleteDeck(String deckId) async {
+    // Lösche alle Kommentare
     final commentsRef = _firestore
         .collection('decks')
         .doc(deckId)
@@ -204,7 +205,10 @@ class DeckService {
     }
     await batch.commit();
 
+    // Lösche das Deck
     await _firestore.collection('decks').doc(deckId).delete();
+
+    print('✅ Deck $deckId mit allen Kommentaren gelöscht');
   }
 
   List<String> _generateSearchTokens(
