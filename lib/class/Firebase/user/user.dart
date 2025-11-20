@@ -53,8 +53,6 @@ class Userdata implements Dbrepo {
     }
   }
 
-
-
   Future<void> deleteUser(String userId) async {
     final userDoc = FirebaseFirestore.instance.collection("users").doc(userId);
 
@@ -68,11 +66,60 @@ class Userdata implements Dbrepo {
   }
 
   Future<void> deleteUserCompletely(String userId) async {
-    await deleteUser(userId);
+    try {
+      final firestore = FirebaseFirestore.instance;
 
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser != null && currentUser.uid == userId) {
-      await currentUser.delete();
+      // 1. Finde alle Decks des Nutzers
+      final decksSnapshot = await firestore
+          .collection('decks')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      print('🗑️ Lösche ${decksSnapshot.docs.length} Decks...');
+
+      // 2. Lösche alle Decks mit ihren Kommentaren (parallel für bessere Performance)
+      await Future.wait(
+        decksSnapshot.docs.map((deckDoc) async {
+          final deckId = deckDoc.id;
+
+          // Lösche alle Kommentare
+          final commentsSnapshot = await firestore
+              .collection('decks')
+              .doc(deckId)
+              .collection('comments')
+              .get();
+
+          // Batch-Delete für bessere Performance
+          if (commentsSnapshot.docs.isNotEmpty) {
+            final batch = firestore.batch();
+            for (var commentDoc in commentsSnapshot.docs) {
+              batch.delete(commentDoc.reference);
+            }
+            await batch.commit();
+            print('  ↳ ${commentsSnapshot.docs.length} Kommentare gelöscht');
+          }
+
+          // Lösche das Deck
+          await deckDoc.reference.delete();
+          print('  ↳ Deck "$deckId" gelöscht');
+        }),
+      );
+
+      // 3. Lösche das User-Dokument
+      await deleteUser(userId);
+      print('✅ User-Dokument gelöscht');
+
+      // 4. Lösche den Firebase Auth Account
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null && currentUser.uid == userId) {
+        await currentUser.delete();
+        print('✅ Firebase Auth Account gelöscht');
+      }
+
+      print('🎉 User $userId wurde komplett gelöscht!');
+    } catch (e) {
+      print('❌ Fehler beim Löschen des Users: $e');
+      rethrow;
     }
   }
 
