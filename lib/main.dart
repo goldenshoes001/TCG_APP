@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tcg_app/class/Firebase/user/login.dart';
 import 'package:tcg_app/class/Firebase/user/user_profile_side.dart';
 import 'package:tcg_app/class/common/appbar.dart';
@@ -6,7 +7,7 @@ import 'package:tcg_app/class/common/bottombar.dart';
 import 'package:tcg_app/class/common/lists.dart';
 import 'package:tcg_app/class/sharedPreference.dart';
 import 'package:tcg_app/class/widgets/home.dart';
-import 'package:tcg_app/class/widgets/meta.dart';
+import 'package:tcg_app/class/widgets/calculator.dart';
 import 'package:tcg_app/class/widgets/search.dart';
 import 'package:tcg_app/theme/light_theme.dart';
 import 'package:tcg_app/theme/dark_theme.dart';
@@ -21,7 +22,12 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await SaveData.initPreferences();
-  runApp(const MainApp());
+  runApp(
+    const ProviderScope(
+      // <-- MUSS da sein!
+      child: MainApp(),
+    ),
+  );
 }
 
 class MainApp extends StatefulWidget {
@@ -187,12 +193,7 @@ class _MainAppState extends State<MainApp> {
           );
         }
       case 3:
-        return Meta(
-          preloadedTypes: _types,
-          preloadedRaces: _races,
-          preloadedAttributes: _attributes,
-          preloadedArchetypes: _archetypes,
-        );
+        return const ProbabilityCalculator();
       default:
         return Home(
           preloadedTCGBannlist: _tcgBannlist,

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:tcg_app/class/sharedPreference.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tcg_app/theme/sizing.dart';
+import 'package:tcg_app/providers/app_providers.dart';
 
-class Barwidget extends StatefulWidget {
+class Barwidget extends ConsumerWidget {
   final MainAxisAlignment titleFlow;
   final String title;
   final Function(bool) onThemeChanged;
@@ -15,31 +16,7 @@ class Barwidget extends StatefulWidget {
   });
 
   @override
-  State<Barwidget> createState() => _BarwidgetState();
-}
-
-class _BarwidgetState extends State<Barwidget> {
-  bool? mode;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadThemeMode();
-  }
-
-  Future<void> _loadThemeMode() async {
-    final loadedMode = await SaveData().loadBool("darkMode");
-    setState(() {
-      mode = loadedMode;
-    });
-  }
-
-  Future<void> saveThemeMode(bool newValue) async {
-    await SaveData().saveBool("darkMode", newValue);
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final currentBrightness = Theme.of(context).brightness;
     final isDarkMode = currentBrightness == Brightness.dark;
 
@@ -52,13 +29,14 @@ class _BarwidgetState extends State<Barwidget> {
               : const Icon(Icons.dark_mode),
           onPressed: () {
             final newMode = !isDarkMode;
-            widget.onThemeChanged(newMode);
-            saveThemeMode(newMode);
+            onThemeChanged(newMode);
+            // Update über Provider
+            ref.read(darkModeProvider.notifier).toggleDarkMode(newMode);
           },
         ),
       ],
       title: Row(
-        mainAxisAlignment: widget.titleFlow,
+        mainAxisAlignment: titleFlow,
         children: [
           ClipRRect(
             child: Image.asset(
@@ -70,7 +48,7 @@ class _BarwidgetState extends State<Barwidget> {
           SizedBox(
             width: MediaQuery.of(context).size.width * widthSizedBoxAppBar,
           ),
-          Text(widget.title),
+          Text(title),
         ],
       ),
     );

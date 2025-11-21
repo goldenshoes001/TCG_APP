@@ -246,7 +246,6 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
               if (maxCount < 3)
                 Text(
                   'Diese Karte ist ${maxCount == 1 ? 'limitiert' : 'semi-limitiert'}',
-                  style: const TextStyle(color: Colors.orange, fontSize: 12),
                 ),
             ],
           ),

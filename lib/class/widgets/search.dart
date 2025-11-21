@@ -1,30 +1,30 @@
-// search.dart - AKTUALISIERT MIT DECKVIEWER
 import 'package:flutter/material.dart';
-import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tcg_app/class/common/buildCards.dart';
 import 'package:tcg_app/class/widgets/DeckSearchView.dart';
 import 'package:tcg_app/class/widgets/helperClass%20allgemein/search_results_view.dart';
-import 'package:tcg_app/class/widgets/deck_search_service.dart';
 import 'package:tcg_app/class/widgets/deck_viewer.dart';
+import 'package:tcg_app/providers/app_providers.dart';
 
-class Search extends StatefulWidget {
+class Search extends ConsumerStatefulWidget {
   const Search({super.key});
 
   @override
-  State<Search> createState() => _SearchState();
+  ConsumerState<Search> createState() => _MetaState();
 }
 
-class _SearchState extends State<Search> with SingleTickerProviderStateMixin {
-  final CardData _cardData = CardData();
-  final DeckSearchService _deckSearchService = DeckSearchService();
-  final TextEditingController suchfeld = TextEditingController();
-
+class _MetaState extends ConsumerState<Search>
+    with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final TextEditingController _suchfeld = TextEditingController();
+  final TextEditingController _atkController = TextEditingController();
+  final TextEditingController _defController = TextEditingController();
 
-  Future<List<Map<String, dynamic>>>? _cardSearchFuture;
-  Future<List<Map<String, dynamic>>>? _deckSearchFuture;
-  Map<String, dynamic>? _selectedCard;
-  Map<String, dynamic>? _selectedDeck;
+  bool _showFilters = true;
+  int _dropdownResetKey = 0;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -35,73 +35,126 @@ class _SearchState extends State<Search> with SingleTickerProviderStateMixin {
   @override
   void dispose() {
     _tabController.dispose();
-    suchfeld.dispose();
+    _suchfeld.dispose();
+    _atkController.dispose();
+    _defController.dispose();
     super.dispose();
   }
 
-  void _performSearch(String value) {
+  void _performTextSearch(String value) {
     final trimmedValue = value.trim();
-
     if (trimmedValue.isEmpty) {
-      setState(() {
-        _cardSearchFuture = Future.value([]);
-        _deckSearchFuture = Future.value([]);
-      });
+      ref.read(cardSearchQueryProvider.notifier).state = '';
       return;
     }
 
     if (_tabController.index == 0) {
-      // Karten-Suche
+      ref.read(cardSearchQueryProvider.notifier).state = trimmedValue;
+      ref.read(selectedCardProvider.notifier).state = null;
       setState(() {
-        _cardSearchFuture = _cardData.ergebniseAnzeigen(trimmedValue).then((
-          list,
-        ) async {
-          final cards = list.cast<Map<String, dynamic>>();
-          await _cardData.preloadCardImages(cards);
-          return cards;
-        });
-        _selectedCard = null;
-      });
-    } else {
-      // Deck-Suche
-      // ACHTUNG: Die globale Suche wird im Deck-Tab nicht mehr unterstützt.
-      // Wenn der Benutzer hier tippt, löst er versehentlich die Suche aus.
-      // Da wir das Suchfeld nun ausblenden, ist dieser else-Block obsolet,
-      // aber wir lassen die Logik hier zur Sicherheit.
-      setState(() {
-        _deckSearchFuture = _deckSearchService.searchDecks(trimmedValue);
-        _selectedDeck = null;
+        _showFilters = false;
       });
     }
   }
 
+  void _performCardSearch() {
+    final filterState = ref.read(filterProvider);
+
+    if (filterState.selectedType == null &&
+        filterState.selectedRace == null &&
+        filterState.selectedAttribute == null &&
+        filterState.selectedArchetype == null &&
+        filterState.selectedLevel == null &&
+        _atkController.text.trim().isEmpty &&
+        _defController.text.trim().isEmpty &&
+        filterState.selectedScale == null &&
+        filterState.selectedLinkRating == null &&
+        filterState.selectedBanlistTCG == null &&
+        filterState.selectedBanlistOCG == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pls choose at least one Filter.')),
+      );
+      return;
+    }
+
+    // Update ATK/DEF Werte im State
+    ref
+        .read(filterProvider.notifier)
+        .updateAtkValue(_atkController.text.trim());
+    ref
+        .read(filterProvider.notifier)
+        .updateDefValue(_defController.text.trim());
+
+    // Trigger Filter Search durch State-Update
+    ref.read(filterSearchTriggerProvider.notifier).state++;
+    ref.read(cardSearchQueryProvider.notifier).state = '';
+
+    setState(() {
+      _showFilters = false;
+      _suchfeld.clear();
+    });
+  }
+
+  void _resetFilters() {
+    ref.read(filterProvider.notifier).reset();
+    ref.read(cardSearchQueryProvider.notifier).state = '';
+    ref.read(deckSearchQueryProvider.notifier).state = '';
+    ref.read(selectedCardProvider.notifier).state = null;
+    ref.read(selectedDeckProvider.notifier).state = null;
+
+    setState(() {
+      _suchfeld.clear();
+      _atkController.clear();
+      _defController.clear();
+      _showFilters = true;
+      _dropdownResetKey++;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    // ✅ WENN Karten-Detail: Zeige NUR CardDetailView
-    if (_selectedCard != null) {
+    super.build(context);
+
+    final selectedCard = ref.watch(selectedCardProvider);
+    final selectedDeck = ref.watch(selectedDeckProvider);
+    final cardSearchQuery = ref.watch(cardSearchQueryProvider);
+    final filterState = ref.watch(filterProvider);
+
+    // Loading States für Filter-Daten
+    final typesAsync = ref.watch(typesProvider);
+    final racesAsync = ref.watch(racesProvider);
+    final attributesAsync = ref.watch(attributesProvider);
+    final archetypesAsync = ref.watch(archetypesProvider);
+
+    if (selectedCard != null) {
       return CardDetailView(
-        cardData: _selectedCard!,
+        cardData: selectedCard,
         onBack: () {
-          setState(() {
-            _selectedCard = null;
-          });
+          ref.read(selectedCardProvider.notifier).state = null;
         },
       );
     }
 
-    // ✅ WENN Deck-Detail: Zeige NUR DeckViewer (OHNE Tabs!)
-    if (_selectedDeck != null) {
+    if (selectedDeck != null) {
       return DeckViewer(
-        deckData: _selectedDeck!,
+        deckData: selectedDeck,
         onBack: () {
-          setState(() {
-            _selectedDeck = null;
-          });
+          ref.read(selectedDeckProvider.notifier).state = null;
         },
       );
     }
 
-    // ✅ SONST: Zeige normale Ansicht MIT Tabs
+    // Prüfe ob Filter-Daten geladen werden
+    final isLoadingFilters =
+        typesAsync.isLoading ||
+        racesAsync.isLoading ||
+        attributesAsync.isLoading ||
+        archetypesAsync.isLoading;
+
+    if (isLoadingFilters && _tabController.index == 0) {
+      return const Center(child: Text('Filter get loaded...'));
+    }
+
     return Column(
       children: [
         TabBar(
@@ -111,10 +164,17 @@ class _SearchState extends State<Search> with SingleTickerProviderStateMixin {
             Tab(text: 'Decks'),
           ],
           onTap: (index) {
+            ref.read(cardSearchQueryProvider.notifier).state = '';
+            ref.read(deckSearchQueryProvider.notifier).state = '';
+            ref.read(selectedArchetypeProvider.notifier).state = null;
+            ref
+                .read(deckSearchTriggerProvider.notifier)
+                .state++; // 🔄 Trigger reset
+            ref.read(selectedCardProvider.notifier).state = null;
+            ref.read(selectedDeckProvider.notifier).state = null;
             setState(() {
-              _cardSearchFuture = null;
-              _deckSearchFuture = null;
-              suchfeld.clear();
+              _showFilters = index == 0;
+              _suchfeld.clear();
             });
           },
         ),
@@ -122,15 +182,18 @@ class _SearchState extends State<Search> with SingleTickerProviderStateMixin {
           child: Padding(
             padding: EdgeInsets.all(MediaQuery.of(context).size.height / 30),
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SizedBox(height: MediaQuery.of(context).size.height / 350),
 
                 if (_tabController.index == 0)
                   Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       TextField(
                         decoration: const InputDecoration(
-                          hintText: "Search Card..",
+                          hintText: "search Card...",
                           prefixIcon: Icon(Icons.search),
                           border: OutlineInputBorder(),
                           contentPadding: EdgeInsets.symmetric(
@@ -138,38 +201,414 @@ class _SearchState extends State<Search> with SingleTickerProviderStateMixin {
                             horizontal: 12,
                           ),
                         ),
-                        onSubmitted: _performSearch,
-                        controller: suchfeld,
+                        onSubmitted: _performTextSearch,
+                        controller: _suchfeld,
                       ),
-                      SizedBox(height: MediaQuery.of(context).size.height / 55),
+                      const SizedBox(height: 30),
                     ],
+                  ),
+
+                if (_tabController.index == 0 &&
+                    !_showFilters &&
+                    (cardSearchQuery.isNotEmpty ||
+                        filterState.selectedType != null))
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16.0),
+                    child: Row(
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            setState(() {
+                              _showFilters = true;
+                            });
+                          },
+                          icon: const Icon(Icons.filter_list),
+                          label: const Text('Show Filter'),
+                        ),
+                      ],
+                    ),
                   ),
 
                 Expanded(
                   child: TabBarView(
                     controller: _tabController,
                     children: [
-                      SearchResultsView(
-                        searchFuture: _cardSearchFuture,
-                        cardData: _cardData,
-                        onCardSelected: (card) {
-                          setState(() {
-                            _selectedCard = card;
-                          });
-                        },
-                      ),
+                      _showFilters
+                          ? _buildFilterView(
+                              typesAsync,
+                              racesAsync,
+                              attributesAsync,
+                              archetypesAsync,
+                            )
+                          : _buildSearchResults(),
                       DeckSearchView(
                         onDeckSelected: (deck) {
-                          // NEU!
-                          setState(() {
-                            _selectedDeck = deck;
-                          });
+                          ref.read(selectedDeckProvider.notifier).state = deck;
                         },
                       ),
                     ],
                   ),
                 ),
               ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSearchResults() {
+    final cardSearchQuery = ref.watch(cardSearchQueryProvider);
+    final cardData = ref.watch(cardDataProvider);
+
+    // Entscheide ob Text-Suche oder Filter-Suche
+    if (cardSearchQuery.isNotEmpty) {
+      final searchResultsAsync = ref.watch(cardSearchResultsProvider);
+
+      return searchResultsAsync.when(
+        data: (results) => SearchResultsView(
+          searchFuture: Future.value(results),
+
+          onCardSelected: (card) {
+            ref.read(selectedCardProvider.notifier).state = card;
+          },
+        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => Center(child: Text('Error: $error')),
+      );
+    } else {
+      final filterResultsAsync = ref.watch(filterSearchResultsProvider);
+
+      return filterResultsAsync.when(
+        data: (results) => SearchResultsView(
+          searchFuture: Future.value(results),
+
+          onCardSelected: (card) {
+            ref.read(selectedCardProvider.notifier).state = card;
+          },
+        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => Center(child: Text('Error: $error')),
+      );
+    }
+  }
+
+  Widget _buildFilterView(
+    AsyncValue<List<String>> typesAsync,
+    AsyncValue<List<String>> racesAsync,
+    AsyncValue<List<String>> attributesAsync,
+    AsyncValue<List<String>> archetypesAsync,
+  ) {
+    return typesAsync.when(
+      data: (types) => racesAsync.when(
+        data: (races) => attributesAsync.when(
+          data: (attributes) => archetypesAsync.when(
+            data: (archetypes) =>
+                _buildFilterForm(types, races, attributes, archetypes),
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, s) => Center(child: Text('Error loading archetypes')),
+          ),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, s) => Center(child: Text('Error loading attributes')),
+        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, s) => Center(child: Text('Error loading races')),
+      ),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, s) => Center(child: Text('Error loading types')),
+    );
+  }
+
+  Widget _buildFilterForm(
+    List<String> types,
+    List<String> races,
+    List<String> attributes,
+    List<String> archetypes,
+  ) {
+    final filterState = ref.watch(filterProvider);
+    const double spacing = 12.0;
+    final List<String> banlistStatuses = [
+      'Forbidden',
+      'Limited',
+      'Semi-Limited',
+    ];
+    final List<String> operators = ['min', '=', 'max'];
+
+    return SingleChildScrollView(
+      child: Column(
+        key: ValueKey(_dropdownResetKey),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Type Dropdown
+          Padding(
+            padding: const EdgeInsets.only(top: 5.0),
+            child: DropdownMenu<String>(
+              label: const Text('Type'),
+              initialSelection: filterState.selectedType,
+              expandedInsets: EdgeInsets.zero,
+              dropdownMenuEntries: types.map((item) {
+                return DropdownMenuEntry<String>(value: item, label: item);
+              }).toList(),
+              onSelected: (value) {
+                ref.read(filterProvider.notifier).updateType(value);
+              },
+            ),
+          ),
+          const SizedBox(height: spacing),
+
+          // Race & Attribute Row
+          Row(
+            children: [
+              Expanded(
+                child: DropdownMenu<String>(
+                  label: const Text('Race'),
+                  initialSelection: filterState.selectedRace,
+                  expandedInsets: EdgeInsets.zero,
+                  dropdownMenuEntries: races.map((item) {
+                    return DropdownMenuEntry<String>(value: item, label: item);
+                  }).toList(),
+                  onSelected: (value) {
+                    ref.read(filterProvider.notifier).updateRace(value);
+                  },
+                ),
+              ),
+              const SizedBox(width: spacing),
+              Expanded(
+                child: DropdownMenu<String>(
+                  label: const Text('Attribut'),
+                  initialSelection: filterState.selectedAttribute,
+                  expandedInsets: EdgeInsets.zero,
+                  dropdownMenuEntries: attributes.map((item) {
+                    return DropdownMenuEntry<String>(value: item, label: item);
+                  }).toList(),
+                  onSelected: (value) {
+                    ref.read(filterProvider.notifier).updateAttribute(value);
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: spacing),
+
+          // Archetype
+          DropdownMenu<String>(
+            label: const Text('Archetyp'),
+            initialSelection: filterState.selectedArchetype,
+            expandedInsets: EdgeInsets.zero,
+            dropdownMenuEntries: archetypes.map((item) {
+              return DropdownMenuEntry<String>(value: item, label: item);
+            }).toList(),
+            onSelected: (value) {
+              ref.read(filterProvider.notifier).updateArchetype(value);
+            },
+          ),
+          const SizedBox(height: spacing),
+
+          // Level with Operator
+          _buildDropdownWithOperator(
+            label: 'Level',
+            value: filterState.selectedLevel,
+            items: List.generate(14, (index) => index.toString()),
+            operator: filterState.levelOperator,
+            operators: operators,
+            onChanged: (value) {
+              ref.read(filterProvider.notifier).updateLevel(value);
+            },
+            onOperatorChanged: (value) {
+              ref.read(filterProvider.notifier).updateLevelOperator(value!);
+            },
+          ),
+          const SizedBox(height: spacing),
+
+          // Scale with Operator
+          _buildDropdownWithOperator(
+            label: 'Scale',
+            value: filterState.selectedScale,
+            items: List.generate(14, (index) => index.toString()),
+            operator: filterState.scaleOperator,
+            operators: operators,
+            onChanged: (value) {
+              ref.read(filterProvider.notifier).updateScale(value);
+            },
+            onOperatorChanged: (value) {
+              ref.read(filterProvider.notifier).updateScaleOperator(value!);
+            },
+          ),
+          const SizedBox(height: spacing),
+
+          // Link Rating with Operator
+          _buildDropdownWithOperator(
+            label: 'Link Rating',
+            value: filterState.selectedLinkRating,
+            items: List.generate(6, (index) => (index + 1).toString()),
+            operator: filterState.linkRatingOperator,
+            operators: operators,
+            onChanged: (value) {
+              ref.read(filterProvider.notifier).updateLinkRating(value);
+            },
+            onOperatorChanged: (value) {
+              ref
+                  .read(filterProvider.notifier)
+                  .updateLinkRatingOperator(value!);
+            },
+          ),
+          const SizedBox(height: spacing),
+
+          // ATK with Operator
+          _buildNumericInputWithOperator(
+            label: 'ATK',
+            controller: _atkController,
+            operator: filterState.atkOperator,
+            operators: operators,
+            onOperatorChanged: (value) {
+              ref.read(filterProvider.notifier).updateAtkOperator(value!);
+            },
+          ),
+          const SizedBox(height: spacing),
+
+          // DEF with Operator
+          _buildNumericInputWithOperator(
+            label: 'DEF',
+            controller: _defController,
+            operator: filterState.defOperator,
+            operators: operators,
+            onOperatorChanged: (value) {
+              ref.read(filterProvider.notifier).updateDefOperator(value!);
+            },
+          ),
+          const SizedBox(height: spacing),
+
+          // Bannlist Row
+          Row(
+            children: [
+              Expanded(
+                child: DropdownMenu<String>(
+                  label: const Text('TCG Bannliste'),
+                  initialSelection: filterState.selectedBanlistTCG,
+                  expandedInsets: EdgeInsets.zero,
+                  dropdownMenuEntries: banlistStatuses.map((item) {
+                    return DropdownMenuEntry<String>(value: item, label: item);
+                  }).toList(),
+                  onSelected: (value) {
+                    ref.read(filterProvider.notifier).updateBanlistTCG(value);
+                  },
+                ),
+              ),
+              const SizedBox(width: spacing),
+              Expanded(
+                child: DropdownMenu<String>(
+                  label: const Text('OCG Bannliste'),
+                  initialSelection: filterState.selectedBanlistOCG,
+                  expandedInsets: EdgeInsets.zero,
+                  dropdownMenuEntries: banlistStatuses.map((item) {
+                    return DropdownMenuEntry<String>(value: item, label: item);
+                  }).toList(),
+                  onSelected: (value) {
+                    ref.read(filterProvider.notifier).updateBanlistOCG(value);
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: spacing),
+
+          // Search & Reset Buttons
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _performCardSearch,
+                  icon: const Icon(Icons.search),
+                  label: const Text('search'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _resetFilters,
+                  icon: const Icon(Icons.clear),
+                  label: const Text('reset'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDropdownWithOperator({
+    required String label,
+    required String? value,
+    required List<String> items,
+    required String operator,
+    required List<String> operators,
+    required void Function(String?) onChanged,
+    required void Function(String?) onOperatorChanged,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          flex: 1,
+          child: DropdownMenu<String>(
+            initialSelection: operator,
+            expandedInsets: EdgeInsets.zero,
+            dropdownMenuEntries: operators.map((op) {
+              return DropdownMenuEntry<String>(value: op, label: op);
+            }).toList(),
+            onSelected: onOperatorChanged,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          flex: 2,
+          child: DropdownMenu<String>(
+            label: Text(label),
+            initialSelection: value,
+            expandedInsets: EdgeInsets.zero,
+            dropdownMenuEntries: items.map((item) {
+              return DropdownMenuEntry<String>(value: item, label: item);
+            }).toList(),
+            onSelected: onChanged,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNumericInputWithOperator({
+    required String label,
+    required TextEditingController controller,
+    required String operator,
+    required List<String> operators,
+    required void Function(String?) onOperatorChanged,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          flex: 1,
+          child: DropdownMenu<String>(
+            initialSelection: operator,
+            expandedInsets: EdgeInsets.zero,
+            dropdownMenuEntries: operators.map((op) {
+              return DropdownMenuEntry<String>(value: op, label: op);
+            }).toList(),
+            onSelected: onOperatorChanged,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          flex: 2,
+          child: TextField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              hintText: label,
+              border: const OutlineInputBorder(),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 8,
+              ),
             ),
           ),
         ),

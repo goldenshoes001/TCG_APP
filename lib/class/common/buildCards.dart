@@ -191,14 +191,7 @@ class _CardDetailViewState extends State<CardDetailView> {
             const SizedBox(height: 30),
 
             // Name
-            Text(
-              name,
-              style: const TextStyle(
-                fontFamily: "Arial",
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-              ),
-            ),
+            Text(name),
             const SizedBox(height: 10),
 
             // Beschreibung
@@ -220,26 +213,9 @@ class _CardDetailViewState extends State<CardDetailView> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // Key
-                            Text(
-                              element.key.toUpperCase(),
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Theme.of(
-                                  context,
-                                ).textTheme.bodyLarge?.color,
-                              ),
-                            ),
+                            Text(element.key.toUpperCase()),
                             // Value
-                            Text(
-                              element.value.toString(),
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(
-                                  context,
-                                ).textTheme.bodyLarge?.color,
-                              ),
-                            ),
+                            Text(element.value.toString()),
                           ],
                         ),
                       );
@@ -260,26 +236,9 @@ class _CardDetailViewState extends State<CardDetailView> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // Key
-                            Text(
-                              element.key.toUpperCase(),
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Theme.of(
-                                  context,
-                                ).textTheme.bodyLarge?.color,
-                              ),
-                            ),
+                            Text(element.key.toUpperCase()),
                             // Value
-                            Text(
-                              element.value.toString(),
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(
-                                  context,
-                                ).textTheme.bodyLarge?.color,
-                              ),
-                            ),
+                            Text(element.value.toString()),
                           ],
                         ),
                       );

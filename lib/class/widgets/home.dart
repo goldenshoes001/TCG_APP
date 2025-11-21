@@ -180,7 +180,7 @@ class _HomeState extends State<Home> {
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-      child: Text(title, style: Theme.of(context).textTheme.headlineSmall),
+      child: Text(title),
     );
   }
 
@@ -209,7 +209,7 @@ class _HomeState extends State<Home> {
           // Icon oder Zahl
           icon != null
               ? Icon(icon, size: 12, fontWeight: FontWeight.w100)
-              : Text(iconText!, style: TextStyle(fontWeight: FontWeight.bold)),
+              : Text(iconText!),
 
           // Kartenbild
           FutureBuilder<String>(

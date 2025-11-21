@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:tcg_app/class/Firebase/interfaces/FirebaseAuthRepository.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tcg_app/class/Firebase/user/user.dart';
 import 'package:tcg_app/class/common/appbar.dart';
 import 'package:tcg_app/class/common/bottombar.dart';
 import 'package:tcg_app/class/common/lists.dart';
-
 import 'package:tcg_app/theme/sizing.dart';
-// Importiere deine FirebaseAuthRepository
+import 'package:tcg_app/providers/app_providers.dart';
 
-// Stelle sicher, dass du das Benutzerprofil importierst
-
-class Registrieren extends StatefulWidget {
+class Registrieren extends ConsumerStatefulWidget {
   final int selectedIndex;
   final Function(int) onItemTapped;
   final Function(bool) onThemeChanged;
@@ -23,10 +20,10 @@ class Registrieren extends StatefulWidget {
   });
 
   @override
-  State<Registrieren> createState() => _RegistrierenState();
+  ConsumerState<Registrieren> createState() => _RegistrierenState();
 }
 
-class _RegistrierenState extends State<Registrieren> {
+class _RegistrierenState extends ConsumerState<Registrieren> {
   final _formKey = GlobalKey<FormState>();
 
   final emailAdressController = TextEditingController();
@@ -51,7 +48,6 @@ class _RegistrierenState extends State<Registrieren> {
   @override
   void initState() {
     super.initState();
-    // Listener für Live-Validierung
     emailAdressController.addListener(_validateEmail);
     repeatEmailAdressController.addListener(_validateRepeatEmail);
     pwController.addListener(_validatePassword);
@@ -69,6 +65,7 @@ class _RegistrierenState extends State<Registrieren> {
     repeatEmailAdressController.dispose();
     pwController.dispose();
     pwRepeatController.dispose();
+    usernameController.dispose();
     super.dispose();
   }
 
@@ -263,7 +260,61 @@ class _RegistrierenState extends State<Registrieren> {
     }
   }
 
-  // 2. Formular-Validierung
+  Future<void> handleRegistrieren() async {
+    // 1. Zuerst die Live-Validierung prüfen
+    if (_emailValidationColor != Colors.green ||
+        _repeatEmailValidationColor != Colors.green ||
+        _passwordStrengthColor != Colors.green ||
+        _repeatPasswordValidationColor != Colors.green) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Pls correct all Fields"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // 2. Formular-Validierung
+    if (_formKey.currentState!.validate()) {
+      final auth = ref.read(authRepositoryProvider);
+      final db = Userdata();
+      final String email = emailAdressController.text.trim();
+      final String password = pwController.text;
+      final String username = usernameController.text;
+
+      try {
+        await auth.createUserWithEmailAndPassword(email, password);
+        final String userId = auth.getCurrentUser()!.uid;
+        await db.createUser(username, email, userId);
+
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Registration successfull!"),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        if (mounted) {
+          emailAdressController.clear();
+          usernameController.clear();
+          repeatEmailAdressController.clear();
+          pwController.clear();
+          pwRepeatController.clear();
+
+          Navigator.pop(context);
+          widget.onItemTapped(2);
+        }
+      } on Exception catch (e) {
+        String message = e.toString().replaceFirst('Exception: ', '');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -284,249 +335,215 @@ class _RegistrierenState extends State<Registrieren> {
         child: SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Form(
-                  key: _formKey,
-                  child: Column(
-                    children: [
-                      TextFormField(
-                        decoration: InputDecoration(
-                          prefixIcon: Icon(Icons.boy_sharp),
-                          labelText: "username",
-                          hintText: "username",
-                        ),
-                        controller: usernameController,
-                        keyboardType: TextInputType.name,
-                      ),
-                      // E-Mail Feld
-                      const SizedBox(height: 40),
-                      TextFormField(
-                        decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.mail),
-                          labelText: "Email :",
-                          hintText: "Email",
-                          suffixIcon: _emailValidation.isNotEmpty
-                              ? Icon(
-                                  _emailValidationColor == Colors.green
-                                      ? Icons.check_circle
-                                      : _emailValidationColor == Colors.red
-                                      ? Icons.error
-                                      : Icons.warning,
-                                  color: _emailValidationColor,
-                                )
-                              : null,
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Bitte geben Sie eine E-Mail-Adresse ein';
-                          }
-                          return null;
-                        },
-                        controller: emailAdressController,
-                        keyboardType: TextInputType.emailAddress,
-                      ),
-                      if (_emailValidation.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4, left: 12),
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              _emailValidation,
-                              style: TextStyle(
-                                color: _emailValidationColor,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ),
-                      const SizedBox(height: height),
-
-                      // E-Mail wiederholen
-                      TextFormField(
-                        decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.mail),
-                          labelText: "E-Mail wiederholen :",
-                          hintText: "E-Mail wiederholen",
-                          suffixIcon: _repeatEmailValidation.isNotEmpty
-                              ? Icon(
-                                  _repeatEmailValidationColor == Colors.green
-                                      ? Icons.check_circle
-                                      : _repeatEmailValidationColor ==
-                                            Colors.red
-                                      ? Icons.error
-                                      : Icons.warning,
-                                  color: _repeatEmailValidationColor,
-                                )
-                              : null,
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Bitte wiederholen Sie die E-Mail-Adresse';
-                          }
-                          return null;
-                        },
-                        controller: repeatEmailAdressController,
-                        keyboardType: TextInputType.emailAddress,
-                      ),
-                      if (_repeatEmailValidation.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4, left: 12),
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              _repeatEmailValidation,
-                              style: TextStyle(
-                                color: _repeatEmailValidationColor,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ),
-                      const SizedBox(height: height),
-
-                      // Passwort Feld
-                      TextFormField(
-                        decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.key),
-                          labelText: "Passwort :",
-                          hintText: "Passwort",
-                          suffixIcon: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (_passwordStrength.isNotEmpty)
-                                Icon(
-                                  _passwordStrengthColor == Colors.green
-                                      ? Icons.check_circle
-                                      : _passwordStrengthColor == Colors.red
-                                      ? Icons.error
-                                      : _passwordStrengthColor == Colors.orange
-                                      ? Icons.warning
-                                      : Icons.info,
-                                  color: _passwordStrengthColor,
-                                  size: 20,
-                                ),
-                              IconButton(
-                                icon: Icon(
-                                  _isPasswordVisible
-                                      ? Icons.visibility
-                                      : Icons.visibility_off,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _isPasswordVisible = !_isPasswordVisible;
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Bitte geben Sie ein Passwort ein';
-                          }
-                          return null;
-                        },
-                        controller: pwController,
-                        obscureText: !_isPasswordVisible,
-                      ),
-                      if (_passwordStrength.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4, left: 12),
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              _passwordStrength,
-                              style: TextStyle(
-                                color: _passwordStrengthColor,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ),
-                      const SizedBox(height: height),
-
-                      // Passwort wiederholen
-                      TextFormField(
-                        decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.key),
-                          labelText: "Passwort wiederholen :",
-                          hintText: "Passwort wiederholen",
-                          suffixIcon: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (_repeatPasswordValidation.isNotEmpty)
-                                Icon(
-                                  _repeatPasswordValidationColor == Colors.green
-                                      ? Icons.check_circle
-                                      : _repeatPasswordValidationColor ==
-                                            Colors.red
-                                      ? Icons.error
-                                      : _repeatPasswordValidationColor ==
-                                            Colors.orange
-                                      ? Icons.warning
-                                      : Icons.info,
-                                  color: _repeatPasswordValidationColor,
-                                  size: 20,
-                                ),
-                              IconButton(
-                                icon: Icon(
-                                  _isRepeatPasswordVisible
-                                      ? Icons.visibility
-                                      : Icons.visibility_off,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _isRepeatPasswordVisible =
-                                        !_isRepeatPasswordVisible;
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Bitte bestätigen Sie Ihr Passwort';
-                          }
-                          return null;
-                        },
-
-                        controller: pwRepeatController,
-                        obscureText: !_isRepeatPasswordVisible,
-                      ),
-                      if (_repeatPasswordValidation.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4, left: 12),
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              _repeatPasswordValidation,
-                              style: TextStyle(
-                                color: _repeatPasswordValidationColor,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextFormField(
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.boy_sharp),
+                      labelText: "username",
+                      hintText: "username",
+                    ),
+                    controller: usernameController,
+                    keyboardType: TextInputType.name,
                   ),
-                ),
-                const SizedBox(height: height + 50),
-                SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.96,
-                  child: OutlinedButton(
-                    onPressed: handleRegistrieren,
-                    child: const Text("Registration"),
+                  const SizedBox(height: 40),
+
+                  // E-Mail Feld
+                  TextFormField(
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.mail),
+                      labelText: "Email :",
+                      hintText: "Email",
+                      suffixIcon: _emailValidation.isNotEmpty
+                          ? Icon(
+                              _emailValidationColor == Colors.green
+                                  ? Icons.check_circle
+                                  : _emailValidationColor == Colors.red
+                                  ? Icons.error
+                                  : Icons.warning,
+                              color: _emailValidationColor,
+                            )
+                          : null,
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Bitte geben Sie eine E-Mail-Adresse ein';
+                      }
+                      return null;
+                    },
+                    controller: emailAdressController,
+                    keyboardType: TextInputType.emailAddress,
                   ),
-                ),
+                  if (_emailValidation.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4, left: 12),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(_emailValidation),
+                      ),
+                    ),
+                  const SizedBox(height: height),
 
-                const SizedBox(height: 20),
+                  // E-Mail wiederholen
+                  TextFormField(
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.mail),
+                      labelText: "E-Mail wiederholen :",
+                      hintText: "E-Mail wiederholen",
+                      suffixIcon: _repeatEmailValidation.isNotEmpty
+                          ? Icon(
+                              _repeatEmailValidationColor == Colors.green
+                                  ? Icons.check_circle
+                                  : _repeatEmailValidationColor == Colors.red
+                                  ? Icons.error
+                                  : Icons.warning,
+                              color: _repeatEmailValidationColor,
+                            )
+                          : null,
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Bitte wiederholen Sie die E-Mail-Adresse';
+                      }
+                      return null;
+                    },
+                    controller: repeatEmailAdressController,
+                    keyboardType: TextInputType.emailAddress,
+                  ),
+                  if (_repeatEmailValidation.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4, left: 12),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(_repeatEmailValidation),
+                      ),
+                    ),
+                  const SizedBox(height: height),
 
-                // Delete Account Button
-              ],
+                  // Passwort Feld
+                  TextFormField(
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.key),
+                      labelText: "Passwort :",
+                      hintText: "Passwort",
+                      suffixIcon: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_passwordStrength.isNotEmpty)
+                            Icon(
+                              _passwordStrengthColor == Colors.green
+                                  ? Icons.check_circle
+                                  : _passwordStrengthColor == Colors.red
+                                  ? Icons.error
+                                  : _passwordStrengthColor == Colors.orange
+                                  ? Icons.warning
+                                  : Icons.info,
+                              color: _passwordStrengthColor,
+                              size: 20,
+                            ),
+                          IconButton(
+                            icon: Icon(
+                              _isPasswordVisible
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _isPasswordVisible = !_isPasswordVisible;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Bitte geben Sie ein Passwort ein';
+                      }
+                      return null;
+                    },
+                    controller: pwController,
+                    obscureText: !_isPasswordVisible,
+                  ),
+                  if (_passwordStrength.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4, left: 12),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(_passwordStrength),
+                      ),
+                    ),
+                  const SizedBox(height: height),
+
+                  // Passwort wiederholen
+                  TextFormField(
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.key),
+                      labelText: "Passwort wiederholen :",
+                      hintText: "Passwort wiederholen",
+                      suffixIcon: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_repeatPasswordValidation.isNotEmpty)
+                            Icon(
+                              _repeatPasswordValidationColor == Colors.green
+                                  ? Icons.check_circle
+                                  : _repeatPasswordValidationColor == Colors.red
+                                  ? Icons.error
+                                  : _repeatPasswordValidationColor ==
+                                        Colors.orange
+                                  ? Icons.warning
+                                  : Icons.info,
+                              color: _repeatPasswordValidationColor,
+                              size: 20,
+                            ),
+                          IconButton(
+                            icon: Icon(
+                              _isRepeatPasswordVisible
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _isRepeatPasswordVisible =
+                                    !_isRepeatPasswordVisible;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Bitte bestätigen Sie Ihr Passwort';
+                      }
+                      return null;
+                    },
+                    controller: pwRepeatController,
+                    obscureText: !_isRepeatPasswordVisible,
+                  ),
+                  if (_repeatPasswordValidation.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4, left: 12),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(_repeatPasswordValidation),
+                      ),
+                    ),
+
+                  const SizedBox(height: height + 50),
+                  SizedBox(
+                    width: MediaQuery.of(context).size.width * 0.96,
+                    child: OutlinedButton(
+                      onPressed: handleRegistrieren,
+                      child: const Text("Registration"),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -537,68 +554,5 @@ class _RegistrierenState extends State<Registrieren> {
         navigationItems: iconList,
       ),
     );
-  }
-
-  Future<void> handleRegistrieren() async {
-    // 1. Zuerst die Live-Validierung prüfen
-    if (_emailValidationColor != Colors.green ||
-        _repeatEmailValidationColor != Colors.green ||
-        _passwordStrengthColor != Colors.green ||
-        _repeatPasswordValidationColor != Colors.green) {
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Pls correct all Fields"),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    // 2. Formular-Validierung
-    if (_formKey.currentState!.validate()) {
-      final FirebaseAuthRepository auth = FirebaseAuthRepository();
-      final Userdata db = Userdata();
-      final String email = emailAdressController.text.trim();
-      final String password = pwController.text;
-      final String username = usernameController.text;
-
-      try {
-        // Erst den Benutzer erstellen
-        await auth.createUserWithEmailAndPassword(email, password);
-
-        // Dann die UID des neu erstellten Benutzers holen
-        final String userId = auth.getCurrentUser()!.uid;
-
-        await db.createUser(username, email, userId);
-
-        // Bei erfolgreicher Registrierung
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Registration successfull!"),
-            backgroundColor: Colors.green,
-          ),
-        );
-
-        if (mounted) {
-          emailAdressController.clear();
-          usernameController.clear();
-          repeatEmailAdressController.clear();
-          pwController.clear();
-          pwRepeatController.clear();
-
-          // Navigate back to main app - auth state change will handle UI update
-          Navigator.pop(context);
-          widget.onItemTapped(2); // Go to profile tab
-        }
-      } on Exception catch (e) {
-        // Fehler von Firebase abfangen
-        String message = e.toString().replaceFirst('Exception: ', '');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), backgroundColor: Colors.red),
-        );
-      }
-    }
   }
 }
