@@ -1,23 +1,21 @@
-// search_results_view.dart
-
+// search_results_view.dart - MIT RIVERPOD
 import 'package:flutter/material.dart';
-import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
-import 'package:tcg_app/class/widgets/helperClass%20allgemein/card_list_item.dart'; // Import der neuen Datei
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:tcg_app/class/widgets/helperClass%20allgemein/card_list_item.dart';
+import 'package:tcg_app/providers/app_providers.dart';
 
-class SearchResultsView extends StatelessWidget {
+class SearchResultsView extends ConsumerWidget {
   final Future<List<Map<String, dynamic>>>? searchFuture;
-  final CardData cardData;
   final Function(Map<String, dynamic> card) onCardSelected;
 
   const SearchResultsView({
     super.key,
     required this.searchFuture,
-    required this.cardData,
     required this.onCardSelected,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return FutureBuilder<List<Map<String, dynamic>>>(
       future: searchFuture,
       builder: (context, snapshot) {
@@ -32,30 +30,21 @@ class SearchResultsView extends StatelessWidget {
               children: const [
                 CircularProgressIndicator(),
                 SizedBox(height: 16),
-                Text('loading...', style: TextStyle(color: Colors.white)),
+                Text('loading...'),
               ],
             ),
           );
         }
 
         if (snapshot.hasError) {
-          return Center(
-            child: Text(
-              'Error on loading: ${snapshot.error}',
-              style: const TextStyle(color: Colors.white),
-            ),
-          );
+          return Center(child: Text('Error on loading: ${snapshot.error}'));
         }
 
         final cards = snapshot.data;
 
         if (cards == null || cards.isEmpty) {
           return const Center(
-            child: Text(
-              'No Cards found.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white),
-            ),
+            child: Text('No Cards found.', textAlign: TextAlign.center),
           );
         }
 
@@ -71,7 +60,6 @@ class SearchResultsView extends StatelessWidget {
                   final card = cards[index];
                   return CardListItem(
                     card: card,
-
                     onTap: () => onCardSelected(card),
                   );
                 },

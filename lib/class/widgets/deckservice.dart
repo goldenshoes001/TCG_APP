@@ -587,7 +587,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                       const SizedBox(height: 4),
                       Text(
                         card['name'] ?? 'Unbekannt',
-                        style: const TextStyle(fontSize: 10),
+
                         maxLines: 2,
                         textAlign: TextAlign.center,
                         overflow: TextOverflow.ellipsis,
@@ -787,12 +787,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            child: Text(
-              '$categoryName ($totalCount)',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
+            child: Text('$categoryName ($totalCount)'),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -934,12 +929,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
           padding: const EdgeInsets.all(8.0),
           child: Row(
             children: [
-              Text(
-                '$title ($totalCards Cards)',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
-              ),
+              Text('$title ($totalCards Cards)'),
               const Spacer(),
               IconButton(
                 icon: const Icon(Icons.add_circle_outline),
@@ -1190,29 +1180,11 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
           child: Row(
             children: [
-              Text(
-                'Main: ${_getDeckCardCount(_mainDeck)}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey[600],
-                  fontSize: 12,
-                ),
-              ),
+              Text('Main: ${_getDeckCardCount(_mainDeck)}'),
               const SizedBox(width: 8),
-              Text(
-                'Extra: ${_getDeckCardCount(_extraDeck)}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey[600],
-                  fontSize: 12,
-                ),
-              ),
+              Text('Extra: ${_getDeckCardCount(_extraDeck)}'),
               const SizedBox(width: 8),
-              Text(
-                'Side: ${_getDeckCardCount(_sideDeck)}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey[600],
-                  fontSize: 12,
-                ),
-              ),
+              Text('Side: ${_getDeckCardCount(_sideDeck)}'),
             ],
           ),
         ),

@@ -1,32 +1,37 @@
-// deck_viewer.dart - Final mit dynamischen Deck-Kommentaren und CardDetailView
+// deck_viewer.dart - MIT RIVERPOD
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 import 'package:tcg_app/class/common/buildCards.dart';
 import 'package:tcg_app/class/widgets/deckservice.dart';
+import 'package:tcg_app/providers/app_providers.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:intl/intl.dart'; // NEU: Für Datumsformatierung in CommentSection
+import 'package:intl/intl.dart';
 
-// NEUE ENUM: 'notes' hinzugefügt
 enum ViewDeckType { main, extra, side, notes }
 
-class DeckViewer extends StatefulWidget {
+// Provider für selected deck type
+final selectedDeckTypeProvider = StateProvider<ViewDeckType>(
+  (ref) => ViewDeckType.main,
+);
+
+// Provider für selected card in deck viewer
+final selectedCardInDeckProvider = StateProvider<Map<String, dynamic>?>(
+  (ref) => null,
+);
+
+class DeckViewer extends ConsumerStatefulWidget {
   final Map<String, dynamic> deckData;
   final VoidCallback onBack;
 
   const DeckViewer({super.key, required this.deckData, required this.onBack});
 
   @override
-  State<DeckViewer> createState() => _DeckViewerState();
+  ConsumerState<DeckViewer> createState() => _DeckViewerState();
 }
 
-class _DeckViewerState extends State<DeckViewer> {
-  final CardData _cardData = CardData();
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-
-  ViewDeckType _selectedDeckType = ViewDeckType.main;
-  Map<String, dynamic>? _selectedCardForDetail;
-
+class _DeckViewerState extends ConsumerState<DeckViewer> {
   List<Map<String, dynamic>> get _mainDeck =>
       (widget.deckData['mainDeck'] as List<dynamic>?)
           ?.map((item) => item as Map<String, dynamic>)
@@ -45,24 +50,21 @@ class _DeckViewerState extends State<DeckViewer> {
           .toList() ??
       [];
 
-  // --- HILFSFUNKTION FÜR KATEGORISIERUNG UND SORTIERUNG ---
   Map<String, List<Map<String, dynamic>>> _sortAndCategorizeCards(
     List<Map<String, dynamic>> cards,
   ) {
-    // ✅ FÜR EXTRA DECK: NUR MONSTER ANZEIGEN (OHNE UNTERKATEGORIEN)
-    if (_selectedDeckType == ViewDeckType.extra) {
-      // Einfach alle Karten als "Monster" zurückgeben
+    final selectedDeckType = ref.watch(selectedDeckTypeProvider);
+
+    if (selectedDeckType == ViewDeckType.extra) {
       final List<Map<String, dynamic>> sortedCards = List.from(cards)
         ..sort(
           (a, b) => (a['name'] as String? ?? '').compareTo(
             b['name'] as String? ?? '',
           ),
         );
-
       return {'Monster': sortedCards};
     }
 
-    // ✅ FÜR MAIN DECK: NORMALE KATEGORISIERUNG BEIBEHALTEN
     final Map<String, List<Map<String, dynamic>>> categorized = {
       'Monster': [],
       'Zauber': [],
@@ -91,7 +93,6 @@ class _DeckViewerState extends State<DeckViewer> {
       }
     }
 
-    // Alphabetisch sortieren innerhalb jeder Kategorie
     categorized.forEach((key, list) {
       list.sort(
         (a, b) =>
@@ -105,23 +106,20 @@ class _DeckViewerState extends State<DeckViewer> {
 
     return categorized;
   }
-  // --- ENDE HILFSFUNKTION ---
 
   @override
   Widget build(BuildContext context) {
-    // Wenn eine Karte ausgewählt wurde, zeige NUR CardDetailView (OHNE AppBar/Tabs)
-    if (_selectedCardForDetail != null) {
+    final selectedCard = ref.watch(selectedCardInDeckProvider);
+
+    if (selectedCard != null) {
       return CardDetailView(
-        cardData: _selectedCardForDetail!,
+        cardData: selectedCard,
         onBack: () {
-          setState(() {
-            _selectedCardForDetail = null;
-          });
+          ref.read(selectedCardInDeckProvider.notifier).state = null;
         },
       );
     }
 
-    // Ansonsten zeige die normale Deckliste mit AppBar und Tabs
     return Column(
       children: [
         _buildCustomAppBar(context),
@@ -131,21 +129,20 @@ class _DeckViewerState extends State<DeckViewer> {
     );
   }
 
-  // Wählt die anzuzeigende Ansicht basierend auf _selectedDeckType
   Widget _buildCurrentView() {
-    switch (_selectedDeckType) {
+    final selectedDeckType = ref.watch(selectedDeckTypeProvider);
+
+    switch (selectedDeckType) {
       case ViewDeckType.main:
       case ViewDeckType.extra:
       case ViewDeckType.side:
         return _buildCardList();
       case ViewDeckType.notes:
-        return _buildDeckNotes(); // Hier wird der CommentSection aufgerufen
+        return _buildDeckNotes();
     }
   }
 
-  // NEU: Aufruf des CommentSection Widgets
   Widget _buildDeckNotes() {
-    // Annahme: Die Deck ID ist im Map unter 'id' oder 'deckId' gespeichert.
     final deckId =
         (widget.deckData['id'] ?? widget.deckData['deckId']) as String?;
 
@@ -155,7 +152,6 @@ class _DeckViewerState extends State<DeckViewer> {
       );
     }
 
-    // Verwende das bereitgestellte CommentSection Widget
     return CommentSection(deckId: deckId);
   }
 
@@ -180,9 +176,7 @@ class _DeckViewerState extends State<DeckViewer> {
                 padding: const EdgeInsets.only(left: 8.0),
                 child: Text(
                   widget.deckData['name'] ?? "",
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(color: Colors.white),
+
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -194,11 +188,13 @@ class _DeckViewerState extends State<DeckViewer> {
   }
 
   Widget _buildDeckTypeTabs() {
+    final selectedDeckType = ref.watch(selectedDeckTypeProvider);
+
     return Card(
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: ViewDeckType.values.map((type) {
-          bool isSelected = _selectedDeckType == type;
+          bool isSelected = selectedDeckType == type;
           String label;
           switch (type) {
             case ViewDeckType.main:
@@ -210,16 +206,14 @@ class _DeckViewerState extends State<DeckViewer> {
             case ViewDeckType.side:
               label = 'SIDE';
               break;
-            case ViewDeckType.notes: // REITER 'NOTES'
+            case ViewDeckType.notes:
               label = 'Comments';
               break;
           }
 
           return TextButton(
             onPressed: () {
-              setState(() {
-                _selectedDeckType = type;
-              });
+              ref.read(selectedDeckTypeProvider.notifier).state = type;
             },
             child: Text(label),
           );
@@ -229,10 +223,13 @@ class _DeckViewerState extends State<DeckViewer> {
   }
 
   Widget _buildCardList() {
+    final selectedDeckType = ref.watch(selectedDeckTypeProvider);
+    final cardData = ref.watch(cardDataProvider);
+
     List<Map<String, dynamic>> currentDeck;
     String deckName;
 
-    switch (_selectedDeckType) {
+    switch (selectedDeckType) {
       case ViewDeckType.main:
         currentDeck = _mainDeck;
         deckName = 'Main Deck';
@@ -250,14 +247,9 @@ class _DeckViewerState extends State<DeckViewer> {
         deckName = 'Unbekannt';
     }
 
-    // ✅ GESAMTANZAHL DER KARTEN BERECHNEN (MIT COUNT)
     final totalCardCount = currentDeck.fold<int>(0, (sum, card) {
-      return sum +
-          (card['count'] as int? ?? 1); // count oder 1 falls nicht vorhanden
+      return sum + (card['count'] as int? ?? 1);
     });
-
-    // ✅ ANZAHL UNTERSCHIEDLICHER KARTEN
-    final uniqueCardCount = currentDeck.length;
 
     if (currentDeck.isEmpty) {
       return Center(child: Text('$deckName ist leer.'));
@@ -270,7 +262,6 @@ class _DeckViewerState extends State<DeckViewer> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ✅ GESAMTANZAHL ANZEIGEN
           Padding(
             padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
             child: Text('$deckName ($totalCardCount Cards)'),
@@ -281,7 +272,6 @@ class _DeckViewerState extends State<DeckViewer> {
             final category = entry.key;
             final cards = entry.value;
 
-            // ✅ ANZAHL IN DER KATEGORIE BERECHNEN (MIT COUNT)
             final categoryCardCount = cards.fold<int>(0, (sum, card) {
               return sum + (card['count'] as int? ?? 1);
             });
@@ -297,17 +287,13 @@ class _DeckViewerState extends State<DeckViewer> {
                   children: cards.map((card) {
                     final count = card['count'] ?? 1;
                     return ListTile(
-                      leading: _CardImageWidget(
-                        card: card,
-                        cardData: _cardData,
-                      ),
+                      leading: _CardImageWidget(card: card, cardData: cardData),
                       title: Text(card['name'] ?? 'Unbekannte Karte'),
                       subtitle: Text(card['type'] ?? ''),
                       trailing: Text('x$count'),
                       onTap: () {
-                        setState(() {
-                          _selectedCardForDetail = card;
-                        });
+                        ref.read(selectedCardInDeckProvider.notifier).state =
+                            card;
                       },
                     );
                   }).toList(),
@@ -320,36 +306,21 @@ class _DeckViewerState extends State<DeckViewer> {
       ),
     );
   }
-
-  // _buildCardDetail verwendet CardDetailView und setzt den State zurück
-  Widget _buildCardDetail() {
-    return CardDetailView(
-      cardData: _selectedCardForDetail!,
-      onBack: () {
-        setState(() {
-          _selectedCardForDetail = null; // Zurück zur Deckliste
-        });
-      },
-    );
-  }
 }
 
 // ====================================================================
-// VOM BENUTZER BEREITGESTELLTES WIDGET FÜR DIE KOMMENTARE
+// COMMENT SECTION MIT RIVERPOD
 // ====================================================================
-class CommentSection extends StatefulWidget {
+class CommentSection extends ConsumerStatefulWidget {
   final String deckId;
   const CommentSection({super.key, required this.deckId});
 
   @override
-  State<CommentSection> createState() => _CommentSectionState();
+  ConsumerState<CommentSection> createState() => _CommentSectionState();
 }
 
-class _CommentSectionState extends State<CommentSection> {
-  // DeckService muss hier lokal initialisiert werden, da es eine separate Klasse ist
-  final DeckService _deckService = DeckService();
+class _CommentSectionState extends ConsumerState<CommentSection> {
   final TextEditingController _commentController = TextEditingController();
-  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   @override
   void dispose() {
@@ -362,7 +333,8 @@ class _CommentSectionState extends State<CommentSection> {
     if (comment.isEmpty) return;
 
     try {
-      await _deckService.addComment(deckId: widget.deckId, comment: comment);
+      final deckService = ref.read(deckServiceProvider);
+      await deckService.addComment(deckId: widget.deckId, comment: comment);
       _commentController.clear();
 
       if (mounted) {
@@ -381,7 +353,8 @@ class _CommentSectionState extends State<CommentSection> {
 
   Future<void> _deleteComment(String commentId) async {
     try {
-      await _deckService.deleteComment(
+      final deckService = ref.read(deckServiceProvider);
+      await deckService.deleteComment(
         deckId: widget.deckId,
         commentId: commentId,
       );
@@ -402,18 +375,16 @@ class _CommentSectionState extends State<CommentSection> {
 
   @override
   Widget build(BuildContext context) {
-    final currentUserId = _auth.currentUser?.uid;
+    final currentUser = ref.watch(currentUserProvider);
+    final deckService = ref.watch(deckServiceProvider);
 
     return SingleChildScrollView(
-      // Füge SingleChildScrollView hinzu, falls die Kommentare den Bildschirm übersteigen
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Comments'),
+          const Text('Comments'),
           const SizedBox(height: 16),
-
-          // Kommentar hinzufügen
           Row(
             children: [
               Expanded(
@@ -429,12 +400,9 @@ class _CommentSectionState extends State<CommentSection> {
               IconButton(icon: const Icon(Icons.send), onPressed: _addComment),
             ],
           ),
-
           const SizedBox(height: 16),
-
-          // Kommentare anzeigen
           StreamBuilder<QuerySnapshot>(
-            stream: _deckService.getComments(widget.deckId),
+            stream: deckService.getComments(widget.deckId),
             builder: (context, snapshot) {
               if (snapshot.hasError) {
                 return Text('Fehler: ${snapshot.error}');
@@ -450,7 +418,7 @@ class _CommentSectionState extends State<CommentSection> {
                 return const Center(
                   child: Padding(
                     padding: EdgeInsets.all(16.0),
-                    child: Text("No Comments"),
+                    child: Text('No Comments'),
                   ),
                 );
               }
@@ -468,7 +436,7 @@ class _CommentSectionState extends State<CommentSection> {
                   final commentText = comment['comment'] as String;
                   final timestamp = comment['createdAt'] as Timestamp?;
 
-                  final canDelete = currentUserId == userId;
+                  final canDelete = currentUser?.uid == userId;
 
                   return Card(
                     margin: const EdgeInsets.symmetric(vertical: 4),
@@ -477,11 +445,13 @@ class _CommentSectionState extends State<CommentSection> {
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          const SizedBox(height: 4),
                           Text(commentText),
+                          const SizedBox(height: 4),
                           if (timestamp != null)
                             Text(
                               DateFormat(
-                                'dd.MM.yyyy',
+                                'dd.MM.yyyy HH:mm',
                               ).format(timestamp.toDate().toLocal()),
                             ),
                         ],
@@ -504,18 +474,18 @@ class _CommentSectionState extends State<CommentSection> {
   }
 }
 
-// Card Image Widget (unberührt gelassen)
-class _CardImageWidget extends StatefulWidget {
+// Card Image Widget (unverändert, aber mit ref)
+class _CardImageWidget extends ConsumerStatefulWidget {
   final Map<String, dynamic> card;
   final CardData cardData;
 
   const _CardImageWidget({required this.card, required this.cardData});
 
   @override
-  State<_CardImageWidget> createState() => _CardImageWidgetState();
+  ConsumerState<_CardImageWidget> createState() => _CardImageWidgetState();
 }
 
-class _CardImageWidgetState extends State<_CardImageWidget> {
+class _CardImageWidgetState extends ConsumerState<_CardImageWidget> {
   String? _loadedImageUrl;
   bool _isLoading = true;
   bool _hasError = false;

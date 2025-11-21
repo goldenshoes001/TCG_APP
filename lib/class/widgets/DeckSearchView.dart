@@ -1,26 +1,25 @@
-// DeckSearchView.dart - KOMPAKTE VERSION MIT MEHR PLATZ FÜR DECKS
+// DeckSearchView.dart - VOLLSTÄNDIG KORRIGIERTE VERSION
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tcg_app/class/widgets/deck_search_service.dart';
 import 'package:tcg_app/class/widgets/deck_viewer.dart';
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
+import 'package:tcg_app/providers/app_providers.dart';
 
-class DeckSearchView extends StatefulWidget {
+class DeckSearchView extends ConsumerStatefulWidget {
   final Function(Map<String, dynamic>)? onDeckSelected;
   const DeckSearchView({super.key, this.onDeckSelected});
 
   @override
-  State<DeckSearchView> createState() => _DeckSearchViewState();
+  ConsumerState<DeckSearchView> createState() => _DeckSearchViewState();
 }
 
-class _DeckSearchViewState extends State<DeckSearchView> {
+class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
   final DeckSearchService _deckSearchService = DeckSearchService();
   final CardData _cardData = CardData();
   final TextEditingController _searchController = TextEditingController();
 
-  Future<List<Map<String, dynamic>>>? _deckSearchFuture;
-
   List<String> _availableArchetypes = [];
-  String? _selectedArchetype;
   bool _isLoadingArchetypes = true;
 
   @override
@@ -47,7 +46,7 @@ class _DeckSearchViewState extends State<DeckSearchView> {
         });
       }
     } catch (e) {
-      print('Fehler beim Laden der Archetypen: $e');
+      debugPrint('Fehler beim Laden der Archetypen: $e');
       if (mounted) {
         setState(() => _isLoadingArchetypes = false);
       }
@@ -56,38 +55,46 @@ class _DeckSearchViewState extends State<DeckSearchView> {
 
   void _performSearch() {
     final searchTerm = _searchController.text.trim();
-    final selectedArchetype = _selectedArchetype;
-
-    if (selectedArchetype != null && selectedArchetype.isNotEmpty) {
-      setState(() {
-        _deckSearchFuture = _deckSearchService.searchDecks(selectedArchetype);
-      });
-    } else if (searchTerm.isNotEmpty) {
-      setState(() {
-        _deckSearchFuture = _deckSearchService.searchDecks(searchTerm);
-      });
-    } else {
-      setState(() {
-        _deckSearchFuture = _deckSearchService.getRecentDecks();
-      });
+    ref.read(deckSearchQueryProvider.notifier).state = searchTerm;
+    // Archetype zurücksetzen wenn Text-Suche durchgeführt wird
+    if (searchTerm.isNotEmpty) {
+      ref.read(selectedArchetypeProvider.notifier).state = null;
     }
+    // Trigger die Suche
+    _triggerSearch();
+  }
+
+  void _performArchetypeSearch(String? archetype) {
+    ref.read(selectedArchetypeProvider.notifier).state = archetype;
+    // Text-Suche zurücksetzen wenn Archetype-Suche durchgeführt wird
+    if (archetype != null) {
+      ref.read(deckSearchQueryProvider.notifier).state = '';
+      _searchController.clear();
+    }
+    // Trigger die Suche
+    _triggerSearch();
+  }
+
+  void _triggerSearch() {
+    // Verwende den Trigger Provider um die Suche zu aktualisieren
+    final currentTrigger = ref.read(deckSearchTriggerProvider);
+    ref.read(deckSearchTriggerProvider.notifier).state = currentTrigger + 1;
   }
 
   void _resetFilters() {
+    ref.read(deckSearchQueryProvider.notifier).state = '';
+    ref.read(selectedArchetypeProvider.notifier).state = null;
     setState(() {
       _searchController.clear();
-      _selectedArchetype = null;
-      _deckSearchFuture = null;
     });
   }
 
   Widget _buildDeckCoverImage(Map<String, dynamic> deck) {
     final coverImageUrl = deck['coverImageUrl'] as String?;
 
-    return Container(
+    return SizedBox(
       width: 50,
       height: 50,
-      decoration: BoxDecoration(),
       child: ClipOval(
         child: coverImageUrl == null || coverImageUrl.isEmpty
             ? Container(
@@ -145,22 +152,25 @@ class _DeckSearchViewState extends State<DeckSearchView> {
 
   @override
   Widget build(BuildContext context) {
+    final deckSearchResults = ref.watch(deckSearchResultsProvider);
+    final selectedArchetype = ref.watch(selectedArchetypeProvider);
+    final searchQuery = ref.watch(deckSearchQueryProvider);
+
     return Padding(
       padding: const EdgeInsets.all(12.0),
       child: Column(
         children: [
-          // Kompakter Suchbereich in einer Zeile
+          // Suchbereich
           Row(
             children: [
-              // TextField für Deckname-Suche
               Expanded(
                 child: TextField(
                   controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: "Deckname",
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    border: const OutlineInputBorder(),
-                    contentPadding: const EdgeInsets.symmetric(
+                  decoration: const InputDecoration(
+                    hintText: "Deck name...",
+                    prefixIcon: Icon(Icons.search, size: 20),
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(
                       vertical: 8,
                       horizontal: 12,
                     ),
@@ -172,21 +182,15 @@ class _DeckSearchViewState extends State<DeckSearchView> {
 
               const SizedBox(width: 8),
 
-              // Search Icon Button
               IconButton(
                 onPressed: _performSearch,
                 icon: const Icon(Icons.search),
-                style: IconButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.all(12),
-                ),
-                tooltip: 'Suchen',
+
+                tooltip: 'Search',
               ),
 
               const SizedBox(width: 4),
 
-              // Reset Icon Button
               IconButton(
                 onPressed: _resetFilters,
                 icon: const Icon(Icons.clear),
@@ -194,14 +198,14 @@ class _DeckSearchViewState extends State<DeckSearchView> {
                   backgroundColor: Colors.grey[300],
                   padding: const EdgeInsets.all(12),
                 ),
-                tooltip: 'Zurücksetzen',
+                tooltip: 'Reset',
               ),
             ],
           ),
 
           const SizedBox(height: 8),
 
-          // Dropdown für Archetypen
+          // Archetype Dropdown
           if (_isLoadingArchetypes)
             const SizedBox(
               height: 40,
@@ -209,24 +213,16 @@ class _DeckSearchViewState extends State<DeckSearchView> {
             )
           else if (_availableArchetypes.isNotEmpty)
             DropdownMenu<String?>(
-              initialSelection: _selectedArchetype,
+              initialSelection: selectedArchetype,
               leadingIcon: const Icon(Icons.category, size: 18),
-              label: const Text('Archetype'),
+              label: const Text('Filter by archetype'),
               width: MediaQuery.of(context).size.width - 24,
               menuHeight: 300,
-              onSelected: (String? value) {
-                setState(() {
-                  _selectedArchetype = value;
-                  if (value != null) {
-                    _searchController.clear();
-                    _performSearch();
-                  }
-                });
-              },
+              onSelected: _performArchetypeSearch,
               dropdownMenuEntries: [
                 const DropdownMenuEntry<String?>(
                   value: null,
-                  label: 'All Archetypes',
+                  label: 'All archetypes',
                 ),
                 ..._availableArchetypes.map(
                   (archetype) => DropdownMenuEntry<String>(
@@ -239,24 +235,92 @@ class _DeckSearchViewState extends State<DeckSearchView> {
 
           const SizedBox(height: 8),
 
-          // Erweiterter Bereich für Ergebnisse
-          Expanded(child: _buildResults()),
+          // Aktive Filter anzeigen
+          if (searchQuery.isNotEmpty || selectedArchetype != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Row(
+                children: [
+                  if (searchQuery.isNotEmpty) ...[
+                    Chip(
+                      label: Text('Name: $searchQuery'),
+                      onDeleted: () {
+                        ref.read(deckSearchQueryProvider.notifier).state = '';
+                        _triggerSearch();
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  if (selectedArchetype != null) ...[
+                    Chip(
+                      label: Text('Archetype: $selectedArchetype'),
+                      onDeleted: () {
+                        ref.read(selectedArchetypeProvider.notifier).state =
+                            null;
+                        _triggerSearch();
+                      },
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
+          // Ergebnisse
+          Expanded(
+            child: deckSearchResults.when(
+              data: (decks) =>
+                  _buildResults(decks, searchQuery, selectedArchetype),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Error: $error',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildResults() {
-    if (_deckSearchFuture == null) {
+  Widget _buildResults(
+    List<Map<String, dynamic>> decks,
+    String searchQuery,
+    String? selectedArchetype,
+  ) {
+    // Zeige leeren State wenn keine Suche aktiv ist
+    if (searchQuery.isEmpty && selectedArchetype == null) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.search, size: 48, color: Colors.grey[400]),
-            const SizedBox(height: 12),
+            Icon(Icons.search, size: 64, color: Colors.grey[400]),
+            const SizedBox(height: 16),
             Text(
-              'search by name or archetype',
-              style: Theme.of(context).textTheme.bodyMedium,
+              'Search for decks',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Enter a deck name or select an archetype',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
               textAlign: TextAlign.center,
             ),
           ],
@@ -264,106 +328,85 @@ class _DeckSearchViewState extends State<DeckSearchView> {
       );
     }
 
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: _deckSearchFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    // Zeige leeren State wenn keine Ergebnisse
+    if (decks.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.inbox_outlined, size: 64, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text(
+              'No decks found',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              searchQuery.isNotEmpty
+                  ? 'No decks found for "$searchQuery"'
+                  : 'No decks found for archetype "$selectedArchetype"',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
 
-        if (snapshot.hasError) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+    return ListView.builder(
+      itemCount: decks.length,
+      itemBuilder: (context, index) {
+        final deck = decks[index];
+        final deckName = deck['deckName'] as String? ?? 'Unknown';
+        final username = deck['username'] as String? ?? 'Unknown';
+
+        final mainDeck = deck['mainDeck'] as List<dynamic>? ?? [];
+        final extraDeck = deck['extraDeck'] as List<dynamic>? ?? [];
+
+        final mainCount = mainDeck.fold<int>(0, (sum, card) {
+          if (card is Map<String, dynamic>) {
+            return sum + (card['count'] as int? ?? 0);
+          }
+          return sum;
+        });
+
+        final extraCount = extraDeck.fold<int>(0, (sum, card) {
+          if (card is Map<String, dynamic>) {
+            return sum + (card['count'] as int? ?? 0);
+          }
+          return sum;
+        });
+
+        final totalCards = mainCount;
+
+        return Card(
+          margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 0),
+          child: ListTile(
+            leading: _buildDeckCoverImage(deck),
+            title: Text(
+              deckName,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                const SizedBox(height: 12),
                 Text(
-                  'Error: ${snapshot.error}',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                  textAlign: TextAlign.center,
+                  '$totalCards cards • by $username',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
                 ),
               ],
             ),
-          );
-        }
-
-        final decks = snapshot.data ?? [];
-
-        if (decks.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.inbox_outlined, size: 48, color: Colors.grey[400]),
-                const SizedBox(height: 12),
-                Text(
-                  'No Decks found',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ],
-            ),
-          );
-        }
-
-        return ListView.builder(
-          itemCount: decks.length,
-          itemBuilder: (context, index) {
-            final deck = decks[index];
-            final deckName = deck['deckName'] as String? ?? 'Unbekannt';
-            final archetype = deck['archetype'] as String? ?? '';
-            final username = deck['username'] as String? ?? 'Unbekannt';
-
-            final mainDeck = deck['mainDeck'] as List<dynamic>? ?? [];
-            final extraDeck = deck['extraDeck'] as List<dynamic>? ?? [];
-            final sideDeck = deck['sideDeck'] as List<dynamic>? ?? [];
-
-            final mainCount = mainDeck.fold<int>(0, (sum, card) {
-              if (card is Map<String, dynamic>) {
-                return sum + (card['count'] as int? ?? 0);
-              }
-              return sum;
-            });
-
-            final extraCount = extraDeck.fold<int>(0, (sum, card) {
-              if (card is Map<String, dynamic>) {
-                return sum + (card['count'] as int? ?? 0);
-              }
-              return sum;
-            });
-
-            final sideCount = sideDeck.fold<int>(0, (sum, card) {
-              if (card is Map<String, dynamic>) {
-                return sum + (card['count'] as int? ?? 0);
-              }
-              return sum;
-            });
-
-            final totalcards = mainCount + extraCount;
-            return Card(
-              margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 0),
-              child: ListTile(
-                leading: _buildDeckCoverImage(deck),
-                title: Text(
-                  "$deckName ($totalcards Cards)",
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(username),
-                    ),
-                  ],
-                ),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () {
-                  widget.onDeckSelected?.call(deck);
-                },
-              ),
-            );
-          },
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {
+              widget.onDeckSelected?.call(deck);
+            },
+          ),
         );
       },
     );

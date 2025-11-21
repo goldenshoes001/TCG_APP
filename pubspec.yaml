@@ -3,7 +3,6 @@ description: "A new Flutter project."
 publish_to: 'none'
 version: 0.1.0
 
-
 environment:
   sdk: ^3.8.1
 
@@ -21,8 +20,9 @@ dependencies:
   shared_preferences: ^2.5.3
   sizer: ^3.0.5
   uuid: ^4.5.2
-
-
+  # Riverpod Packages hinzufügen
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
 
 dev_dependencies:
   flutter_test:
@@ -30,6 +30,9 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.4
   flutter_native_splash: ^2.4.6
+  # Riverpod Code Generator
+  build_runner: ^2.4.13
+  riverpod_generator: ^2.6.2
 
 flutter:
   uses-material-design: true
@@ -40,7 +43,6 @@ flutter:
     - assets/images/staples/
     - assets/images/ExtraDeck/Link/
     - assets/icon/
-
 
 flutter_launcher_icons:
   android: true

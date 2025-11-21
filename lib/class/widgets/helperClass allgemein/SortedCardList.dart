@@ -137,14 +137,7 @@ class _sortedCardListState extends State<sortedCardList> {
   Widget _buildSectionHeader(String title, Color color) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-          color: color,
-        ),
-      ),
+      child: Text(title),
     );
   }
 
@@ -176,14 +169,7 @@ class _sortedCardListState extends State<sortedCardList> {
           Center(
             child: icon != null
                 ? Icon(icon, color: iconColor, size: 20)
-                : Text(
-                    iconText ?? '',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: iconColor,
-                    ),
-                  ),
+                : Text(iconText ?? ''),
           ),
           const SizedBox(width: 8),
           // Kartenbild
@@ -228,11 +214,7 @@ class _sortedCardListState extends State<sortedCardList> {
           Expanded(
             child: Text(
               card["name"],
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
             ),
@@ -358,14 +340,7 @@ class CardDetailView extends StatelessWidget {
             const SizedBox(height: 30),
 
             // Name
-            Text(
-              name,
-              style: const TextStyle(
-                fontFamily: "Arial",
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-              ),
-            ),
+            Text(name),
             const SizedBox(height: 10),
 
             // Beschreibung
@@ -386,25 +361,8 @@ class CardDetailView extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              element.key.toUpperCase(),
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Theme.of(
-                                  context,
-                                ).textTheme.bodyLarge?.color,
-                              ),
-                            ),
-                            Text(
-                              element.value.toString(),
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(
-                                  context,
-                                ).textTheme.bodyLarge?.color,
-                              ),
-                            ),
+                            Text(element.key.toUpperCase()),
+                            Text(element.value.toString()),
                           ],
                         ),
                       );
@@ -424,25 +382,8 @@ class CardDetailView extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              element.key.toUpperCase(),
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Theme.of(
-                                  context,
-                                ).textTheme.bodyLarge?.color,
-                              ),
-                            ),
-                            Text(
-                              element.value.toString(),
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(
-                                  context,
-                                ).textTheme.bodyLarge?.color,
-                              ),
-                            ),
+                            Text(element.key.toUpperCase()),
+                            Text(element.value.toString()),
                           ],
                         ),
                       );

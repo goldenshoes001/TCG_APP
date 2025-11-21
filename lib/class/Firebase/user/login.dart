@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:tcg_app/class/Firebase/interfaces/FirebaseAuthRepository.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tcg_app/class/Firebase/user/registrieren.dart';
+import 'package:tcg_app/providers/app_providers.dart';
 
-class Profile extends StatefulWidget {
+class Profile extends ConsumerStatefulWidget {
   final Function(int) onItemTapped;
   final Function(bool) onThemeChanged;
   final int selectedIndex;
@@ -15,10 +16,10 @@ class Profile extends StatefulWidget {
   });
 
   @override
-  State<Profile> createState() => _ProfileState();
+  ConsumerState<Profile> createState() => _ProfileState();
 }
 
-class _ProfileState extends State<Profile> {
+class _ProfileState extends ConsumerState<Profile> {
   final _formKey = GlobalKey<FormState>();
   final passwordController = TextEditingController();
   final userNameController = TextEditingController();
@@ -33,7 +34,7 @@ class _ProfileState extends State<Profile> {
 
   Future<void> handleLogin() async {
     if (_formKey.currentState!.validate()) {
-      final FirebaseAuthRepository auth = FirebaseAuthRepository();
+      final auth = ref.read(authRepositoryProvider);
       final String username = userNameController.text.trim();
       final String password = passwordController.text.trim();
 
@@ -44,7 +45,7 @@ class _ProfileState extends State<Profile> {
           ScaffoldMessenger.of(context).clearSnackBars();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text("Login  succesful!"),
+              content: Text("Login successful!"),
               backgroundColor: Colors.green,
               duration: Duration(seconds: 2),
             ),
@@ -52,8 +53,6 @@ class _ProfileState extends State<Profile> {
 
           passwordController.clear();
           userNameController.clear();
-
-          // No need for manual navigation
         }
       } on Exception catch (e) {
         String message = e.toString().replaceFirst('Exception: ', '');
@@ -77,7 +76,7 @@ class _ProfileState extends State<Profile> {
       padding: EdgeInsets.all(MediaQuery.of(context).size.height / 120),
       child: Column(
         children: [
-          Icon(Icons.person, size: 250),
+          const Icon(Icons.person, size: 250),
           Expanded(
             child: Form(
               key: _formKey,
