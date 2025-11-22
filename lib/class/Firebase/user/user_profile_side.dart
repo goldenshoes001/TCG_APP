@@ -342,58 +342,83 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
   }
 
   Widget _buildProfileContent(Map<String, dynamic> userMap, String username) {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('Welcome, $username'),
-            const SizedBox(height: 24),
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Welcome, $username'),
+                  const SizedBox(height: 24),
 
-            // Create Deck Button
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  _editingDeckId = null;
-                  _showDeckCreation = true;
-                });
-              },
-              child: const Text('Create new Deck'),
-            ),
-            const SizedBox(height: 24),
+                  // Create Deck Button
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _editingDeckId = null;
+                        _showDeckCreation = true;
+                      });
+                    },
+                    child: const Text('Create new Deck'),
+                  ),
+                  const SizedBox(height: 24),
 
-            // Your Decks Section
-            const Text('Your Decks'),
-            const SizedBox(height: 16),
-            _buildDeckList(userMap, username),
-            const SizedBox(height: 24),
-
-            // Account Settings Section
-            const Text('Account Settings'),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: _handleLogout,
-              icon: const Icon(Icons.logout),
-              label: const Text("Logout"),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                  // Your Decks Section
+                  const Text('Your Decks'),
+                  const SizedBox(height: 16),
+                  _buildDeckList(userMap, username),
+                ],
               ),
             ),
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: _showDeleteUserConfirmation,
-              icon: const Icon(Icons.delete_forever),
-              label: const Text("Delete Account"),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.red,
-                side: const BorderSide(color: Colors.red),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-            ),
-          ],
+          ),
         ),
-      ),
+
+        // Account Settings Section - AM UNTEREN ENDE DES SCREENS
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16.0),
+
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Account Settings'),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  // Logout Button
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _handleLogout,
+                      icon: const Icon(Icons.logout, size: 20),
+                      label: const Text("Logout"),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Delete Account Button - ECKIG wie Logout
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _showDeleteUserConfirmation,
+                      icon: const Icon(Icons.delete_forever, size: 20),
+                      label: const Text("Delete Account"),
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: Colors.red,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

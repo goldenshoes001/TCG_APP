@@ -1,4 +1,4 @@
-// calculator.dart - mit reinen Text-Eingabefeldern
+// calculator.dart - mit Kartennummer und kleineren Input-Feldern
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tcg_app/providers/calculator_provider.dart';
@@ -11,29 +11,17 @@ class ProbabilityCalculator extends ConsumerWidget {
     final state = ref.watch(calculatorProvider);
     final notifier = ref.read(calculatorProvider.notifier);
 
-    final hasMultipleTargets = state.targetCopies.length > 1;
+    final hasMultipleTargets = state.targetCards.length > 1;
     final handSizeInt = int.tryParse(state.handSize) ?? 0;
     final isStrictlyImpossible =
         state.isAndMode &&
         hasMultipleTargets &&
-        state.targetCopies.length > handSizeInt;
+        state.targetCards.length > handSizeInt;
 
     return Scaffold(
       body: CustomScrollView(
         slivers: [
           // Header
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  Text('Probability Calculator'),
-                  const SizedBox(height: 8),
-                  Text('Calculate drawing chances for your deck'),
-                ],
-              ),
-            ),
-          ),
 
           // Deck Configuration
           SliverToBoxAdapter(
@@ -75,21 +63,26 @@ class ProbabilityCalculator extends ConsumerWidget {
 
           // Target Cards Header
           SliverToBoxAdapter(
-            child: Card(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    Text('Target  Cards'),
-                    const Spacer(),
-                    if (state.targetCopies.length < 10)
-                      FilledButton.icon(
-                        icon: const Icon(Icons.add, size: 18),
-                        label: const Text('Add Card'),
-                        onPressed: notifier.addTargetSet,
-                      ),
-                  ],
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      Text('Target Cards'),
+                      const Spacer(),
+                      if (state.targetCards.length < 10)
+                        FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Theme.of(context).cardColor,
+                          ),
+                          icon: const Icon(Icons.add, size: 18),
+                          label: const Text('Add Card'),
+                          onPressed: notifier.addTargetCard,
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -99,15 +92,18 @@ class ProbabilityCalculator extends ConsumerWidget {
           SliverList(
             delegate: SliverChildBuilderDelegate((context, index) {
               return _TargetCardItem(
+                key: ValueKey('target_card_$index'),
                 index: index,
-                copies: state.targetCopies[index],
+                targetCard: state.targetCards[index],
                 onCopiesChanged: (value) =>
-                    notifier.updateTargetCopy(index, value),
-                onRemove: state.targetCopies.length > 1
-                    ? () => notifier.removeTargetSet(index)
+                    notifier.updateTargetCardCopies(index, value),
+                onRequiredChanged: (value) =>
+                    notifier.updateTargetCardRequired(index, value),
+                onRemove: state.targetCards.length > 1
+                    ? () => notifier.removeTargetCard(index)
                     : null,
               );
-            }, childCount: state.targetCopies.length),
+            }, childCount: state.targetCards.length),
           ),
 
           // Mode Selector
@@ -120,8 +116,6 @@ class ProbabilityCalculator extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Calculation Mode'),
-                      const SizedBox(height: 12),
                       Row(
                         children: [
                           Expanded(
@@ -130,19 +124,13 @@ class ProbabilityCalculator extends ConsumerWidget {
                               children: [
                                 Text(state.isAndMode ? 'AND Mode' : 'OR Mode'),
                                 const SizedBox(height: 4),
-                                Text(
-                                  state.isAndMode
-                                      ? 'Draw at least 1 from EACH card set'
-                                      : 'Draw at least 1 from ANY card set',
-                                ),
                               ],
                             ),
                           ),
                           Switch(
                             value: state.isAndMode,
                             onChanged: (_) => notifier.toggleMode(),
-                            activeTrackColor: Colors.green,
-                            activeColor: Colors.white,
+                            activeTrackColor: Theme.of(context).cardColor,
                           ),
                         ],
                       ),
@@ -155,27 +143,15 @@ class ProbabilityCalculator extends ConsumerWidget {
           // Result
           SliverToBoxAdapter(
             child: Card(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               child: Container(
                 padding: const EdgeInsets.all(20.0),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                      Theme.of(context).colorScheme.primary.withOpacity(0.05),
-                    ],
-                  ),
+                  color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
                   children: [
-                    Text(
-                      state.isAndMode && hasMultipleTargets
-                          ? 'CHANCE TO DRAW ALL CARDS'
-                          : 'CHANCE TO DRAW ANY CARD',
-                    ),
                     const SizedBox(height: 12),
                     Text('${(state.probability * 100).toStringAsFixed(1)}%'),
                     if (isStrictlyImpossible)
@@ -184,8 +160,7 @@ class ProbabilityCalculator extends ConsumerWidget {
                         child: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.orange.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -198,8 +173,7 @@ class ProbabilityCalculator extends ConsumerWidget {
                               const SizedBox(width: 8),
                               Flexible(
                                 child: Text(
-                                  'Impossible: Need ${state.targetCopies.length} different cards but only draw $handSizeInt',
-
+                                  'Impossible: Need ${state.targetCards.length} different cards but only draw $handSizeInt',
                                   textAlign: TextAlign.center,
                                 ),
                               ),
@@ -232,31 +206,34 @@ class _NumberInputField extends StatelessWidget {
     required this.value,
     required this.onChanged,
     required this.hintText,
-  });
+    Key? key,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(color: Colors.grey, width: 2),
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label),
         const SizedBox(height: 8),
-        Container(
-          height: 48,
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade300),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: TextField(
-            controller: TextEditingController(text: value),
-            keyboardType: TextInputType.number,
-            textAlign: TextAlign.center,
-            decoration: InputDecoration(
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-              hintText: hintText,
+        TextFormField(
+          controller: TextEditingController(text: value),
+          onChanged: onChanged,
+          keyboardType: TextInputType.number,
+          textAlign: TextAlign.center,
+          decoration: InputDecoration(
+            border: border,
+            focusedBorder: border,
+            enabledBorder: border,
+            hintText: hintText,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 16,
             ),
-            onChanged: onChanged,
           ),
         ),
       ],
@@ -264,75 +241,150 @@ class _NumberInputField extends StatelessWidget {
   }
 }
 
-class _TargetCardItem extends StatelessWidget {
+class _TargetCardItem extends StatefulWidget {
   final int index;
-  final String copies;
+  final TargetCard targetCard;
   final Function(String) onCopiesChanged;
+  final Function(String) onRequiredChanged;
   final VoidCallback? onRemove;
 
   const _TargetCardItem({
     required this.index,
-    required this.copies,
+    required this.targetCard,
     required this.onCopiesChanged,
+    required this.onRequiredChanged,
     this.onRemove,
-  });
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  State<_TargetCardItem> createState() => _TargetCardItemState();
+}
+
+class _TargetCardItemState extends State<_TargetCardItem> {
+  late TextEditingController _copiesController;
+  late TextEditingController _requiredController;
+
+  @override
+  void initState() {
+    super.initState();
+    _copiesController = TextEditingController(text: widget.targetCard.copies);
+    _requiredController = TextEditingController(
+      text: widget.targetCard.requiredInHand,
+    );
+  }
+
+  @override
+  void didUpdateWidget(_TargetCardItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.targetCard.copies != widget.targetCard.copies) {
+      _copiesController.text = widget.targetCard.copies;
+    }
+    if (oldWidget.targetCard.requiredInHand !=
+        widget.targetCard.requiredInHand) {
+      _requiredController.text = widget.targetCard.requiredInHand;
+    }
+  }
+
+  @override
+  void dispose() {
+    _copiesController.dispose();
+    _requiredController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final inputBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(color: Colors.grey.shade300),
+    );
+
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      margin: const EdgeInsets.only(left: 20, right: 20, top: 0, bottom: 0),
+      elevation: 0,
+
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.only(left: 20.0, top: 0, bottom: 10),
         child: Row(
           children: [
-            // Index Badge
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Center(child: Text('${index + 1}')),
+            // Card Number
+            Text(
+              'Card ${widget.index + 1}',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             const SizedBox(width: 16),
-
-            // Card Info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [Text('Card ${index + 1}'), Text('Copies in deck')],
-              ),
-            ),
 
             // Copies Input Field
             SizedBox(
               width: 80,
-              child: TextField(
-                controller: TextEditingController(text: copies),
-                keyboardType: TextInputType.number,
-                textAlign: TextAlign.center,
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Copies',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 12,
+                  const SizedBox(height: 4),
+                  TextField(
+                    controller: _copiesController,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    decoration: InputDecoration(
+                      border: inputBorder,
+                      enabledBorder: inputBorder,
+                      focusedBorder: inputBorder,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 10,
+                      ),
+                      hintText: '1',
+                    ),
+                    onChanged: widget.onCopiesChanged,
                   ),
-                  hintText: '3',
-                ),
-                onChanged: onCopiesChanged,
+                ],
+              ),
+            ),
+
+            const SizedBox(width: 12),
+
+            // Required Input Field
+            SizedBox(
+              width: 80,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Required',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                  const SizedBox(height: 4),
+                  TextField(
+                    controller: _requiredController,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    decoration: InputDecoration(
+                      border: inputBorder,
+                      enabledBorder: inputBorder,
+                      focusedBorder: inputBorder,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 10,
+                      ),
+                      hintText: '1',
+                    ),
+                    onChanged: widget.onRequiredChanged,
+                  ),
+                ],
               ),
             ),
 
             // Remove Button
-            if (onRemove != null) ...[
+            if (widget.onRemove != null) ...[
               const SizedBox(width: 12),
               IconButton(
                 icon: const Icon(Icons.delete_outline, size: 20),
-                onPressed: onRemove,
+                onPressed: widget.onRemove,
                 color: Colors.red,
               ),
             ],

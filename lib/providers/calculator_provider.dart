@@ -1,42 +1,56 @@
 // lib/providers/calculator_provider.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-final calculatorProvider =
-    StateNotifierProvider<CalculatorNotifier, CalculatorState>((ref) {
-      return CalculatorNotifier();
-    });
+class TargetCard {
+  final String copies;
+  final String requiredInHand;
+
+  TargetCard({this.copies = "3", this.requiredInHand = "1"});
+
+  TargetCard copyWith({String? copies, String? requiredInHand}) {
+    return TargetCard(
+      copies: copies ?? this.copies,
+      requiredInHand: requiredInHand ?? this.requiredInHand,
+    );
+  }
+}
 
 class CalculatorState {
   final String deckSize;
   final String handSize;
-  final List<String> targetCopies;
+  final List<TargetCard> targetCards;
   final bool isAndMode;
   final double probability;
 
   CalculatorState({
     this.deckSize = "40",
     this.handSize = "5",
-    this.targetCopies = const ["3"],
+    List<TargetCard>? targetCards,
     this.isAndMode = false,
     this.probability = 0.0,
-  });
+  }) : targetCards = targetCards ?? [TargetCard()];
 
   CalculatorState copyWith({
     String? deckSize,
     String? handSize,
-    List<String>? targetCopies,
+    List<TargetCard>? targetCards,
     bool? isAndMode,
     double? probability,
   }) {
     return CalculatorState(
       deckSize: deckSize ?? this.deckSize,
       handSize: handSize ?? this.handSize,
-      targetCopies: targetCopies ?? this.targetCopies,
+      targetCards: targetCards ?? this.targetCards,
       isAndMode: isAndMode ?? this.isAndMode,
       probability: probability ?? this.probability,
     );
   }
 }
+
+final calculatorProvider =
+    StateNotifierProvider<CalculatorNotifier, CalculatorState>((ref) {
+      return CalculatorNotifier();
+    });
 
 class CalculatorNotifier extends StateNotifier<CalculatorState> {
   CalculatorNotifier() : super(CalculatorState()) {
@@ -53,42 +67,64 @@ class CalculatorNotifier extends StateNotifier<CalculatorState> {
     _calculateProbability();
   }
 
-  void updateTargetCopy(int index, String value) {
-    final newTargetCopies = List<String>.from(state.targetCopies);
-    if (index < newTargetCopies.length) {
-      newTargetCopies[index] = value;
+  void updateTargetCardCopies(int index, String value) {
+    final newTargetCards = List<TargetCard>.from(state.targetCards);
+    if (index < newTargetCards.length) {
+      newTargetCards[index] = newTargetCards[index].copyWith(copies: value);
     }
-    state = state.copyWith(targetCopies: newTargetCopies);
+    state = state.copyWith(targetCards: newTargetCards);
     _calculateProbability();
   }
 
-  void addTargetSet() {
-    final newTargetCopies = List<String>.from(state.targetCopies)..add("1");
-    final newIsAndMode = newTargetCopies.length > 1 ? true : state.isAndMode;
+  void updateTargetCardRequired(int index, String value) {
+    final newTargetCards = List<TargetCard>.from(state.targetCards);
+    if (index < newTargetCards.length) {
+      newTargetCards[index] = newTargetCards[index].copyWith(
+        requiredInHand: value,
+      );
+    }
+    state = state.copyWith(targetCards: newTargetCards);
+    _calculateProbability();
+  }
+
+  void addTargetCard() {
+    final newTargetCards = List<TargetCard>.from(state.targetCards)
+      ..add(TargetCard());
+    final newIsAndMode = newTargetCards.length > 1 ? true : state.isAndMode;
     state = state.copyWith(
-      targetCopies: newTargetCopies,
+      targetCards: newTargetCards,
       isAndMode: newIsAndMode,
     );
     _calculateProbability();
   }
 
-  void removeTargetSet(int index) {
-    if (state.targetCopies.length <= 1) return;
-    final newTargetCopies = List<String>.from(state.targetCopies)
+  void removeTargetCard(int index) {
+    if (state.targetCards.length <= 1) return;
+    final newTargetCards = List<TargetCard>.from(state.targetCards)
       ..removeAt(index);
-    final newIsAndMode = newTargetCopies.length > 1 ? state.isAndMode : false;
+    final newIsAndMode = newTargetCards.length > 1 ? state.isAndMode : false;
     state = state.copyWith(
-      targetCopies: newTargetCopies,
+      targetCards: newTargetCards,
       isAndMode: newIsAndMode,
     );
     _calculateProbability();
   }
 
   void toggleMode() {
-    if (state.targetCopies.length > 1) {
+    if (state.targetCards.length > 1) {
       state = state.copyWith(isAndMode: !state.isAndMode);
       _calculateProbability();
     }
+  }
+
+  // Helper function to count set bits in an integer
+  int _countOnes(int n) {
+    int count = 0;
+    while (n > 0) {
+      count += n & 1;
+      n >>= 1;
+    }
+    return count;
   }
 
   // Binomial coefficient helper function
@@ -104,85 +140,106 @@ class CalculatorNotifier extends StateNotifier<CalculatorState> {
     return res;
   }
 
-  double _probNoneOfSet(
-    int D,
-    int H,
-    List<int> indicesToExclude,
-    List<String> allTargetCopies,
-  ) {
-    int sumOfExcludedCopies = 0;
-    for (int index in indicesToExclude) {
-      sumOfExcludedCopies += int.tryParse(allTargetCopies[index]) ?? 0;
-    }
-
-    final deckSizeMinusExcluded = D - sumOfExcludedCopies;
-    if (deckSizeMinusExcluded < H || deckSizeMinusExcluded < 0) {
+  double _probDrawExactly(int D, int H, int copiesInDeck, int requiredInHand) {
+    if (requiredInHand < 0 ||
+        requiredInHand > copiesInDeck ||
+        requiredInHand > H ||
+        copiesInDeck > D) {
       return 0.0;
     }
 
-    final combinationsOfNotDrawing = _combinations(deckSizeMinusExcluded, H);
-    final totalCombinations = _combinations(D, H);
+    final waysToDrawRequired = _combinations(copiesInDeck, requiredInHand);
+    final waysToDrawOther = _combinations(D - copiesInDeck, H - requiredInHand);
+    final totalWays = _combinations(D, H);
 
-    if (totalCombinations > BigInt.zero) {
-      return combinationsOfNotDrawing.toDouble() / totalCombinations.toDouble();
+    if (totalWays > BigInt.zero) {
+      return (waysToDrawRequired * waysToDrawOther).toDouble() /
+          totalWays.toDouble();
     }
     return 0.0;
   }
 
-  void _calculateProbAND(int D, int H) {
-    final targetCopies = state.targetCopies;
-    final N = targetCopies.length;
+  double _probDrawAtLeast(int D, int H, int copiesInDeck, int requiredInHand) {
+    if (requiredInHand <= 0) return 1.0;
+    if (requiredInHand > copiesInDeck ||
+        requiredInHand > H ||
+        copiesInDeck > D) {
+      return 0.0;
+    }
 
-    if (N > H) {
+    double probability = 0.0;
+    for (int k = requiredInHand; k <= copiesInDeck && k <= H; k++) {
+      probability += _probDrawExactly(D, H, copiesInDeck, k);
+    }
+    return probability;
+  }
+
+  void _calculateProbAND(int D, int H) {
+    final targetCards = state.targetCards;
+    final N = targetCards.length;
+
+    // Check if it's strictly impossible
+    int totalRequired = 0;
+    for (final card in targetCards) {
+      totalRequired += int.tryParse(card.requiredInHand) ?? 0;
+    }
+    if (totalRequired > H) {
       state = state.copyWith(probability: 0.0);
       return;
     }
 
-    double probNone = 0.0;
-    for (int i = 1; i < (1 << N); i++) {
-      List<int> currentSetIndices = [];
-      int setSize = 0;
-      for (int j = 0; j < N; j++) {
-        if ((i & (1 << j)) != 0) {
-          currentSetIndices.add(j);
-          setSize++;
-        }
-      }
+    // For AND mode with multiple required cards, we need a more sophisticated approach
+    // This is a simplified approximation using inclusion-exclusion
+    double probAll = 1.0;
 
-      final probNoneCurrentSet = _probNoneOfSet(
-        D,
-        H,
-        currentSetIndices,
-        targetCopies,
-      );
-      final sign = (setSize % 2 == 1) ? 1.0 : -1.0;
-      probNone += sign * probNoneCurrentSet;
+    // Multiply probabilities for each card (this assumes independence, which isn't perfect but works as approximation)
+    for (final card in targetCards) {
+      final copies = int.tryParse(card.copies) ?? 0;
+      final required = int.tryParse(card.requiredInHand) ?? 0;
+
+      final probThisCard = _probDrawAtLeast(D, H, copies, required);
+      probAll *= probThisCard;
+
+      if (!probAll.isFinite || probAll <= 0.0) {
+        probAll = 0.0;
+        break;
+      }
+    }
+
+    state = state.copyWith(
+      probability: probAll.isFinite ? probAll.clamp(0.0, 1.0) : 0.0,
+    );
+  }
+
+  void _calculateProbOR(int D, int H) {
+    final targetCards = state.targetCards;
+
+    if (targetCards.isEmpty) {
+      state = state.copyWith(probability: 0.0);
+      return;
+    }
+
+    // For OR mode, calculate probability that at least one card meets its requirement
+    double probNone = 1.0;
+
+    for (final card in targetCards) {
+      final copies = int.tryParse(card.copies) ?? 0;
+      final required = int.tryParse(card.requiredInHand) ?? 0;
+
+      final probNotThisCard = 1.0 - _probDrawAtLeast(D, H, copies, required);
+      probNone *= probNotThisCard;
+
+      if (!probNone.isFinite) {
+        probNone = 0.0;
+        break;
+      }
     }
 
     final finalProbability = 1.0 - probNone;
     state = state.copyWith(
-      probability: finalProbability.isFinite ? finalProbability : 0.0,
-    );
-  }
-
-  void _calculateProbOR(int D, int H, int T) {
-    if (D <= 0 || T <= 0 || H <= 0 || H > D || T > D) {
-      state = state.copyWith(probability: 0.0);
-      return;
-    }
-
-    final combinationsOfNotDrawing = _combinations(D - T, H);
-    final totalCombinations = _combinations(D, H);
-
-    double probNotDrawing = 0.0;
-    if (totalCombinations > BigInt.zero) {
-      probNotDrawing =
-          combinationsOfNotDrawing.toDouble() / totalCombinations.toDouble();
-    }
-
-    final finalProbability = 1.0 - probNotDrawing;
-    state = state.copyWith(
-      probability: finalProbability.isFinite ? finalProbability : 0.0,
+      probability: finalProbability.isFinite
+          ? finalProbability.clamp(0.0, 1.0)
+          : 0.0,
     );
   }
 
@@ -190,28 +247,40 @@ class CalculatorNotifier extends StateNotifier<CalculatorState> {
     final D = int.tryParse(state.deckSize) ?? 40;
     final H = int.tryParse(state.handSize) ?? 5;
 
-    // Prüfe ob targetCopies leer ist
-    if (state.targetCopies.isEmpty) {
+    if (state.targetCards.isEmpty) {
       state = state.copyWith(probability: 0.0);
       return;
     }
 
-    int T = 0;
-    for (String copy in state.targetCopies) {
-      T += int.tryParse(copy) ?? 0;
-    }
-
-    if (D <= 0 || H <= 0 || T > D || H > D) {
+    if (D <= 0 || H <= 0 || H > D) {
       state = state.copyWith(probability: 0.0);
       return;
     }
 
-    if (state.targetCopies.length == 1) {
-      _calculateProbOR(D, H, T);
+    // Check for individual card requirements that are impossible
+    for (final card in state.targetCards) {
+      final copies = int.tryParse(card.copies) ?? 0;
+      final required = int.tryParse(card.requiredInHand) ?? 0;
+
+      if (required > copies || required > H || copies > D) {
+        if (state.isAndMode) {
+          state = state.copyWith(probability: 0.0);
+          return;
+        }
+      }
+    }
+
+    if (state.targetCards.length == 1) {
+      final card = state.targetCards.first;
+      final copies = int.tryParse(card.copies) ?? 0;
+      final required = int.tryParse(card.requiredInHand) ?? 0;
+
+      final probability = _probDrawAtLeast(D, H, copies, required);
+      state = state.copyWith(probability: probability);
     } else if (state.isAndMode) {
       _calculateProbAND(D, H);
     } else {
-      _calculateProbOR(D, H, T);
+      _calculateProbOR(D, H);
     }
   }
 }

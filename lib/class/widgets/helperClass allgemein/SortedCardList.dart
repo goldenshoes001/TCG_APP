@@ -400,7 +400,7 @@ class CardDetailView extends StatelessWidget {
               children: [
                 IconButton(
                   icon: const Icon(Icons.arrow_back),
-                  color: Colors.white,
+
                   onPressed: onBack,
                 ),
               ],
