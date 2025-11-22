@@ -1,6 +1,3 @@
-
-
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:tcg_app/class/Firebase/interfaces/authrepo.dart';
 
@@ -30,11 +27,11 @@ class FirebaseAuthRepository implements AuthRepository {
       );
     } on FirebaseAuthException catch (e) {
       if (e.code == 'user-not-found') {
-        throw Exception('Kein Benutzer gefunden für diese E-Mail.');
+        throw Exception('No User found for this Email.');
       } else if (e.code == 'wrong-password') {
-        throw Exception('Falsches Passwort.');
+        throw Exception('Wrong Username.');
       }
-      throw Exception('Fehler bei der Anmeldung: ${e.message}');
+      throw Exception('Error on login: ${e.message}');
     }
   }
 
@@ -51,11 +48,11 @@ class FirebaseAuthRepository implements AuthRepository {
       );
     } on FirebaseAuthException catch (e) {
       if (e.code == 'weak-password') {
-        throw Exception('Das Passwort ist zu schwach.');
+        throw Exception('Password to weak ');
       } else if (e.code == 'email-already-in-use') {
-        throw Exception('Ein Konto für diese E-Mail existiert bereits.');
+        throw Exception('A account with this email already exists');
       }
-      throw Exception('Fehler bei der Registrierung: ${e.message}');
+      throw Exception('Error on registration ${e.message}');
     }
   }
 
