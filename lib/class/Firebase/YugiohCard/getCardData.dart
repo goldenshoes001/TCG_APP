@@ -114,6 +114,151 @@ class CardData implements Dbrepo {
     }
   }
 
+  Future<List<Map<String, dynamic>>> searchWithQueryAndFilters({
+    String? query,
+    String? type,
+    String? race,
+    String? attribute,
+    String? archetype,
+    int? level,
+    String? levelOperator,
+    int? linkRating,
+    String? linkRatingOperator,
+    int? scale,
+    String? scaleOperator,
+    String? atk,
+    String? def,
+    String? banlistTCG,
+    String? banlistOCG,
+  }) async {
+    // Cache-Key für kombinierte Suche
+    final cacheKey =
+        'combined_${query ?? ''}_${_createFilterCacheKey(type: type, race: race, attribute: attribute, archetype: archetype, level: level, levelOperator: levelOperator, linkRating: linkRating, linkRatingOperator: linkRatingOperator, scale: scale, scaleOperator: scaleOperator, atk: atk, def: def, banlistTCG: banlistTCG, banlistOCG: banlistOCG)}';
+
+    // Cache-Check
+    if (_isCacheValid() && _searchResultsCache.containsKey(cacheKey)) {
+      print('Cache HIT für kombinierte Suche');
+      return _searchResultsCache[cacheKey]!;
+    }
+
+    // Verwende Algolia für die KOMBINIERTE Suche (Query + Filter)
+    final List<List<String>> facetFilters = [];
+    final List<String> numericFilters = [];
+
+    // Facet-Filter (wie bisher)
+    if (type != null && type.isNotEmpty) {
+      facetFilters.add(['type:$type']);
+    }
+    if (race != null && race.isNotEmpty) {
+      facetFilters.add(['race:$race']);
+    }
+    if (attribute != null && attribute.isNotEmpty) {
+      facetFilters.add(['attribute:$attribute']);
+    }
+    if (archetype != null && archetype.isNotEmpty) {
+      facetFilters.add(['archetype:$archetype']);
+    }
+    if (banlistTCG != null && banlistTCG.isNotEmpty) {
+      facetFilters.add(['banlist_info.ban_tcg:$banlistTCG']);
+    }
+    if (banlistOCG != null && banlistOCG.isNotEmpty) {
+      facetFilters.add(['banlist_info.ban_ocg:$banlistOCG']);
+    }
+
+    // Numeric-Filter (wie bisher)
+    if (level != null) {
+      numericFilters.add(
+        'level${_convertOperator(levelOperator ?? '=')}$level',
+      );
+    }
+    if (linkRating != null) {
+      numericFilters.add(
+        'linkval${_convertOperator(linkRatingOperator ?? '=')}$linkRating',
+      );
+    }
+    if (scale != null) {
+      numericFilters.add(
+        'scale${_convertOperator(scaleOperator ?? '=')}$scale',
+      );
+    }
+    if (atk != null && atk.isNotEmpty && atk != '?') {
+      numericFilters.add('atk$atk');
+    }
+    if (def != null && def.isNotEmpty && def != '?') {
+      numericFilters.add('def$def');
+    }
+
+    // Führe die KOMBINIERTE Suche mit Query + Filtern durch
+    final results = await _searchAlgoliaWithFiltersAndQuery(
+      query: query,
+      facetFilters: facetFilters,
+      numericFilters: numericFilters,
+    );
+
+    // Cache speichern
+    _searchResultsCache[cacheKey] = results;
+
+    return results;
+  }
+
+  // NEUE METHODE: Kombinierte Suche mit Query und Filtern
+  Future<List<Map<String, dynamic>>> _searchAlgoliaWithFiltersAndQuery({
+    String? query,
+    required List<List<String>> facetFilters,
+    required List<String> numericFilters,
+  }) async {
+    try {
+      final List<List<String>>? finalFacetFilters = facetFilters.isEmpty
+          ? null
+          : facetFilters;
+
+      final String? finalFilters = numericFilters.isEmpty
+          ? null
+          : numericFilters.join(' AND ');
+
+      final response = await client.search(
+        searchMethodParams: algolia_lib.SearchMethodParams(
+          requests: [
+            algolia_lib.SearchForHits(
+              indexName: 'cards',
+              query: query ?? '', // WICHTIG: Query hier übergeben
+              facetFilters: finalFacetFilters,
+              filters: finalFilters,
+              hitsPerPage: 1000,
+              // Deaktiviere Typo-Toleranz für exakte Suchen
+              typoTolerance: query != null && query.isNotEmpty
+                  ? algolia_lib.TypoToleranceEnum.false_
+                  : null,
+            ),
+          ],
+        ),
+      );
+
+      final dynamic hitsData = (response.results.first as Map)['hits'];
+
+      if (hitsData == null || hitsData is! List) {
+        return [];
+      }
+
+      final List<dynamic> hits = hitsData;
+
+      final List<Map<String, dynamic>> cards = hits
+          .map((hit) => Map<String, dynamic>.from(hit as Map))
+          .toList();
+
+      // Alphabetisch sortieren
+      cards.sort(
+        (a, b) =>
+            (a['name'] as String? ?? '').compareTo(b['name'] as String? ?? ''),
+      );
+
+      return cards;
+    } catch (e) {
+      print('Fehler bei kombinierter Algolia-Suche: $e');
+      return [];
+    }
+  }
+
   Future<Map<String, String>> batchLoadImages(List<String> gsPaths) async {
     final Map<String, String> results = {};
 
@@ -744,6 +889,7 @@ class CardData implements Dbrepo {
   }
 
   /// OPTIMIERT: Lädt Facet-Werte mit Caching
+  /// OPTIMIERT: Lädt Facet-Werte mit Caching und korrekter Sortierung
   Future<List<String>> getFacetValues(String fieldName) async {
     // Cache-Check
     if (_isCacheValid() && _facetValuesCache.containsKey(fieldName)) {
@@ -752,7 +898,6 @@ class CardData implements Dbrepo {
     }
 
     try {
-      // Versuche zuerst, Facets direkt zu laden (effizienteste Methode)
       final response = await client.search(
         searchMethodParams: algolia_lib.SearchMethodParams(
           requests: [
@@ -760,7 +905,7 @@ class CardData implements Dbrepo {
               indexName: 'cards',
               query: '',
               facets: [fieldName],
-              hitsPerPage: 0, // Keine Hits, nur Facets
+              hitsPerPage: 0,
               maxValuesPerFacet: 100000,
             ),
           ],
@@ -783,7 +928,9 @@ class CardData implements Dbrepo {
               .toList();
 
           if (values.isNotEmpty) {
-            values.sort();
+            // KORRIGIERTE SORTIERUNG: Case-insensitive alphabetisch
+            values.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+
             // Cache speichern
             _facetValuesCache[fieldName] = values;
             return values;
@@ -791,7 +938,6 @@ class CardData implements Dbrepo {
         }
       }
 
-      // Fallback nur wenn nötig (sollte nicht passieren)
       return [];
     } catch (_) {
       return [];

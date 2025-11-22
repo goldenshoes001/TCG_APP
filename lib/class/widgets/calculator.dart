@@ -76,21 +76,17 @@ class ProbabilityCalculator extends ConsumerWidget {
           // Target Cards Header
           SliverToBoxAdapter(
             child: Card(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    Text('Target  Cards'),
-                    const Spacer(),
-                    if (state.targetCopies.length < 10)
-                      FilledButton.icon(
-                        icon: const Icon(Icons.add, size: 18),
-                        label: const Text('Add Card'),
-                        onPressed: notifier.addTargetSet,
-                      ),
-                  ],
-                ),
+              child: Row(
+                children: [
+                  Text('Target  Cards'),
+                  const Spacer(),
+                  if (state.targetCopies.length < 10)
+                    FilledButton.icon(
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('Add Card'),
+                      onPressed: notifier.addTargetSet,
+                    ),
+                ],
               ),
             ),
           ),
@@ -184,7 +180,6 @@ class ProbabilityCalculator extends ConsumerWidget {
                         child: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.orange.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
@@ -232,31 +227,44 @@ class _NumberInputField extends StatelessWidget {
     required this.value,
     required this.onChanged,
     required this.hintText,
-  });
+    Key? key,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(10),
+      borderSide: BorderSide(color: Colors.grey, width: 2),
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label),
         const SizedBox(height: 8),
-        Container(
-          height: 48,
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade300),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: TextField(
-            controller: TextEditingController(text: value),
-            keyboardType: TextInputType.number,
-            textAlign: TextAlign.center,
-            decoration: InputDecoration(
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-              hintText: hintText,
+        TextFormField(
+          initialValue: value,
+          onChanged: onChanged,
+          keyboardType: TextInputType.number,
+          textAlign: TextAlign.center,
+          decoration: InputDecoration(
+            // Setzt den Standard-Border für enabled/unfocused, disabled, etc.
+            border: border,
+            enabledBorder: border,
+            // ⚠️ enabledBorder: border; <--- DIESE ZEILE ENTFERNEN!
+
+            // Überschreibt den Border nur, wenn das Feld den Fokus hat
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: Theme.of(context).colorScheme.primary,
+                width: 1.5,
+              ),
             ),
-            onChanged: onChanged,
+            hintText: hintText, // Hint Text wird verwendet
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 10,
+              vertical: 16,
+            ),
           ),
         ),
       ],
@@ -289,10 +297,7 @@ class _TargetCardItem extends StatelessWidget {
             Container(
               width: 36,
               height: 36,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
               child: Center(child: Text('${index + 1}')),
             ),
             const SizedBox(width: 16),

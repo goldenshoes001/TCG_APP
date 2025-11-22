@@ -43,41 +43,74 @@ class _MetaState extends ConsumerState<Search>
 
   void _performTextSearch(String value) {
     final trimmedValue = value.trim();
+
     if (trimmedValue.isEmpty) {
       ref.read(cardSearchQueryProvider.notifier).state = '';
+      // Wenn Suchwort leer ist, aber Filter aktiv sind, zeige trotzdem Ergebnisse
+      final filterState = ref.read(filterProvider);
+      final hasFilters =
+          filterState.selectedType != null ||
+          filterState.selectedRace != null ||
+          filterState.selectedAttribute != null ||
+          filterState.selectedArchetype != null ||
+          filterState.selectedLevel != null ||
+          _atkController.text.trim().isNotEmpty ||
+          _defController.text.trim().isNotEmpty ||
+          filterState.selectedScale != null ||
+          filterState.selectedLinkRating != null ||
+          filterState.selectedBanlistTCG != null ||
+          filterState.selectedBanlistOCG != null;
+
+      if (!hasFilters) {
+        setState(() {
+          _showFilters = true;
+        });
+      }
       return;
     }
+    /*
 
-    if (_tabController.index == 0) {
-      ref.read(cardSearchQueryProvider.notifier).state = trimmedValue;
-      ref.read(selectedCardProvider.notifier).state = null;
-      setState(() {
-        _showFilters = false;
-      });
-    }
+  - getcarddata
+  - app_provider
+  - search.dart
+
+ */
+    ref.read(cardSearchQueryProvider.notifier).state = trimmedValue;
+    ref.read(selectedCardProvider.notifier).state = null;
+    setState(() {
+      _showFilters = false;
+    });
   }
 
   void _performCardSearch() {
-    final filterState = ref.read(filterProvider);
+    final filterState = ref.watch(filterProvider);
+    final hasQuery = _suchfeld.text.trim().isNotEmpty;
 
-    if (filterState.selectedType == null &&
-        filterState.selectedRace == null &&
-        filterState.selectedAttribute == null &&
-        filterState.selectedArchetype == null &&
-        filterState.selectedLevel == null &&
-        _atkController.text.trim().isEmpty &&
-        _defController.text.trim().isEmpty &&
-        filterState.selectedScale == null &&
-        filterState.selectedLinkRating == null &&
-        filterState.selectedBanlistTCG == null &&
-        filterState.selectedBanlistOCG == null) {
+    // Prüfe ob mindestens ein Filter ODER ein Suchwort gesetzt ist
+    final hasFilters =
+        filterState.selectedType != null ||
+        filterState.selectedRace != null ||
+        filterState.selectedAttribute != null ||
+        filterState.selectedArchetype != null ||
+        filterState.selectedLevel != null ||
+        _atkController.text.trim().isNotEmpty ||
+        _defController.text.trim().isNotEmpty ||
+        filterState.selectedScale != null ||
+        filterState.selectedLinkRating != null ||
+        filterState.selectedBanlistTCG != null ||
+        filterState.selectedBanlistOCG != null;
+
+    if (!hasQuery && !hasFilters) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pls choose at least one Filter.')),
+        const SnackBar(content: Text('Bitte Suchwort oder Filter eingeben.')),
       );
       return;
     }
 
-    // Update ATK/DEF Werte im State
+    // WICHTIG: Update ALLE Werte im State
+    ref.read(cardSearchQueryProvider.notifier).state = _suchfeld.text.trim();
+
+    // ATK/DEF Werte aktualisieren
     ref
         .read(filterProvider.notifier)
         .updateAtkValue(_atkController.text.trim());
@@ -85,14 +118,15 @@ class _MetaState extends ConsumerState<Search>
         .read(filterProvider.notifier)
         .updateDefValue(_defController.text.trim());
 
-    // Trigger Filter Search durch State-Update
-    ref.read(filterSearchTriggerProvider.notifier).state++;
-    ref.read(cardSearchQueryProvider.notifier).state = '';
-
+    // UI aktualisieren
     setState(() {
       _showFilters = false;
-      _suchfeld.clear();
     });
+
+    // Debug-Ausgabe
+    print('🔍 Suche durchgeführt:');
+    print('   Query: "${_suchfeld.text.trim()}"');
+    print('   Filter aktiv: $hasFilters');
   }
 
   void _resetFilters() {
@@ -259,38 +293,36 @@ class _MetaState extends ConsumerState<Search>
 
   Widget _buildSearchResults() {
     final cardSearchQuery = ref.watch(cardSearchQueryProvider);
-    final cardData = ref.watch(cardDataProvider);
+    final filterState = ref.watch(filterProvider);
 
-    // Entscheide ob Text-Suche oder Filter-Suche
-    if (cardSearchQuery.isNotEmpty) {
-      final searchResultsAsync = ref.watch(cardSearchResultsProvider);
+    // Prüfe ob überhaupt eine Suche aktiv ist
+    final hasQuery = cardSearchQuery.isNotEmpty;
+    final hasFilters =
+        filterState.selectedType != null ||
+        filterState.selectedRace != null ||
+        filterState.selectedAttribute != null ||
+        filterState.selectedArchetype != null ||
+        filterState.selectedLevel != null ||
+        filterState.atkValue.isNotEmpty ||
+        filterState.defValue.isNotEmpty ||
+        filterState.selectedScale != null ||
+        filterState.selectedLinkRating != null ||
+        filterState.selectedBanlistTCG != null ||
+        filterState.selectedBanlistOCG != null;
 
-      return searchResultsAsync.when(
-        data: (results) => SearchResultsView(
-          searchFuture: Future.value(results),
+    // Verwende immer den kombinierten Search Provider
+    final combinedResultsAsync = ref.watch(combinedSearchResultsProvider);
 
-          onCardSelected: (card) {
-            ref.read(selectedCardProvider.notifier).state = card;
-          },
-        ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error: $error')),
-      );
-    } else {
-      final filterResultsAsync = ref.watch(filterSearchResultsProvider);
-
-      return filterResultsAsync.when(
-        data: (results) => SearchResultsView(
-          searchFuture: Future.value(results),
-
-          onCardSelected: (card) {
-            ref.read(selectedCardProvider.notifier).state = card;
-          },
-        ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text('Error: $error')),
-      );
-    }
+    return combinedResultsAsync.when(
+      data: (results) => SearchResultsView(
+        searchFuture: Future.value(results),
+        onCardSelected: (card) {
+          ref.read(selectedCardProvider.notifier).state = card;
+        },
+      ),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(child: Text('Error: $error')),
+    );
   }
 
   Widget _buildFilterView(

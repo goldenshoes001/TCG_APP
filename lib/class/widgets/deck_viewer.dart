@@ -168,7 +168,7 @@ class _DeckViewerState extends ConsumerState<DeckViewer> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              icon: const Icon(Icons.arrow_back),
               onPressed: widget.onBack,
             ),
             Expanded(

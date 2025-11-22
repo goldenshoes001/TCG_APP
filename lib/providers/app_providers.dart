@@ -9,6 +9,97 @@ import 'package:tcg_app/class/widgets/deckservice.dart';
 import 'package:tcg_app/class/widgets/deck_search_service.dart';
 import 'package:tcg_app/class/sharedPreference.dart';
 
+// Füge diesen Provider hinzu:
+final combinedSearchResultsProvider =
+    FutureProvider<List<Map<String, dynamic>>>((ref) async {
+      final query = ref.watch(cardSearchQueryProvider);
+      final filterState = ref.watch(filterProvider);
+      final cardData = ref.watch(cardDataProvider);
+
+      print('🔄 Combined Search triggered:');
+      print('   Query: "$query"');
+      print('   Filter: $filterState');
+
+      // Prüfe ob überhaupt eine Suche aktiv ist
+      final hasQuery = query.isNotEmpty;
+      final hasFilters =
+          filterState.selectedType != null ||
+          filterState.selectedRace != null ||
+          filterState.selectedAttribute != null ||
+          filterState.selectedArchetype != null ||
+          filterState.selectedLevel != null ||
+          filterState.atkValue.isNotEmpty ||
+          filterState.defValue.isNotEmpty ||
+          filterState.selectedScale != null ||
+          filterState.selectedLinkRating != null ||
+          filterState.selectedBanlistTCG != null ||
+          filterState.selectedBanlistOCG != null;
+
+      // Wenn weder Suchwort noch Filter gesetzt sind, leere Liste zurückgeben
+      if (!hasQuery && !hasFilters) {
+        return [];
+      }
+
+      // Verwende die kombinierte Suchmethode
+      int? levelValue;
+      String? levelOperatorValue;
+      int? scaleValue;
+      String? scaleOperatorValue;
+      int? linkRatingValue;
+      String? linkRatingOperatorValue;
+      String? atkFilter;
+      String? defFilter;
+
+      if (filterState.selectedLevel != null) {
+        levelValue = int.tryParse(filterState.selectedLevel!);
+        levelOperatorValue = filterState.levelOperator;
+      }
+      if (filterState.selectedScale != null) {
+        scaleValue = int.tryParse(filterState.selectedScale!);
+        scaleOperatorValue = filterState.scaleOperator;
+      }
+      if (filterState.selectedLinkRating != null) {
+        linkRatingValue = int.tryParse(filterState.selectedLinkRating!);
+        linkRatingOperatorValue = filterState.linkRatingOperator;
+      }
+      if (filterState.atkValue.isNotEmpty) {
+        final atkOp = filterState.atkOperator == 'min'
+            ? '>='
+            : filterState.atkOperator == 'max'
+            ? '<='
+            : '=';
+        atkFilter = '$atkOp${filterState.atkValue}';
+      }
+      if (filterState.defValue.isNotEmpty) {
+        final defOp = filterState.defOperator == 'min'
+            ? '>='
+            : filterState.defOperator == 'max'
+            ? '<='
+            : '=';
+        defFilter = '$defOp${filterState.defValue}';
+      }
+
+      final results = await cardData.searchWithQueryAndFilters(
+        query: hasQuery ? query : null,
+        type: filterState.selectedType,
+        race: filterState.selectedRace,
+        attribute: filterState.selectedAttribute,
+        archetype: filterState.selectedArchetype,
+        level: levelValue,
+        levelOperator: levelOperatorValue,
+        linkRating: linkRatingValue,
+        linkRatingOperator: linkRatingOperatorValue,
+        scale: scaleValue,
+        scaleOperator: scaleOperatorValue,
+        atk: atkFilter,
+        def: defFilter,
+        banlistTCG: filterState.selectedBanlistTCG,
+        banlistOCG: filterState.selectedBanlistOCG,
+      );
+
+      await cardData.preloadCardImages(results);
+      return results;
+    });
 // ============================================================================
 // SINGLETON PROVIDERS (werden nur einmal erstellt)
 // ============================================================================
@@ -469,9 +560,6 @@ final filterSearchResultsProvider = FutureProvider<List<Map<String, dynamic>>>((
 
   await cardData.preloadCardImages(results);
   return results;
-
-
-
 });
 
 // ============================================================================
@@ -495,6 +583,4 @@ final usernameProvider = FutureProvider.family<String, String>((
   } catch (e) {
     return 'Unknown';
   }
-
-  
 });
