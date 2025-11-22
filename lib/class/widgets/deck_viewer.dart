@@ -148,7 +148,7 @@ class _DeckViewerState extends ConsumerState<DeckViewer> {
 
     if (deckId == null || deckId.isEmpty) {
       return const Center(
-        child: Text('Fehler: Deck ID nicht gefunden, um Kommentare zu laden.'),
+        child: Text('error: deckid not found to load comments.'),
       );
     }
 
@@ -244,7 +244,7 @@ class _DeckViewerState extends ConsumerState<DeckViewer> {
         break;
       default:
         currentDeck = [];
-        deckName = 'Unbekannt';
+        deckName = 'unknown';
     }
 
     final totalCardCount = currentDeck.fold<int>(0, (sum, card) {
@@ -252,7 +252,7 @@ class _DeckViewerState extends ConsumerState<DeckViewer> {
     });
 
     if (currentDeck.isEmpty) {
-      return Center(child: Text('$deckName ist leer.'));
+      return Center(child: Text('$deckName is empty.'));
     }
 
     final categorizedCards = _sortAndCategorizeCards(currentDeck);
@@ -288,7 +288,7 @@ class _DeckViewerState extends ConsumerState<DeckViewer> {
                     final count = card['count'] ?? 1;
                     return ListTile(
                       leading: _CardImageWidget(card: card, cardData: cardData),
-                      title: Text(card['name'] ?? 'Unbekannte Karte'),
+                      title: Text(card['name'] ?? 'unknown card'),
                       subtitle: Text(card['type'] ?? ''),
                       trailing: Text('x$count'),
                       onTap: () {
@@ -340,13 +340,13 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Kommentar hinzugefügt')));
+        ).showSnackBar(const SnackBar(content: Text('Comment added')));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Fehler: $e')));
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
@@ -362,13 +362,13 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Kommentar gelöscht')));
+        ).showSnackBar(const SnackBar(content: Text('Comment deleted')));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Fehler: $e')));
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
@@ -405,7 +405,7 @@ class _CommentSectionState extends ConsumerState<CommentSection> {
             stream: deckService.getComments(widget.deckId),
             builder: (context, snapshot) {
               if (snapshot.hasError) {
-                return Text('Fehler: ${snapshot.error}');
+                return Text('Error: ${snapshot.error}');
               }
 
               if (snapshot.connectionState == ConnectionState.waiting) {

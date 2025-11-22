@@ -85,13 +85,13 @@ class _ProfileState extends ConsumerState<Profile> {
                   TextFormField(
                     controller: userNameController,
                     decoration: const InputDecoration(
-                      labelText: "Benutzername",
-                      hintText: "Benutzername",
+                      labelText: "Username",
+                      hintText: "Username",
                       prefixIcon: Icon(Icons.person_rounded),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Bitte geben Sie Ihre E-Mail-Adresse ein.';
+                        return 'Pls write a E-mail adress';
                       }
                       return null;
                     },
@@ -119,7 +119,7 @@ class _ProfileState extends ConsumerState<Profile> {
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Bitte geben Sie Ihr Passwort ein.';
+                        return 'Pls write a password.';
                       }
                       return null;
                     },

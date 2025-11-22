@@ -55,19 +55,19 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Account löschen'),
+          title: const Text('Delete Account'),
           content: const Text(
-            'Möchten Sie Ihren Account wirklich unwiderruflich löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden und alle Ihre Decks und Daten werden permanent gelöscht.',
+            'Do you really want to permanently delete your account?\n\nThis action cannot be undone and all your data will be permanently deleted.',
           ),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Abbrechen'),
+              child: const Text('Cancel'),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
               style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Account löschen'),
+              child: const Text('Delete Account'),
             ),
           ],
         );
@@ -96,7 +96,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text("Error on delete: $e")));
+        ).showSnackBar(SnackBar(content: Text("Error deleting account: $e")));
       }
     }
   }
@@ -151,19 +151,19 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Deck löschen'),
+          title: const Text('Delete Deck'),
           content: Text(
-            'Möchten Sie das Deck "$deckName" wirklich löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden.',
+            'Do you really want to delete the deck "$deckName"?\n\nThis action cannot be undone.',
           ),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Abbrechen'),
+              child: const Text('Cancel'),
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
               style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Löschen'),
+              child: const Text('Delete'),
             ),
           ],
         );
@@ -189,7 +189,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error on deleting Deck: $e')));
+        ).showSnackBar(SnackBar(content: Text('Error deleting deck: $e')));
       }
     }
   }
@@ -235,7 +235,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
         final deckName = deck['deckName'] as String;
         final String coverImage = deck["coverImageUrl"] as String? ?? '';
 
-        // Hole den tatsächlichen Username aus dem Deck, falls vorhanden
+        // Get the actual username from the deck, if available
         final deckUsername = deck['username'] as String? ?? username;
 
         return FutureBuilder<String?>(
@@ -362,7 +362,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                         _showDeckCreation = true;
                       });
                     },
-                    child: const Text('Create new Deck'),
+                    child: const Text('Create New Deck'),
                   ),
                   const SizedBox(height: 24),
 
@@ -376,7 +376,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
           ),
         ),
 
-        // Account Settings Section - AM UNTEREN ENDE DES SCREENS
+        // Account Settings Section - AT THE BOTTOM OF THE SCREEN
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(16.0),
@@ -400,7 +400,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  // Delete Account Button - ECKIG wie Logout
+                  // Delete Account Button
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: _showDeleteUserConfirmation,
