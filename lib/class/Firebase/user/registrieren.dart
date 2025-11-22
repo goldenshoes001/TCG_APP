@@ -79,16 +79,16 @@ class _RegistrierenState extends ConsumerState<Registrieren> {
     );
 
     if (email.isEmpty) {
-      validation = "E-Mail-Adresse eingeben";
+      validation = "Enter email address";
       color = Colors.grey;
     } else if (!emailRegex.hasMatch(email)) {
-      validation = "Ungültige E-Mail-Adresse";
+      validation = "Invalid email address";
       color = Colors.red;
     } else if (email.length > 254) {
-      validation = "E-Mail-Adresse zu lang";
+      validation = "Email address too long";
       color = Colors.red;
     } else {
-      validation = "Gültige E-Mail-Adresse";
+      validation = "Valid email address";
       color = Colors.green;
     }
 
@@ -97,7 +97,7 @@ class _RegistrierenState extends ConsumerState<Registrieren> {
         _emailValidation = validation;
         _emailValidationColor = color;
       });
-      _showValidationSnackBar("E-Mail: $_emailValidation", color);
+      _showValidationSnackBar("Email: $_emailValidation", color);
     }
 
     if (repeatEmailAdressController.text.isNotEmpty) {
@@ -112,13 +112,13 @@ class _RegistrierenState extends ConsumerState<Registrieren> {
     Color color = Colors.grey;
 
     if (repeatEmail.isEmpty) {
-      validation = "E-Mail wiederholen";
+      validation = "Repeat email";
       color = Colors.grey;
     } else if (repeatEmail != email) {
-      validation = "E-Mail-Adressen stimmen nicht überein";
+      validation = "Email addresses do not match";
       color = Colors.red;
     } else {
-      validation = "E-Mail-Adressen stimmen überein";
+      validation = "Email addresses match";
       color = Colors.green;
     }
 
@@ -128,7 +128,7 @@ class _RegistrierenState extends ConsumerState<Registrieren> {
         _repeatEmailValidationColor = color;
       });
       _showValidationSnackBar(
-        "E-Mail Bestätigung: $_repeatEmailValidation",
+        "Email Confirmation: $_repeatEmailValidation",
         color,
       );
     }
@@ -140,10 +140,10 @@ class _RegistrierenState extends ConsumerState<Registrieren> {
     Color color = Colors.grey;
 
     if (password.isEmpty) {
-      strength = "Passwort eingeben";
+      strength = "Enter password";
       color = Colors.grey;
     } else if (password.length < 6) {
-      strength = "Zu kurz (min. 6 Zeichen)";
+      strength = "Too short (min. 6 characters)";
       color = Colors.red;
     } else {
       int score = 0;
@@ -152,32 +152,32 @@ class _RegistrierenState extends ConsumerState<Registrieren> {
       if (RegExp(r'[a-z]').hasMatch(password)) {
         score++;
       } else {
-        missingRequirements.add("Kleinbuchstaben");
+        missingRequirements.add("lowercase letters");
       }
 
       if (RegExp(r'[A-Z]').hasMatch(password)) {
         score++;
       } else {
-        missingRequirements.add("Großbuchstaben");
+        missingRequirements.add("uppercase letters");
       }
 
       if (RegExp(r'[0-9]').hasMatch(password)) {
         score++;
       } else {
-        missingRequirements.add("Zahlen");
+        missingRequirements.add("numbers");
       }
 
       if (RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(password)) {
         score++;
       } else {
-        missingRequirements.add("Sonderzeichen");
+        missingRequirements.add("special characters");
       }
 
       if (missingRequirements.isNotEmpty) {
-        strength = "Benötigt: ${missingRequirements.join(', ')}";
+        strength = "Required: ${missingRequirements.join(', ')}";
         color = score >= 2 ? Colors.orange : Colors.red;
       } else {
-        strength = "Stark - Alle Anforderungen erfüllt";
+        strength = "Strong - All requirements met";
         color = Colors.green;
       }
     }
@@ -187,7 +187,7 @@ class _RegistrierenState extends ConsumerState<Registrieren> {
         _passwordStrength = strength;
         _passwordStrengthColor = color;
       });
-      _showValidationSnackBar("Passwort: $_passwordStrength", color);
+      _showValidationSnackBar("Password: $_passwordStrength", color);
     }
 
     if (pwRepeatController.text.isNotEmpty) {
@@ -202,13 +202,13 @@ class _RegistrierenState extends ConsumerState<Registrieren> {
     Color color = Colors.grey;
 
     if (repeatPassword.isEmpty) {
-      validation = "Passwort bestätigen";
+      validation = "Confirm password";
       color = Colors.grey;
     } else if (repeatPassword != password) {
-      validation = "Passwörter stimmen nicht überein";
+      validation = "Passwords do not match";
       color = Colors.red;
     } else {
-      validation = "Passwörter stimmen überein";
+      validation = "Passwords match";
       color = Colors.green;
     }
 
@@ -218,7 +218,7 @@ class _RegistrierenState extends ConsumerState<Registrieren> {
         _repeatPasswordValidationColor = color;
       });
       _showValidationSnackBar(
-        "Passwort Bestätigung: $_repeatPasswordValidation",
+        "Password Confirmation: $_repeatPasswordValidation",
         color,
       );
     }
@@ -261,7 +261,7 @@ class _RegistrierenState extends ConsumerState<Registrieren> {
   }
 
   Future<void> handleRegistrieren() async {
-    // 1. Zuerst die Live-Validierung prüfen
+    // 1. First check live validation
     if (_emailValidationColor != Colors.green ||
         _repeatEmailValidationColor != Colors.green ||
         _passwordStrengthColor != Colors.green ||
@@ -269,14 +269,14 @@ class _RegistrierenState extends ConsumerState<Registrieren> {
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Pls correct all Fields"),
+          content: Text("Please correct all fields"),
           backgroundColor: Colors.red,
         ),
       );
       return;
     }
 
-    // 2. Formular-Validierung
+    // 2. Form validation
     if (_formKey.currentState!.validate()) {
       final auth = ref.read(authRepositoryProvider);
       final db = Userdata();
@@ -292,7 +292,7 @@ class _RegistrierenState extends ConsumerState<Registrieren> {
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("Registration successfull!"),
+            content: Text("Registration successful!"),
             backgroundColor: Colors.green,
           ),
         );
@@ -343,19 +343,19 @@ class _RegistrierenState extends ConsumerState<Registrieren> {
                   TextFormField(
                     decoration: const InputDecoration(
                       prefixIcon: Icon(Icons.boy_sharp),
-                      labelText: "username",
-                      hintText: "username",
+                      labelText: "Username",
+                      hintText: "Username",
                     ),
                     controller: usernameController,
                     keyboardType: TextInputType.name,
                   ),
                   const SizedBox(height: 40),
 
-                  // E-Mail Feld
+                  // Email Field
                   TextFormField(
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.mail),
-                      labelText: "Email :",
+                      labelText: "Email",
                       hintText: "Email",
                       suffixIcon: _emailValidation.isNotEmpty
                           ? Icon(
@@ -370,7 +370,7 @@ class _RegistrierenState extends ConsumerState<Registrieren> {
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return 'Bitte geben Sie eine E-Mail-Adresse ein';
+                        return 'Please enter an email address';
                       }
                       return null;
                     },
@@ -387,12 +387,12 @@ class _RegistrierenState extends ConsumerState<Registrieren> {
                     ),
                   const SizedBox(height: height),
 
-                  // E-Mail wiederholen
+                  // Repeat Email
                   TextFormField(
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.mail),
-                      labelText: "E-Mail wiederholen :",
-                      hintText: "E-Mail wiederholen",
+                      labelText: "Repeat Email",
+                      hintText: "Repeat Email",
                       suffixIcon: _repeatEmailValidation.isNotEmpty
                           ? Icon(
                               _repeatEmailValidationColor == Colors.green
@@ -406,7 +406,7 @@ class _RegistrierenState extends ConsumerState<Registrieren> {
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return 'Bitte wiederholen Sie die E-Mail-Adresse';
+                        return 'Please repeat the email address';
                       }
                       return null;
                     },
@@ -423,12 +423,12 @@ class _RegistrierenState extends ConsumerState<Registrieren> {
                     ),
                   const SizedBox(height: height),
 
-                  // Passwort Feld
+                  // Password Field
                   TextFormField(
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.key),
-                      labelText: "Passwort :",
-                      hintText: "Passwort",
+                      labelText: "Password",
+                      hintText: "Password",
                       suffixIcon: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -461,7 +461,7 @@ class _RegistrierenState extends ConsumerState<Registrieren> {
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return 'Bitte geben Sie ein Passwort ein';
+                        return 'Please enter a password';
                       }
                       return null;
                     },
@@ -478,12 +478,12 @@ class _RegistrierenState extends ConsumerState<Registrieren> {
                     ),
                   const SizedBox(height: height),
 
-                  // Passwort wiederholen
+                  // Repeat Password
                   TextFormField(
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.key),
-                      labelText: "Passwort wiederholen :",
-                      hintText: "Passwort wiederholen",
+                      labelText: "Repeat Password",
+                      hintText: "Repeat Password",
                       suffixIcon: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -518,7 +518,7 @@ class _RegistrierenState extends ConsumerState<Registrieren> {
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return 'Bitte bestätigen Sie Ihr Passwort';
+                        return 'Please confirm your password';
                       }
                       return null;
                     },
@@ -539,7 +539,7 @@ class _RegistrierenState extends ConsumerState<Registrieren> {
                     width: MediaQuery.of(context).size.width * 0.96,
                     child: OutlinedButton(
                       onPressed: handleRegistrieren,
-                      child: const Text("Registration"),
+                      child: const Text("Register"),
                     ),
                   ),
                 ],

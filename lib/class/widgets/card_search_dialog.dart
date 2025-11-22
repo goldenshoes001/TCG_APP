@@ -77,7 +77,7 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
         });
       }
     } catch (e) {
-      print('Fehler beim Laden der Filterdaten: $e');
+      print('Error on loading filters: $e');
       if (mounted) {
         setState(() => _filtersLoading = false);
       }

@@ -54,7 +54,7 @@ class DeckService {
   }) async {
     final user = _auth.currentUser;
     if (user == null) {
-      throw Exception('Benutzer nicht angemeldet');
+      throw Exception("User isn't logged in");
     }
     String? username = await _getUsernameFromFirestore(user.uid);
     final archetypes = _extractArchetypes(mainDeck, extraDeck);
@@ -93,7 +93,7 @@ class DeckService {
   }) async {
     final user = _auth.currentUser;
     if (user == null) {
-      throw Exception('Benutzer nicht angemeldet');
+      throw Exception("User isn't logged in ");
     }
 
     final decksRef = _firestore.collection('decks');
@@ -128,7 +128,7 @@ class DeckService {
     final deckNameLower = deckName.trim().toLowerCase();
 
     if (user == null) {
-      throw Exception('Benutzer nicht angemeldet');
+      throw Exception("User isn't logged in");
     }
     String? username = await _getUsernameFromFirestore(user.uid);
     final isDuplicate = await isDeckNameDuplicate(
@@ -138,7 +138,7 @@ class DeckService {
 
     if (isDuplicate) {
       throw Exception(
-        'Ein Deck mit dem Namen "$deckName" existiert bereits. Bitte wähle einen anderen Namen.',
+        'A deck with the name "$deckName" already exists. Pls choose a other name',
       );
     }
 
@@ -208,7 +208,7 @@ class DeckService {
     // Lösche das Deck
     await _firestore.collection('decks').doc(deckId).delete();
 
-    print('✅ Deck $deckId mit allen Kommentaren gelöscht');
+    print('✅ Deck $deckId has been deleted!');
   }
 
   List<String> _generateSearchTokens(
@@ -234,12 +234,12 @@ class DeckService {
   }) async {
     final user = _auth.currentUser;
     if (user == null) {
-      throw Exception('Benutzer nicht angemeldet');
+      throw Exception("User isn't logged in");
     }
 
     final commentId = _uuid.v4();
 
-    String username = 'Unbekannter Benutzer';
+    String username = 'Unknown user';
     try {
       final userDoc = await _firestore.collection('users').doc(user.uid).get();
       if (userDoc.exists) {
@@ -249,19 +249,15 @@ class DeckService {
             userData?['displayName'] ??
             user.displayName ??
             user.email ??
-            'Unbekannter Benutzer';
+            'Unknown User';
       } else {
         username =
-            user.displayName ??
-            user.email?.split('@')[0] ??
-            'Unbekannter Benutzer';
+            user.displayName ?? user.email?.split('@')[0] ?? 'Unknown Userr';
       }
     } catch (e) {
-      print('Fehler beim Laden des Benutzernamens: $e');
+      print('Error on loading username: $e');
       username =
-          user.displayName ??
-          user.email?.split('@')[0] ??
-          'Unbekannter Benutzer';
+          user.displayName ?? user.email?.split('@')[0] ?? 'Unknown user';
     }
 
     await _firestore
@@ -307,7 +303,7 @@ class DeckService {
       }
       return null;
     } catch (e) {
-      print('Fehler beim Laden des Usernamens: $e');
+      print('Error on loading username: $e');
       return null;
     }
   }
@@ -407,9 +403,9 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fehler beim Laden des Decks: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error on loading the deck $e')));
         setState(() => _isLoading = false);
       }
     }
@@ -426,9 +422,9 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
         'coverImageUrl': _coverImageUrl,
       };
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Das Deck muss einen Namen haben.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('A deckname is necesarry')));
     }
     return null;
   }
@@ -475,7 +471,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Deck Cover auswählen'),
+          title: const Text('Pls choose a deckcoverimage'),
           content: SizedBox(
             width: double.maxFinite,
             height: 400,
@@ -498,7 +494,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
-                            'Kein Bild für ${card['name']} verfügbar',
+                            'No Image available for: ${card['name']}',
                           ),
                         ),
                       );
@@ -551,7 +547,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
-                            'Cover-Bild auf "${card['name']}" gesetzt',
+                            'Cover-has been set to "${card['name']}"',
                           ),
                         ),
                       );
@@ -559,7 +555,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
-                            'Keine funktionierende Bild-URL für ${card['name']} gefunden',
+                            'no working image url found for ${card['name']}',
                           ),
                         ),
                       );
@@ -601,7 +597,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Abbrechen'),
+              child: const Text('cancel'),
             ),
           ],
         );
@@ -653,7 +649,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Limit überschritten! ${card['name']} ist auf $maxAllowed Kopien limitiert.',
+              'Limit over! ${card['name']} you are only allowed to play $maxAllowed copies',
             ),
           ),
         );
@@ -669,7 +665,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Limit überschritten! ${card['name']} ist auf $maxAllowed Kopien limitiert.',
+              'Limit over! ${card['name']} you are only allowed to play $maxAllowed copies',
             ),
           ),
         );
@@ -683,9 +679,9 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
 
     setState(() {});
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${card['name']} ${count}x hinzugefügt')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('${card['name']} ${count}x added')));
   }
 
   void _removeCardFromDeck(
@@ -698,12 +694,14 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
         final currentCount = card['count'] as int? ?? 0;
 
         return AlertDialog(
-          title: const Text('Karte entfernen'),
-          content: Text('Wie viele Kopien von "${card['name']}" entfernen?'),
+          title: const Text('Card deleted'),
+          content: Text(
+            'How many Cards  do you want to delete from "${card['name']}"?',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Abbrechen'),
+              child: const Text('cancel'),
             ),
             ...List.generate(currentCount, (index) {
               final removeCount = index + 1;
@@ -934,7 +932,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
               IconButton(
                 icon: const Icon(Icons.add_circle_outline),
                 onPressed: () => _showCardSearchDialog(isSideDeck: false),
-                tooltip: 'Karte hinzufügen',
+                tooltip: 'Add card',
               ),
               if (currentType != DeckType.side &&
                   currentType != DeckType.comments)
@@ -942,7 +940,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                   icon: const Icon(Icons.swap_horiz),
                   color: Colors.orange,
                   onPressed: () => _showCardSearchDialog(isSideDeck: true),
-                  tooltip: 'Zu Side Deck hinzufügen',
+                  tooltip: 'add to sidedeck',
                 ),
             ],
           ),
@@ -990,16 +988,16 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Deck erfolgreich gespeichert!')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Deck sucessfull saved!')));
         widget.onSaved?.call();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Fehler beim Speichern: $e')));
+        ).showSnackBar(SnackBar(content: Text('Error on saving: $e')));
       }
     } finally {
       setState(() => _isSaving = false);
@@ -1013,14 +1011,14 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
         builder: (BuildContext context) {
           return AlertDialog(
             backgroundColor: Theme.of(context).cardColor,
-            title: const Text('Änderungen verwerfen?'),
+            title: const Text('discard changes?'),
             content: const Text(
-              'Möchten Sie die Bearbeitung wirklich abbrechen? Ungespeicherte Änderungen gehen verloren.',
+              'Do you really want to cancel editing? Unsaved changes will be lost',
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Weiter bearbeiten'),
+                child: const Text('Continue editing'),
               ),
               TextButton(
                 onPressed: () {
@@ -1028,7 +1026,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                   widget.onCancel?.call();
                 },
                 style: TextButton.styleFrom(foregroundColor: Colors.red),
-                child: const Text('Abbrechen'),
+                child: const Text('cancel'),
               ),
             ],
           );
@@ -1134,7 +1132,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                   child: TextField(
                     controller: _deckNameController,
                     decoration: const InputDecoration(
-                      hintText: "Deckname...",
+                      hintText: "deckname...",
                       border: InputBorder.none,
 
                       contentPadding: EdgeInsets.symmetric(
@@ -1149,7 +1147,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                 IconButton(
                   icon: const Icon(Icons.close, size: 20),
                   color: Colors.red,
-                  tooltip: 'Abbrechen',
+                  tooltip: 'Cancel',
                   onPressed: _handleCancel,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(
@@ -1162,7 +1160,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                 IconButton(
                   icon: const Icon(Icons.save, size: 20),
                   color: Colors.green,
-                  tooltip: 'Speichern',
+                  tooltip: 'Save',
                   onPressed: _handleSave,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(
@@ -1237,13 +1235,13 @@ class _CommentSectionState extends State<CommentSection> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Kommentar hinzugefügt')));
+        ).showSnackBar(const SnackBar(content: Text('Add comment')));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Fehler: $e')));
+        ).showSnackBar(SnackBar(content: Text('error: $e')));
       }
     }
   }
@@ -1258,13 +1256,13 @@ class _CommentSectionState extends State<CommentSection> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Kommentar gelöscht')));
+        ).showSnackBar(const SnackBar(content: Text('comment deleted')));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Fehler: $e')));
+        ).showSnackBar(SnackBar(content: Text('error: $e')));
       }
     }
   }
@@ -1300,7 +1298,7 @@ class _CommentSectionState extends State<CommentSection> {
             stream: _deckService.getComments(widget.deckId),
             builder: (context, snapshot) {
               if (snapshot.hasError) {
-                return Text('Fehler: ${snapshot.error}');
+                return Text('error: ${snapshot.error}');
               }
 
               if (snapshot.connectionState == ConnectionState.waiting) {
