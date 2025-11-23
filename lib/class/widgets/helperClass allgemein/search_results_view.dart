@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tcg_app/class/widgets/helperClass%20allgemein/card_list_item.dart';
-import 'package:tcg_app/providers/app_providers.dart';
 
 class SearchResultsView extends ConsumerWidget {
   final Future<List<Map<String, dynamic>>>? searchFuture;

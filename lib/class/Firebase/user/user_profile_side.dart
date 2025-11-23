@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 import 'package:tcg_app/class/widgets/deckservice.dart';
 import 'package:tcg_app/providers/app_providers.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserProfileScreen extends ConsumerStatefulWidget {
   final int selectedIndex;

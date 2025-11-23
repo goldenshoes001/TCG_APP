@@ -206,8 +206,8 @@ class _NumberInputField extends StatelessWidget {
     required this.value,
     required this.onChanged,
     required this.hintText,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -254,8 +254,8 @@ class _TargetCardItem extends StatefulWidget {
     required this.onCopiesChanged,
     required this.onRequiredChanged,
     this.onRemove,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   State<_TargetCardItem> createState() => _TargetCardItemState();

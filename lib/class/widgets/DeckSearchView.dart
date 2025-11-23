@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tcg_app/class/widgets/deck_search_service.dart';
-import 'package:tcg_app/class/widgets/deck_viewer.dart';
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 import 'package:tcg_app/providers/app_providers.dart';
 

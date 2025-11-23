@@ -8,8 +8,6 @@ import 'package:tcg_app/class/Firebase/user/user.dart';
 import 'package:tcg_app/class/widgets/deckservice.dart';
 import 'package:tcg_app/class/widgets/deck_search_service.dart';
 import 'package:tcg_app/class/sharedPreference.dart';
-import 'package:tcg_app/providers/language_provider.dart';
-
 
 // Füge diesen Provider hinzu:
 final combinedSearchResultsProvider =
@@ -132,7 +130,7 @@ final deckSearchResultsProvider = FutureProvider<List<Map<String, dynamic>>>((
   }
 
   if (hasSelectedArchetype) {
-    return deckSearchService.searchDecksByArchetype(selectedArchetype!);
+    return deckSearchService.searchDecksByArchetype(selectedArchetype);
   } else if (hasSearchQuery) {
     return deckSearchService.searchDecks(searchQuery);
   } else {
@@ -145,8 +143,7 @@ final deckSearchResultsProvider = FutureProvider<List<Map<String, dynamic>>>((
 
 /// Provider für CardData Service
 final cardDataProvider = Provider<CardData>((ref) {
-  final algoliaIndex = ref.watch(algoliaIndexProvider);
-  return CardData(customIndexName: algoliaIndex);
+  return CardData();
 });
 
 /// Provider für FirebaseAuthRepository
