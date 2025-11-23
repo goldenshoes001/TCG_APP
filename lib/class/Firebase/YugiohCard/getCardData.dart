@@ -114,6 +114,10 @@ class CardData implements Dbrepo {
     }
   }
 
+  // Ersetze die searchWithQueryAndFilters Methode in getCardData.dart (ab Zeile 128):
+
+  // Ersetze die searchWithQueryAndFilters Methode in getCardData.dart (ab Zeile 128):
+
   Future<List<Map<String, dynamic>>> searchWithQueryAndFilters({
     String? query,
     String? type,
@@ -141,11 +145,24 @@ class CardData implements Dbrepo {
       return _searchResultsCache[cacheKey]!;
     }
 
+    // Splitte Query in einzelne Wörter für UND-Verknüpfung
+    List<String> searchWords = [];
+    if (query != null && query.isNotEmpty) {
+      searchWords = query
+          .toLowerCase()
+          .split(RegExp(r'\s+'))
+          .where((word) => word.isNotEmpty)
+          .toList();
+      print(
+        '🔍 Kombinierte Suche - ALLE Wörter müssen vorkommen: $searchWords',
+      );
+    }
+
     // Verwende Algolia für die KOMBINIERTE Suche (Query + Filter)
     final List<List<String>> facetFilters = [];
     final List<String> numericFilters = [];
 
-    // Facet-Filter (wie bisher)
+    // Facet-Filter
     if (type != null && type.isNotEmpty) {
       facetFilters.add(['type:$type']);
     }
@@ -165,7 +182,7 @@ class CardData implements Dbrepo {
       facetFilters.add(['banlist_info.ban_ocg:$banlistOCG']);
     }
 
-    // Numeric-Filter (wie bisher)
+    // Numeric-Filter
     if (level != null) {
       numericFilters.add(
         'level${_convertOperator(levelOperator ?? '=')}$level',
@@ -195,10 +212,54 @@ class CardData implements Dbrepo {
       numericFilters: numericFilters,
     );
 
-    // Cache speichern
-    _searchResultsCache[cacheKey] = results;
+    print('📊 Vor Wort-Filterung: ${results.length} Karten');
 
-    return results;
+    // WICHTIG: Clientseitige Filterung nach ALLEN Wörtern
+    List<Map<String, dynamic>> filteredResults = results;
+
+    if (searchWords.isNotEmpty) {
+      filteredResults = results.where((card) {
+        final name = (card['name'] as String? ?? '').toLowerCase();
+        final desc = (card['desc'] as String? ?? '').toLowerCase();
+        final cardArchetype = (card['archetype'] as String? ?? '')
+            .toLowerCase();
+
+        // Normalisiere Bindestriche
+        final normalizedName = name.replaceAll('-', ' ');
+        final normalizedDesc = desc.replaceAll('-', ' ');
+        final normalizedArchetype = cardArchetype.replaceAll('-', ' ');
+
+        // Prüfe ob ALLE Suchwörter in mindestens einem Feld vorkommen
+        bool allWordsFound = searchWords.every((word) {
+          final normalizedWord = word.replaceAll('-', ' ');
+
+          bool inName =
+              name.contains(word) || normalizedName.contains(normalizedWord);
+          bool inArchetype =
+              cardArchetype.contains(word) ||
+              normalizedArchetype.contains(normalizedWord);
+          bool inDesc =
+              desc.contains(word) || normalizedDesc.contains(normalizedWord);
+
+          return inName || inArchetype || inDesc;
+        });
+
+        if (!allWordsFound) {
+          print('❌ Gefiltert: ${card['name']}');
+        } else {
+          print('✅ ${card['name']}');
+        }
+
+        return allWordsFound;
+      }).toList();
+
+      print('✅ Nach Wort-Filterung: ${filteredResults.length} Karten');
+    }
+
+    // Cache speichern
+    _searchResultsCache[cacheKey] = filteredResults;
+
+    return filteredResults;
   }
 
   // NEUE METHODE: Kombinierte Suche mit Query und Filtern
@@ -720,9 +781,18 @@ class CardData implements Dbrepo {
       return _searchResultsCache[normalizedSearch]!;
     }
 
-    final searchPhrase = normalizedSearch.toLowerCase();
+    final searchPhraseLower = normalizedSearch.toLowerCase();
+
+    // Splitte in einzelne Wörter für die UND-Verknüpfung
+    final searchWords = searchPhraseLower
+        .split(RegExp(r'\s+'))
+        .where((word) => word.isNotEmpty)
+        .toList();
+
+    print('🔍 Suche nach ALLEN Wörtern: $searchWords');
 
     try {
+      // Verwende die gesamte Phrase als Query
       final response = await client.search(
         searchMethodParams: algolia_lib.SearchMethodParams(
           requests: [
@@ -731,8 +801,9 @@ class CardData implements Dbrepo {
               query: normalizedSearch,
               removeWordsIfNoResults: algolia_lib.RemoveWordsIfNoResults.none,
               hitsPerPage: 1000,
-              // WICHTIG: Typo-Toleranz DEAKTIVIEREN für exakte Suche
               typoTolerance: algolia_lib.TypoToleranceEnum.false_,
+              // Setze optionalWords auf leer, damit Algolia stricter sucht
+              optionalWords: [],
             ),
           ],
         ),
@@ -745,8 +816,9 @@ class CardData implements Dbrepo {
       }
 
       final List<dynamic> hits = hitsData;
+      print('📊 Algolia returned ${hits.length} hits');
 
-      // Filtere NUR nach exakter Phrase (mit Bindestrich-Toleranz)
+      // WICHTIG: Filtere clientseitig nach ALLEN Wörtern
       final List<Map<String, dynamic>> filteredCards = hits
           .map((hit) => Map<String, dynamic>.from(hit as Map))
           .where((card) {
@@ -755,30 +827,44 @@ class CardData implements Dbrepo {
             final archetype = (card['archetype'] as String? ?? '')
                 .toLowerCase();
 
-            // Normalisiere beide Seiten: Bindestriche → Leerzeichen
-            final normalizedName = name
-                .replaceAll('-', ' ')
-                .replaceAll(RegExp(r'\s+'), ' ');
-            final normalizedDesc = desc
-                .replaceAll('-', ' ')
-                .replaceAll(RegExp(r'\s+'), ' ');
-            final normalizedArchetype = archetype
-                .replaceAll('-', ' ')
-                .replaceAll(RegExp(r'\s+'), ' ');
-            final normalizedSearchPhrase = searchPhrase
-                .replaceAll('-', ' ')
-                .replaceAll(RegExp(r'\s+'), ' ');
+            // Normalisiere Bindestriche
+            final normalizedName = name.replaceAll('-', ' ');
+            final normalizedDesc = desc.replaceAll('-', ' ');
+            final normalizedArchetype = archetype.replaceAll('-', ' ');
 
-            // Prüfe ob die EXAKTE Phrase vorkommt (mit und ohne Bindestrich)
-            return name.contains(searchPhrase) ||
-                normalizedName.contains(normalizedSearchPhrase) ||
-                archetype.contains(searchPhrase) ||
-                normalizedArchetype.contains(normalizedSearchPhrase) ||
-                desc.contains(searchPhrase) ||
-                normalizedDesc.contains(normalizedSearchPhrase);
+            // Prüfe ob ALLE Wörter in mindestens einem Feld vorkommen
+            bool allWordsFound = searchWords.every((word) {
+              final normalizedWord = word.replaceAll('-', ' ');
+
+              // Suche in allen Feldern
+              bool inName =
+                  name.contains(word) ||
+                  normalizedName.contains(normalizedWord);
+              bool inArchetype =
+                  archetype.contains(word) ||
+                  normalizedArchetype.contains(normalizedWord);
+              bool inDesc =
+                  desc.contains(word) ||
+                  normalizedDesc.contains(normalizedWord);
+
+              // Wort muss in mindestens einem Feld vorkommen
+              return inName || inArchetype || inDesc;
+            });
+
+            // Debug-Ausgabe für gefundene Karten
+            if (allWordsFound) {
+              print('✅ ${card['name']}');
+            } else {
+              print('❌ ${card['name']} - fehlt mindestens ein Wort');
+            }
+
+            return allWordsFound;
           })
           .toList();
 
+      print('✅ Gefiltert: ${filteredCards.length} Karten');
+
+      // Sortiere alphabetisch
       filteredCards.sort(
         (a, b) =>
             (a['name'] as String? ?? '').compareTo(b['name'] as String? ?? ''),
@@ -789,7 +875,7 @@ class CardData implements Dbrepo {
 
       return filteredCards;
     } catch (e) {
-      print('Fehler bei Algolia-Suche: $e');
+      print('❌ Fehler bei Algolia-Suche: $e');
       return [];
     }
   }
