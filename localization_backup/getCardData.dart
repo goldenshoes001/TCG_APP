@@ -11,12 +11,8 @@ final algolia_lib.SearchClient client = algolia_lib.SearchClient(
 );
 
 class CardData implements Dbrepo {
-  final String? customIndexName;
-
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseStorage storage = FirebaseStorage.instance;
-
-  CardData({this.customIndexName});
 
   // Image URL Cache
   static final Map<String, String> _imageUrlCache = {};
@@ -224,7 +220,7 @@ class CardData implements Dbrepo {
         searchMethodParams: algolia_lib.SearchMethodParams(
           requests: [
             algolia_lib.SearchForHits(
-              indexName: customIndexName ?? 'cards',
+              indexName: 'cards',
               query: query ?? '', // WICHTIG: Query hier übergeben
               facetFilters: finalFacetFilters,
               filters: finalFilters,
@@ -525,7 +521,7 @@ class CardData implements Dbrepo {
         searchMethodParams: algolia_lib.SearchMethodParams(
           requests: [
             algolia_lib.SearchForHits(
-              indexName: customIndexName ?? 'cards',
+              indexName: 'cards',
               query: '',
               facetFilters: finalFacetFilters,
               filters: finalFilters,
@@ -567,7 +563,7 @@ class CardData implements Dbrepo {
         searchMethodParams: algolia_lib.SearchMethodParams(
           requests: [
             algolia_lib.SearchForHits(
-              indexName: customIndexName ?? 'cards',
+              indexName: 'cards',
               removeWordsIfNoResults: algolia_lib.RemoveWordsIfNoResults.none,
               query: query,
               filters: filter,
@@ -731,7 +727,7 @@ class CardData implements Dbrepo {
         searchMethodParams: algolia_lib.SearchMethodParams(
           requests: [
             algolia_lib.SearchForHits(
-              indexName: customIndexName ?? 'cards',
+              indexName: 'cards',
               query: normalizedSearch,
               removeWordsIfNoResults: algolia_lib.RemoveWordsIfNoResults.none,
               hitsPerPage: 1000,
@@ -850,7 +846,7 @@ class CardData implements Dbrepo {
         }
 
         await writeClient.batch(
-          indexName: customIndexName ?? 'cards',
+          indexName: 'cards',
           batchWriteParams: algolia_lib.BatchWriteParams(
             requests: recordsToUpdate.map((record) {
               return algolia_lib.BatchRequest(
@@ -906,7 +902,7 @@ class CardData implements Dbrepo {
         searchMethodParams: algolia_lib.SearchMethodParams(
           requests: [
             algolia_lib.SearchForHits(
-              indexName: customIndexName ?? 'cards',
+              indexName: 'cards',
               query: '',
               facets: [fieldName],
               hitsPerPage: 0,

@@ -23,7 +23,6 @@ dependencies:
   # Riverpod Packages hinzufügen
   flutter_riverpod: ^2.6.1
   riverpod_annotation: ^2.6.1
-  easy_localization: ^3.0.8
 
 dev_dependencies:
   flutter_test:
@@ -38,7 +37,6 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/translations/
     - assets/images/Cyberse/
     - assets/images/maliss/
     - assets/images/handtraps/

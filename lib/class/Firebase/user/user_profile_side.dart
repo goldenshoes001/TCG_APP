@@ -50,14 +50,36 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
     }
   }
 
+  // In lib/class/Firebase/user/user_profile_side.dart
+
   Future<void> _showDeleteUserConfirmation() async {
+    final TextEditingController passwordController = TextEditingController();
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Delete Account'),
-          content: const Text(
-            'Do you really want to permanently delete your account?\n\nThis action cannot be undone and all your data will be permanently deleted.',
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Do you really want to permanently delete your account?\n\nThis action cannot be undone and all your data will be permanently deleted.',
+              ),
+              const SizedBox(height: 16),
+              // 🔐 PASSWORT-EINGABE
+              TextField(
+                controller: passwordController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Confirm with password',
+                  hintText: 'Enter your password',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.lock),
+                ),
+              ),
+            ],
           ),
           actions: <Widget>[
             TextButton(
@@ -65,7 +87,15 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
               child: const Text('Cancel'),
             ),
             TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
+              onPressed: () {
+                if (passwordController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter your password')),
+                  );
+                  return;
+                }
+                Navigator.of(context).pop(true);
+              },
               style: TextButton.styleFrom(foregroundColor: Colors.red),
               child: const Text('Delete Account'),
             ),
@@ -74,33 +104,42 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
       },
     );
 
-    if (confirm == true) {
-      await _deleteUser();
+    if (confirm == true && passwordController.text.trim().isNotEmpty) {
+      await _deleteUser(passwordController.text.trim());
     }
+
+    passwordController.dispose();
   }
 
-  Future<void> _deleteUser() async {
+  Future<void> _deleteUser(String password) async {
     final currentUser = ref.read(currentUserProvider);
     if (currentUser == null) return;
 
     try {
       final userdata = ref.read(userdataProvider);
-      await userdata.deleteUserCompletely(currentUser.uid);
+
+      // ✅ ÜBERGEBE PASSWORT
+      await userdata.deleteUserCompletely(currentUser.uid, password);
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Account successfully deleted!")),
         );
         widget.onItemTapped(0);
       }
-    } catch (e) {
+    } on Exception catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Error deleting account: $e")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              "Error deleting account: ${e.toString().replaceFirst('Exception: ', '')}",
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
-
   int _getDeckCardCount(List<Map<String, dynamic>> deck) {
     return deck.fold(0, (sum, card) => sum + (card['count'] as int? ?? 0));
   }

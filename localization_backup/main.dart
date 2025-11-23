@@ -17,8 +17,6 @@ import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 import 'package:firebase_core/firebase_core.dart';
 import '../firebase_options.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:easy_localization/easy_localization.dart';
-import 'package:tcg_app/providers/language_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -209,10 +207,7 @@ class _MainAppState extends State<MainApp> {
     // Zeige Ladebildschirm während Preloading
     if (_isPreloading) {
       return MaterialApp(
-        localizationsDelegates: context.localizationDelegates,
-      supportedLocales: context.supportedLocales,
-      locale: context.locale,
-      debugShowCheckedModeBanner: false,
+        debugShowCheckedModeBanner: false,
         theme: lightTheme(context),
         darkTheme: darkTheme(context),
         themeMode: isDarkMode == null
@@ -241,9 +236,6 @@ class _MainAppState extends State<MainApp> {
 
     // Normale App nach Preloading
     return MaterialApp(
-      localizationsDelegates: context.localizationDelegates,
-      supportedLocales: context.supportedLocales,
-      locale: context.locale,
       debugShowCheckedModeBanner: false,
       theme: lightTheme(context),
       darkTheme: darkTheme(context),
