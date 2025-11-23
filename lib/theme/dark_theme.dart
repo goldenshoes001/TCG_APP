@@ -23,7 +23,7 @@ ThemeData darkTheme(BuildContext context) => generalTheme(context).copyWith(
 
     // ✅ TEXT-STYLE FÜR DEN AUSGEWÄHLTEN TEXT IM INPUT-FELD
     textStyle: TextStyle(
-      color: Colors.lightBlue,
+      color: Colors.white,
       fontFamily: fontFamily,
       fontSize: 14,
     ),

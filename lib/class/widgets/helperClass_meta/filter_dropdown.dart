@@ -3,14 +3,14 @@
 import 'package:flutter/material.dart';
 
 class FilterDropdown extends StatelessWidget {
-  final String label;
+
   final String? value;
   final List<String> items;
   final void Function(String?) onChanged;
 
   const FilterDropdown({
     super.key,
-    required this.label,
+
     required this.value,
     required this.items,
     required this.onChanged,
@@ -19,7 +19,7 @@ class FilterDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownMenu<String>(
-      label: Text(label),
+
       initialSelection: value,
       expandedInsets: EdgeInsets.zero,
       dropdownMenuEntries: items.map((item) {

@@ -40,6 +40,15 @@ final combinedSearchResultsProvider =
         return [];
       }
 
+      // ✅ NEUE LOGIK: Teile Suchbegriff in einzelne Wörter
+      final searchWords = hasQuery
+          ? query.toLowerCase().split(' ').where((w) => w.isNotEmpty).toList()
+          : <String>[];
+
+      print(
+        '🔍 Kombinierte Suche - ALLE Wörter müssen vorkommen: $searchWords',
+      );
+
       // Verwende die kombinierte Suchmethode
       int? levelValue;
       String? levelOperatorValue;
@@ -97,8 +106,64 @@ final combinedSearchResultsProvider =
         banlistOCG: filterState.selectedBanlistOCG,
       );
 
-      await cardData.preloadCardImages(results);
-      return results;
+      print('📊 Vor Wort-Filterung: ${results.length} Karten');
+
+      // ✅ NEUE FILTERLOGIK: Filtere nach ALLEN Wörtern
+      List<Map<String, dynamic>> filteredResults = results;
+
+      if (searchWords.isNotEmpty) {
+        // Erstelle die Suchphrase
+        final searchPhrase = searchWords.join(' ');
+
+        filteredResults = results.where((card) {
+          final name = (card['name'] as String? ?? '').toLowerCase();
+          final desc = (card['desc'] as String? ?? '').toLowerCase();
+          final archetype = (card['archetype'] as String? ?? '').toLowerCase();
+
+          final normalizedName = name
+              .replaceAll('-', ' ')
+              .replaceAll(RegExp(r'\s+'), ' ');
+          final normalizedDesc = desc
+              .replaceAll('-', ' ')
+              .replaceAll(RegExp(r'\s+'), ' ');
+          final normalizedArchetype = archetype
+              .replaceAll('-', ' ')
+              .replaceAll(RegExp(r'\s+'), ' ');
+
+          // ✅ Suche überall nach der kompletten Phrase
+          bool phraseInName =
+              name.contains(searchPhrase) ||
+              normalizedName.contains(searchPhrase);
+
+          bool phraseInArchetype =
+              archetype.contains(searchPhrase) ||
+              normalizedArchetype.contains(searchPhrase);
+
+          bool phraseInDesc =
+              desc.contains(searchPhrase) ||
+              normalizedDesc.contains(searchPhrase);
+
+          final matches = phraseInName || phraseInArchetype || phraseInDesc;
+
+          // Debug-Ausgabe
+          if (name.contains('fang') ||
+              name.contains('timestar') ||
+              name.contains('wing')) {
+            print('${matches ? "✅" : "❌ Gefiltert:"} ${card['name']}');
+            print('   phraseInName: $phraseInName');
+            print('   phraseInArchetype: $phraseInArchetype');
+            print('   phraseInDesc: $phraseInDesc');
+            print('   Suche nach Phrase: "$searchPhrase"');
+          }
+
+          return matches;
+        }).toList();
+      }
+
+      print('✅ Nach Wort-Filterung: ${filteredResults.length} Karten');
+
+      await cardData.preloadCardImages(filteredResults);
+      return filteredResults;
     });
 // ============================================================================
 // SINGLETON PROVIDERS (werden nur einmal erstellt)

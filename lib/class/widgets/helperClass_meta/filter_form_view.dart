@@ -153,7 +153,6 @@ class FilterFormView extends StatelessWidget {
       children: [
         SizedBox(height: spacing),
         FilterDropdown(
-          label: 'Type',
           value: selectedType,
           items: types,
           onChanged: onSelectedTypeChanged,
@@ -164,7 +163,6 @@ class FilterFormView extends StatelessWidget {
           children: [
             Expanded(
               child: FilterDropdown(
-                label: 'Race',
                 value: selectedRace,
                 items: races,
                 onChanged: onSelectedRaceChanged,
@@ -173,7 +171,6 @@ class FilterFormView extends StatelessWidget {
             SizedBox(width: spacing),
             Expanded(
               child: FilterDropdown(
-                label: 'Attribut',
                 value: selectedAttribute,
                 items: attributes,
                 onChanged: onSelectedAttributeChanged,
@@ -184,7 +181,6 @@ class FilterFormView extends StatelessWidget {
         SizedBox(height: spacing),
 
         FilterDropdown(
-          label: 'Archetyp',
           value: selectedArchetype,
           items: archetypes,
           onChanged: onSelectedArchetypeChanged,
@@ -192,7 +188,6 @@ class FilterFormView extends StatelessWidget {
         SizedBox(height: spacing),
 
         OperatorDropdown(
-          label: 'Level',
           value: selectedLevel,
           items: levelItems,
           operator: levelOperator,
@@ -203,7 +198,6 @@ class FilterFormView extends StatelessWidget {
         SizedBox(height: spacing),
 
         OperatorDropdown(
-          label: 'Scale',
           value: selectedScale,
           items: scaleItems,
           operator: scaleOperator,
@@ -214,7 +208,6 @@ class FilterFormView extends StatelessWidget {
         SizedBox(height: spacing),
 
         OperatorDropdown(
-          label: 'Link Rating',
           value: selectedLinkRating,
           items: linkRatingItems,
           operator: linkRatingOperator,
@@ -246,7 +239,6 @@ class FilterFormView extends StatelessWidget {
           children: [
             Expanded(
               child: FilterDropdown(
-                label: 'TCG Bannliste',
                 value: selectedBanlistTCG,
                 items: banlistStatuses,
                 onChanged: onSelectedBanlistTCGChanged,
@@ -255,7 +247,6 @@ class FilterFormView extends StatelessWidget {
             SizedBox(width: spacing),
             Expanded(
               child: FilterDropdown(
-                label: 'OCG Bannliste',
                 value: selectedBanlistOCG,
                 items: banlistStatuses,
                 onChanged: onSelectedBanlistOCGChanged,

@@ -56,7 +56,7 @@ class Userdata implements Dbrepo {
 
     final snapshot = await userDoc.get();
     if (!snapshot.exists) {
-      throw Exception("Benutzer nicht gefunden");
+      throw Exception("User not found");
     }
 
     await userDoc.delete();
@@ -66,11 +66,11 @@ class Userdata implements Dbrepo {
   Future<void> reauthenticateUser(String password) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      throw Exception("Kein Benutzer angemeldet");
+      throw Exception("No User is logged in");
     }
 
     if (user.email == null) {
-      throw Exception("Benutzer hat keine E-Mail-Adresse");
+      throw Exception("Bthe user has no Email adress");
     }
 
     // Erstelle Credentials mit aktueller E-Mail und Passwort
@@ -81,7 +81,7 @@ class Userdata implements Dbrepo {
 
     // Reauthenticate
     await user.reauthenticateWithCredential(credential);
-    print("✅ Reauthentication erfolgreich");
+    print("✅pls authenticate again");
   }
 
   /// ✅ KORRIGIERTE METHODE: Erfordert Passwort-Eingabe
@@ -91,11 +91,11 @@ class Userdata implements Dbrepo {
       final currentUser = FirebaseAuth.instance.currentUser;
 
       if (currentUser == null || currentUser.uid != userId) {
-        throw Exception("Nicht autorisiert");
+        throw Exception("not authenticated");
       }
 
       // 🔐 SCHRITT 1: REAUTHENTICATION
-      print("🔐 Reauthentication wird durchgeführt...");
+      print("🔐 authentication has started again...");
       await reauthenticateUser(password);
 
       // 🗑️ SCHRITT 2: Lösche alle Decks
@@ -144,9 +144,9 @@ class Userdata implements Dbrepo {
       print('❌ Firebase Auth Fehler: ${e.code}');
 
       if (e.code == 'wrong-password') {
-        throw Exception('Falsches Passwort');
+        throw Exception('wrong password');
       } else if (e.code == 'requires-recent-login') {
-        throw Exception('Bitte melde dich erneut an und versuche es nochmal');
+        throw Exception('pls login again');
       } else {
         throw Exception('Authentifizierungsfehler: ${e.message}');
       }

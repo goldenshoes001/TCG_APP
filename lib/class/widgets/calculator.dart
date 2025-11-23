@@ -1,4 +1,4 @@
-// calculator.dart - mit Kartennummer und kleineren Input-Feldern
+// calculator.dart - mit robustem Fokusmanagement für alle Felder
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tcg_app/providers/calculator_provider.dart';
@@ -37,7 +37,8 @@ class ProbabilityCalculator extends ConsumerWidget {
                     Row(
                       children: [
                         Expanded(
-                          child: _NumberInputField(
+                          // HIER: _DeckConfigInputField statt _NumberInputField verwenden
+                          child: _DeckConfigInputField(
                             label: 'Deck Size',
                             value: state.deckSize,
                             onChanged: notifier.updateDeckSize,
@@ -46,7 +47,8 @@ class ProbabilityCalculator extends ConsumerWidget {
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: _NumberInputField(
+                          // HIER: _DeckConfigInputField statt _NumberInputField verwenden
+                          child: _DeckConfigInputField(
                             label: 'Hand Size',
                             value: state.handSize,
                             onChanged: notifier.updateHandSize,
@@ -195,13 +197,14 @@ class ProbabilityCalculator extends ConsumerWidget {
   }
 }
 
-class _NumberInputField extends StatelessWidget {
+// STATEFUL WIDGET für Deck/Hand Size
+class _DeckConfigInputField extends StatefulWidget {
   final String label;
   final String value;
   final Function(String) onChanged;
   final String hintText;
 
-  const _NumberInputField({
+  const _DeckConfigInputField({
     required this.label,
     required this.value,
     required this.onChanged,
@@ -210,26 +213,82 @@ class _NumberInputField extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<_DeckConfigInputField> createState() => _DeckConfigInputFieldState();
+}
+
+class _DeckConfigInputFieldState extends State<_DeckConfigInputField> {
+  late TextEditingController _controller;
+  final FocusNode _focusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    // Controller im State initialisieren
+    _controller = TextEditingController(text: widget.value);
+    // Setzen Sie den Cursor ans Ende
+    _controller.selection = TextSelection.collapsed(
+      offset: _controller.text.length,
+    );
+  }
+
+  // Hilfsfunktion zur Synchronisierung des Controllers
+  void _syncControllerText(TextEditingController controller, String value) {
+    if (controller.text != value) {
+      // Nur aktualisieren, wenn der Text von Riverpod abweicht
+      controller.value = controller.value.copyWith(
+        text: value,
+        selection: TextSelection.collapsed(offset: value.length),
+      );
+    }
+  }
+
+  @override
+  void didUpdateWidget(_DeckConfigInputField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Führt die Synchronisierung nur durch, wenn das Feld NICHT fokussiert ist.
+    if (!_focusNode.hasFocus) {
+      _syncControllerText(_controller, widget.value);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final border = OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
       borderSide: BorderSide(color: Colors.grey, width: 2),
     );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label),
+        Text(widget.label),
         const SizedBox(height: 8),
         TextFormField(
-          controller: TextEditingController(text: value),
-          onChanged: onChanged,
+          controller: _controller,
+          onChanged: (value) {
+            // 1. Riverpod State aktualisieren (löst Rebuild aus)
+            widget.onChanged(value);
+            // 2. FIX: Fokus-Wiederherstellung verzögern, um Absturz zu vermeiden
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _focusNode.requestFocus();
+            });
+          },
+          onFieldSubmitted: (value) => widget.onChanged(value),
           keyboardType: TextInputType.number,
           textAlign: TextAlign.center,
+          focusNode: _focusNode,
           decoration: InputDecoration(
             border: border,
             focusedBorder: border,
             enabledBorder: border,
-            hintText: hintText,
+            hintText: widget.hintText,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 20,
               vertical: 16,
@@ -265,24 +324,52 @@ class _TargetCardItemState extends State<_TargetCardItem> {
   late TextEditingController _copiesController;
   late TextEditingController _requiredController;
 
+  // FocusNodes sofort initialisieren (final)
+  final FocusNode _copiesFocusNode = FocusNode();
+  final FocusNode _requiredFocusNode = FocusNode();
+
   @override
   void initState() {
     super.initState();
+
+    // Controller initialisieren
     _copiesController = TextEditingController(text: widget.targetCard.copies);
     _requiredController = TextEditingController(
       text: widget.targetCard.requiredInHand,
     );
+
+    // Setzen Sie den Cursor ans Ende, um die Eingabe zu erleichtern
+    _copiesController.selection = TextSelection.collapsed(
+      offset: _copiesController.text.length,
+    );
+    _requiredController.selection = TextSelection.collapsed(
+      offset: _requiredController.text.length,
+    );
+  }
+
+  // Funktion zur Korrektur des Controllers nach Rebuilds, wenn nicht fokussiert
+  void _syncControllerText(TextEditingController controller, String value) {
+    if (controller.text != value) {
+      // Nur aktualisieren, wenn der Text von Riverpod abweicht
+      controller.value = controller.value.copyWith(
+        text: value,
+        selection: TextSelection.collapsed(offset: value.length),
+      );
+    }
   }
 
   @override
   void didUpdateWidget(_TargetCardItem oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.targetCard.copies != widget.targetCard.copies) {
-      _copiesController.text = widget.targetCard.copies;
+    // Synchronisierung nur, wenn das Feld nicht fokussiert ist.
+    if (!_copiesFocusNode.hasFocus) {
+      _syncControllerText(_copiesController, widget.targetCard.copies);
     }
-    if (oldWidget.targetCard.requiredInHand !=
-        widget.targetCard.requiredInHand) {
-      _requiredController.text = widget.targetCard.requiredInHand;
+    if (!_requiredFocusNode.hasFocus) {
+      _syncControllerText(
+        _requiredController,
+        widget.targetCard.requiredInHand,
+      );
     }
   }
 
@@ -290,6 +377,8 @@ class _TargetCardItemState extends State<_TargetCardItem> {
   void dispose() {
     _copiesController.dispose();
     _requiredController.dispose();
+    _copiesFocusNode.dispose();
+    _requiredFocusNode.dispose();
     super.dispose();
   }
 
@@ -330,6 +419,7 @@ class _TargetCardItemState extends State<_TargetCardItem> {
                     controller: _copiesController,
                     keyboardType: TextInputType.number,
                     textAlign: TextAlign.center,
+                    focusNode: _copiesFocusNode,
                     decoration: InputDecoration(
                       border: inputBorder,
                       enabledBorder: inputBorder,
@@ -340,7 +430,18 @@ class _TargetCardItemState extends State<_TargetCardItem> {
                       ),
                       hintText: '1',
                     ),
-                    onChanged: widget.onCopiesChanged,
+                    onChanged: (value) {
+                      // 1. Riverpod State aktualisieren (löst Rebuild aus)
+                      widget.onCopiesChanged(value);
+                      // 2. FIX: Fokus-Wiederherstellung verzögern
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        _copiesFocusNode.requestFocus();
+                      });
+                    },
+                    onSubmitted: (value) {
+                      // Stellt sicher, dass die Berechnung bei Enter abgeschlossen wird
+                      widget.onCopiesChanged(value);
+                    },
                   ),
                 ],
               ),
@@ -363,6 +464,7 @@ class _TargetCardItemState extends State<_TargetCardItem> {
                     controller: _requiredController,
                     keyboardType: TextInputType.number,
                     textAlign: TextAlign.center,
+                    focusNode: _requiredFocusNode,
                     decoration: InputDecoration(
                       border: inputBorder,
                       enabledBorder: inputBorder,
@@ -373,7 +475,18 @@ class _TargetCardItemState extends State<_TargetCardItem> {
                       ),
                       hintText: '1',
                     ),
-                    onChanged: widget.onRequiredChanged,
+                    onChanged: (value) {
+                      // 1. Riverpod State aktualisieren (löst Rebuild aus)
+                      widget.onRequiredChanged(value);
+                      // 2. FIX: Fokus-Wiederherstellung verzögern
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        _requiredFocusNode.requestFocus();
+                      });
+                    },
+                    onSubmitted: (value) {
+                      // Stellt sicher, dass die Berechnung bei Enter abgeschlossen wird
+                      widget.onRequiredChanged(value);
+                    },
                   ),
                 ],
               ),

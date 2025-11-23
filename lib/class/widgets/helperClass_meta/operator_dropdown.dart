@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 
 class OperatorDropdown extends StatelessWidget {
-  final String label;
+
   final String? value;
   final List<String> items;
   final String operator;
@@ -13,7 +13,7 @@ class OperatorDropdown extends StatelessWidget {
 
   const OperatorDropdown({
     super.key,
-    required this.label,
+  
     required this.value,
     required this.items,
     required this.operator,
@@ -41,7 +41,7 @@ class OperatorDropdown extends StatelessWidget {
         Expanded(
           flex: 2,
           child: DropdownMenu<String>(
-            label: Text(label),
+      
             initialSelection: value,
             expandedInsets: EdgeInsets.zero,
             dropdownMenuEntries: items.map((item) {

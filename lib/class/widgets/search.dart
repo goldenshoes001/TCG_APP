@@ -30,15 +30,28 @@ class _MetaState extends ConsumerState<Search>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+
+    // Hinzufügen von Listenern für Textfelder, um die Farbe beim Tippen zu aktualisieren
+    _atkController.addListener(_onTextFieldChanged);
+    _defController.addListener(_onTextFieldChanged);
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     _suchfeld.dispose();
+    _atkController.removeListener(_onTextFieldChanged); // Listener entfernen
+    _defController.removeListener(_onTextFieldChanged); // Listener entfernen
     _atkController.dispose();
     _defController.dispose();
     super.dispose();
+  }
+
+  // Führt setState aus, wenn sich der Text in ATK/DEF ändert, um die Farbe zu aktualisieren
+  void _onTextFieldChanged() {
+    setState(() {
+      // Leerer Aufruf, da die Änderung in den Controllern selbst liegt
+    });
   }
 
   void _performTextSearch(String value) {
@@ -46,7 +59,6 @@ class _MetaState extends ConsumerState<Search>
 
     if (trimmedValue.isEmpty) {
       ref.read(cardSearchQueryProvider.notifier).state = '';
-      // Wenn Suchwort leer ist, aber Filter aktiv sind, zeige trotzdem Ergebnisse
       final filterState = ref.read(filterProvider);
       final hasFilters =
           filterState.selectedType != null ||
@@ -68,13 +80,7 @@ class _MetaState extends ConsumerState<Search>
       }
       return;
     }
-    /*
 
-  - getcarddata
-  - app_provider
-  - search.dart
-
- */
     ref.read(cardSearchQueryProvider.notifier).state = trimmedValue;
     ref.read(selectedCardProvider.notifier).state = null;
     setState(() {
@@ -86,7 +92,6 @@ class _MetaState extends ConsumerState<Search>
     final filterState = ref.watch(filterProvider);
     final hasQuery = _suchfeld.text.trim().isNotEmpty;
 
-    // Prüfe ob mindestens ein Filter ODER ein Suchwort gesetzt ist
     final hasFilters =
         filterState.selectedType != null ||
         filterState.selectedRace != null ||
@@ -102,15 +107,12 @@ class _MetaState extends ConsumerState<Search>
 
     if (!hasQuery && !hasFilters) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bitte Suchwort oder Filter eingeben.')),
+        const SnackBar(content: Text('Pls search word or use filter.')),
       );
       return;
     }
 
-    // WICHTIG: Update ALLE Werte im State
     ref.read(cardSearchQueryProvider.notifier).state = _suchfeld.text.trim();
-
-    // ATK/DEF Werte aktualisieren
     ref
         .read(filterProvider.notifier)
         .updateAtkValue(_atkController.text.trim());
@@ -118,15 +120,9 @@ class _MetaState extends ConsumerState<Search>
         .read(filterProvider.notifier)
         .updateDefValue(_defController.text.trim());
 
-    // UI aktualisieren
     setState(() {
       _showFilters = false;
     });
-
-    // Debug-Ausgabe
-    print('🔍 Suche durchgeführt:');
-    print('   Query: "${_suchfeld.text.trim()}"');
-    print('   Filter aktiv: $hasFilters');
   }
 
   void _resetFilters() {
@@ -154,7 +150,6 @@ class _MetaState extends ConsumerState<Search>
     final cardSearchQuery = ref.watch(cardSearchQueryProvider);
     final filterState = ref.watch(filterProvider);
 
-    // Loading States für Filter-Daten
     final typesAsync = ref.watch(typesProvider);
     final racesAsync = ref.watch(racesProvider);
     final attributesAsync = ref.watch(attributesProvider);
@@ -178,7 +173,6 @@ class _MetaState extends ConsumerState<Search>
       );
     }
 
-    // Prüfe ob Filter-Daten geladen werden
     final isLoadingFilters =
         typesAsync.isLoading ||
         racesAsync.isLoading ||
@@ -201,9 +195,7 @@ class _MetaState extends ConsumerState<Search>
             ref.read(cardSearchQueryProvider.notifier).state = '';
             ref.read(deckSearchQueryProvider.notifier).state = '';
             ref.read(selectedArchetypeProvider.notifier).state = null;
-            ref
-                .read(deckSearchTriggerProvider.notifier)
-                .state++; // 🔄 Trigger reset
+            ref.read(deckSearchTriggerProvider.notifier).state++;
             ref.read(selectedCardProvider.notifier).state = null;
             ref.read(selectedDeckProvider.notifier).state = null;
             setState(() {
@@ -292,25 +284,6 @@ class _MetaState extends ConsumerState<Search>
   }
 
   Widget _buildSearchResults() {
-    final cardSearchQuery = ref.watch(cardSearchQueryProvider);
-    final filterState = ref.watch(filterProvider);
-
-    // Prüfe ob überhaupt eine Suche aktiv ist
-    final hasQuery = cardSearchQuery.isNotEmpty;
-    final hasFilters =
-        filterState.selectedType != null ||
-        filterState.selectedRace != null ||
-        filterState.selectedAttribute != null ||
-        filterState.selectedArchetype != null ||
-        filterState.selectedLevel != null ||
-        filterState.atkValue.isNotEmpty ||
-        filterState.defValue.isNotEmpty ||
-        filterState.selectedScale != null ||
-        filterState.selectedLinkRating != null ||
-        filterState.selectedBanlistTCG != null ||
-        filterState.selectedBanlistOCG != null;
-
-    // Verwende immer den kombinierten Search Provider
     final combinedResultsAsync = ref.watch(combinedSearchResultsProvider);
 
     return combinedResultsAsync.when(
@@ -364,7 +337,9 @@ class _MetaState extends ConsumerState<Search>
       'Limited',
       'Semi-Limited',
     ];
-    final List<String> operators = ['min', '=', 'max'];
+
+    // DEFINIERT DIE FARBE FÜR AKTIVE FILTER
+    const activeColor = Colors.lightBlue;
 
     return SingleChildScrollView(
       child: Column(
@@ -375,14 +350,25 @@ class _MetaState extends ConsumerState<Search>
           Padding(
             padding: const EdgeInsets.only(top: 5.0),
             child: DropdownMenu<String>(
-              label: const Text('Type'),
-              initialSelection: filterState.selectedType,
+              label: null,
+              // BEDINGTER TEXTSTIL
+              textStyle: TextStyle(
+                color: filterState.selectedType != null ? activeColor : null,
+              ),
+              initialSelection: filterState.selectedType ?? 'Type',
               expandedInsets: EdgeInsets.zero,
-              dropdownMenuEntries: types.map((item) {
-                return DropdownMenuEntry<String>(value: item, label: item);
-              }).toList(),
+              dropdownMenuEntries: [
+                const DropdownMenuEntry<String>(value: 'Type', label: 'Type'),
+                ...types.map((item) {
+                  return DropdownMenuEntry<String>(value: item, label: item);
+                }),
+              ],
               onSelected: (value) {
-                ref.read(filterProvider.notifier).updateType(value);
+                if (value == 'Type') {
+                  ref.read(filterProvider.notifier).updateType(null);
+                } else {
+                  ref.read(filterProvider.notifier).updateType(value);
+                }
               },
             ),
           ),
@@ -393,28 +379,66 @@ class _MetaState extends ConsumerState<Search>
             children: [
               Expanded(
                 child: DropdownMenu<String>(
-                  label: const Text('Race'),
-                  initialSelection: filterState.selectedRace,
+                  label: null,
+                  // BEDINGTER TEXTSTIL
+                  textStyle: TextStyle(
+                    color: filterState.selectedRace != null
+                        ? activeColor
+                        : null,
+                  ),
+                  initialSelection: filterState.selectedRace ?? 'Race',
                   expandedInsets: EdgeInsets.zero,
-                  dropdownMenuEntries: races.map((item) {
-                    return DropdownMenuEntry<String>(value: item, label: item);
-                  }).toList(),
+                  dropdownMenuEntries: [
+                    const DropdownMenuEntry<String>(
+                      value: 'Race',
+                      label: 'Race',
+                    ),
+                    ...races.map((item) {
+                      return DropdownMenuEntry<String>(
+                        value: item,
+                        label: item,
+                      );
+                    }),
+                  ],
                   onSelected: (value) {
-                    ref.read(filterProvider.notifier).updateRace(value);
+                    if (value == 'Race') {
+                      ref.read(filterProvider.notifier).updateRace(null);
+                    } else {
+                      ref.read(filterProvider.notifier).updateRace(value);
+                    }
                   },
                 ),
               ),
               const SizedBox(width: spacing),
               Expanded(
                 child: DropdownMenu<String>(
-                  label: const Text('Attribut'),
-                  initialSelection: filterState.selectedAttribute,
+                  label: null,
+                  // BEDINGTER TEXTSTIL
+                  textStyle: TextStyle(
+                    color: filterState.selectedAttribute != null
+                        ? activeColor
+                        : null,
+                  ),
+                  initialSelection: filterState.selectedAttribute ?? 'Attribut',
                   expandedInsets: EdgeInsets.zero,
-                  dropdownMenuEntries: attributes.map((item) {
-                    return DropdownMenuEntry<String>(value: item, label: item);
-                  }).toList(),
+                  dropdownMenuEntries: [
+                    const DropdownMenuEntry<String>(
+                      value: 'Attribut',
+                      label: 'Attribut',
+                    ),
+                    ...attributes.map((item) {
+                      return DropdownMenuEntry<String>(
+                        value: item,
+                        label: item,
+                      );
+                    }),
+                  ],
                   onSelected: (value) {
-                    ref.read(filterProvider.notifier).updateAttribute(value);
+                    if (value == 'Attribut') {
+                      ref.read(filterProvider.notifier).updateAttribute(null);
+                    } else {
+                      ref.read(filterProvider.notifier).updateAttribute(value);
+                    }
                   },
                 ),
               ),
@@ -424,89 +448,115 @@ class _MetaState extends ConsumerState<Search>
 
           // Archetype
           DropdownMenu<String>(
-            label: const Text('Archetyp'),
-            initialSelection: filterState.selectedArchetype,
+            label: null,
+            // BEDINGTER TEXTSTIL
+            textStyle: TextStyle(
+              color: filterState.selectedArchetype != null ? activeColor : null,
+            ),
+            initialSelection: filterState.selectedArchetype ?? 'Archetyp',
             expandedInsets: EdgeInsets.zero,
-            dropdownMenuEntries: archetypes.map((item) {
-              return DropdownMenuEntry<String>(value: item, label: item);
-            }).toList(),
+            dropdownMenuEntries: [
+              const DropdownMenuEntry<String>(
+                value: 'Archetyp',
+                label: 'Archetyp',
+              ),
+              ...archetypes.map((item) {
+                return DropdownMenuEntry<String>(value: item, label: item);
+              }),
+            ],
             onSelected: (value) {
-              ref.read(filterProvider.notifier).updateArchetype(value);
+              if (value == 'Archetyp') {
+                ref.read(filterProvider.notifier).updateArchetype(null);
+              } else {
+                ref.read(filterProvider.notifier).updateArchetype(value);
+              }
             },
           ),
           const SizedBox(height: spacing),
 
-          // Level with Operator
-          _buildDropdownWithOperator(
+          // Level with Operator (Combined)
+          _buildOperatorDropdown(
             label: 'Level',
             value: filterState.selectedLevel,
             items: List.generate(14, (index) => index.toString()),
             operator: filterState.levelOperator,
-            operators: operators,
             onChanged: (value) {
-              ref.read(filterProvider.notifier).updateLevel(value);
+              if (value == 'Level') {
+                ref.read(filterProvider.notifier).updateLevel(null);
+              } else {
+                ref.read(filterProvider.notifier).updateLevel(value);
+              }
             },
             onOperatorChanged: (value) {
               ref.read(filterProvider.notifier).updateLevelOperator(value!);
             },
+            activeColor: activeColor,
           ),
           const SizedBox(height: spacing),
 
-          // Scale with Operator
-          _buildDropdownWithOperator(
+          // Scale with Operator (Combined)
+          _buildOperatorDropdown(
             label: 'Scale',
             value: filterState.selectedScale,
             items: List.generate(14, (index) => index.toString()),
             operator: filterState.scaleOperator,
-            operators: operators,
             onChanged: (value) {
-              ref.read(filterProvider.notifier).updateScale(value);
+              if (value == 'Scale') {
+                ref.read(filterProvider.notifier).updateScale(null);
+              } else {
+                ref.read(filterProvider.notifier).updateScale(value);
+              }
             },
             onOperatorChanged: (value) {
               ref.read(filterProvider.notifier).updateScaleOperator(value!);
             },
+            activeColor: activeColor,
           ),
           const SizedBox(height: spacing),
 
-          // Link Rating with Operator
-          _buildDropdownWithOperator(
+          // Link Rating with Operator (Combined)
+          _buildOperatorDropdown(
             label: 'Link Rating',
             value: filterState.selectedLinkRating,
             items: List.generate(6, (index) => (index + 1).toString()),
             operator: filterState.linkRatingOperator,
-            operators: operators,
             onChanged: (value) {
-              ref.read(filterProvider.notifier).updateLinkRating(value);
+              if (value == 'Link Rating') {
+                ref.read(filterProvider.notifier).updateLinkRating(null);
+              } else {
+                ref.read(filterProvider.notifier).updateLinkRating(value);
+              }
             },
             onOperatorChanged: (value) {
               ref
                   .read(filterProvider.notifier)
                   .updateLinkRatingOperator(value!);
             },
+            activeColor: activeColor,
           ),
           const SizedBox(height: spacing),
 
-          // ATK with Operator
-          _buildNumericInputWithOperator(
+          // ATK with Operator (Combined)
+          _buildOperatorTextInput(
             label: 'ATK',
             controller: _atkController,
             operator: filterState.atkOperator,
-            operators: operators,
             onOperatorChanged: (value) {
               ref.read(filterProvider.notifier).updateAtkOperator(value!);
             },
+            activeColor: activeColor,
           ),
           const SizedBox(height: spacing),
 
-          // DEF with Operator
-          _buildNumericInputWithOperator(
+          // DEF with Operator (Combined)
+          _buildOperatorTextInput(
             label: 'DEF',
             controller: _defController,
             operator: filterState.defOperator,
-            operators: operators,
             onOperatorChanged: (value) {
               ref.read(filterProvider.notifier).updateDefOperator(value!);
             },
+            activeColor: activeColor,
           ),
           const SizedBox(height: spacing),
 
@@ -515,28 +565,68 @@ class _MetaState extends ConsumerState<Search>
             children: [
               Expanded(
                 child: DropdownMenu<String>(
-                  label: const Text('TCG Bannliste'),
-                  initialSelection: filterState.selectedBanlistTCG,
+                  label: null,
+                  // BEDINGTER TEXTSTIL
+                  textStyle: TextStyle(
+                    color: filterState.selectedBanlistTCG != null
+                        ? activeColor
+                        : null,
+                  ),
+                  initialSelection:
+                      filterState.selectedBanlistTCG ?? 'TCG Bannliste',
                   expandedInsets: EdgeInsets.zero,
-                  dropdownMenuEntries: banlistStatuses.map((item) {
-                    return DropdownMenuEntry<String>(value: item, label: item);
-                  }).toList(),
+                  dropdownMenuEntries: [
+                    const DropdownMenuEntry<String>(
+                      value: 'TCG Bannliste',
+                      label: 'TCG Bannliste',
+                    ),
+                    ...banlistStatuses.map((item) {
+                      return DropdownMenuEntry<String>(
+                        value: item,
+                        label: item,
+                      );
+                    }),
+                  ],
                   onSelected: (value) {
-                    ref.read(filterProvider.notifier).updateBanlistTCG(value);
+                    if (value == 'TCG Bannliste') {
+                      ref.read(filterProvider.notifier).updateBanlistTCG(null);
+                    } else {
+                      ref.read(filterProvider.notifier).updateBanlistTCG(value);
+                    }
                   },
                 ),
               ),
               const SizedBox(width: spacing),
               Expanded(
                 child: DropdownMenu<String>(
-                  label: const Text('OCG Bannliste'),
-                  initialSelection: filterState.selectedBanlistOCG,
+                  label: null,
+                  // BEDINGTER TEXTSTIL
+                  textStyle: TextStyle(
+                    color: filterState.selectedBanlistOCG != null
+                        ? activeColor
+                        : null,
+                  ),
+                  initialSelection:
+                      filterState.selectedBanlistOCG ?? 'OCG Bannliste',
                   expandedInsets: EdgeInsets.zero,
-                  dropdownMenuEntries: banlistStatuses.map((item) {
-                    return DropdownMenuEntry<String>(value: item, label: item);
-                  }).toList(),
+                  dropdownMenuEntries: [
+                    const DropdownMenuEntry<String>(
+                      value: 'OCG Bannliste',
+                      label: 'OCG Bannliste',
+                    ),
+                    ...banlistStatuses.map((item) {
+                      return DropdownMenuEntry<String>(
+                        value: item,
+                        label: item,
+                      );
+                    }),
+                  ],
                   onSelected: (value) {
-                    ref.read(filterProvider.notifier).updateBanlistOCG(value);
+                    if (value == 'OCG Bannliste') {
+                      ref.read(filterProvider.notifier).updateBanlistOCG(null);
+                    } else {
+                      ref.read(filterProvider.notifier).updateBanlistOCG(value);
+                    }
                   },
                 ),
               ),
@@ -569,17 +659,21 @@ class _MetaState extends ConsumerState<Search>
     );
   }
 
-  Widget _buildDropdownWithOperator({
+  // Kombiniertes Operator + Dropdown Widget
+  Widget _buildOperatorDropdown({
     required String label,
     required String? value,
     required List<String> items,
     required String operator,
-    required List<String> operators,
     required void Function(String?) onChanged,
     required void Function(String?) onOperatorChanged,
+    required Color activeColor, // Neue erforderliche Eigenschaft
   }) {
+    final List<String> operators = ['min', '=', 'max'];
+
     return Row(
       children: [
+        // Operator Dropdown
         Expanded(
           flex: 1,
           child: DropdownMenu<String>(
@@ -592,33 +686,48 @@ class _MetaState extends ConsumerState<Search>
           ),
         ),
         const SizedBox(width: 8),
+        // Value Dropdown mit Default-Wert
         Expanded(
           flex: 2,
           child: DropdownMenu<String>(
-            label: Text(label),
-            initialSelection: value,
+            label: null, // Label entfernt
+            // BEDINGTER TEXTSTIL
+            textStyle: TextStyle(color: value != null ? activeColor : null),
+            initialSelection: value ?? label,
             expandedInsets: EdgeInsets.zero,
-            dropdownMenuEntries: items.map((item) {
-              return DropdownMenuEntry<String>(value: item, label: item);
-            }).toList(),
-            onSelected: onChanged,
+            dropdownMenuEntries: [
+              DropdownMenuEntry<String>(value: label, label: label),
+              ...items.map((item) {
+                return DropdownMenuEntry<String>(value: item, label: item);
+              }),
+            ],
+            onSelected: (selectedValue) {
+              if (selectedValue == label) {
+                onChanged(null);
+              } else {
+                onChanged(selectedValue);
+              }
+            },
           ),
         ),
       ],
     );
   }
 
-  Widget _buildNumericInputWithOperator({
+  // Kombiniertes Operator + TextField Widget
+  Widget _buildOperatorTextInput({
     required String label,
     required TextEditingController controller,
     required String operator,
-    required List<String> operators,
     required void Function(String?) onOperatorChanged,
+    required Color activeColor, // Neue erforderliche Eigenschaft
   }) {
+    final List<String> operators = ['min', '=', 'max'];
+
     return Row(
       children: [
-        Expanded(
-          flex: 1,
+        SizedBox(
+          width: 80,
           child: DropdownMenu<String>(
             initialSelection: operator,
             expandedInsets: EdgeInsets.zero,
@@ -630,10 +739,13 @@ class _MetaState extends ConsumerState<Search>
         ),
         const SizedBox(width: 8),
         Expanded(
-          flex: 2,
           child: TextField(
             controller: controller,
             keyboardType: TextInputType.number,
+            // BEDINGTER TEXTSTIL für das Textfeld
+            style: TextStyle(
+              color: controller.text.isNotEmpty ? activeColor : null,
+            ),
             decoration: InputDecoration(
               hintText: label,
               border: const OutlineInputBorder(),
