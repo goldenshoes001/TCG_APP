@@ -22,12 +22,22 @@ import 'package:tcg_app/providers/language_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // ✅ WICHTIG: EasyLocalization ERST initialisieren
+  await EasyLocalization.ensureInitialized();
+
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // ❌ KEIN anonymes Sign-In mehr nötig, wenn Storage öffentlich ist!
+
   await SaveData.initPreferences();
+
   runApp(
-    const ProviderScope(
-      // <-- MUSS da sein!
-      child: MainApp(),
+    EasyLocalization(
+      supportedLocales: const [Locale('en'), Locale('de')],
+      path: 'assets/translations',
+      fallbackLocale: const Locale('en'),
+      child: const ProviderScope(child: MainApp()),
     ),
   );
 }
@@ -62,17 +72,32 @@ class _MainAppState extends State<MainApp> {
   void initState() {
     super.initState();
     _loadData();
-    _preloadAppData();
+    _initializeApp(); // ✅ Neue Methode die ERST Auth, DANN Preload macht
 
+    // ✅ Auth State Listener
     FirebaseAuth.instance.authStateChanges().listen((User? user) {
       if (mounted) {
         setState(() {
           _currentUser = user;
         });
-      } else {
-        FirebaseAuth.instance.signInAnonymously();
       }
     });
+  }
+
+  // ✅ NEUE METHODE: Starte Preload direkt (Auth nicht nötig für Storage)
+  Future<void> _initializeApp() async {
+    try {
+      // Starte Preloading (Storage ist öffentlich lesbar)
+      await _preloadAppData();
+    } catch (e) {
+      print('❌ Fehler bei App-Initialisierung: $e');
+      // Bei Fehler trotzdem fortfahren
+      if (mounted) {
+        setState(() {
+          _isPreloading = false;
+        });
+      }
+    }
   }
 
   Future<void> _loadData() async {
@@ -210,9 +235,9 @@ class _MainAppState extends State<MainApp> {
     if (_isPreloading) {
       return MaterialApp(
         localizationsDelegates: context.localizationDelegates,
-      supportedLocales: context.supportedLocales,
-      locale: context.locale,
-      debugShowCheckedModeBanner: false,
+        supportedLocales: context.supportedLocales,
+        locale: context.locale,
+        debugShowCheckedModeBanner: false,
         theme: lightTheme(context),
         darkTheme: darkTheme(context),
         themeMode: isDarkMode == null

@@ -5,7 +5,7 @@ import 'package:tcg_app/providers/app_providers.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:tcg_app/providers/language_provider.dart';
 
-class Barwidget extends ConsumerWidget {
+class Barwidget extends ConsumerStatefulWidget {
   final MainAxisAlignment titleFlow;
   final String title;
   final Function(bool) onThemeChanged;
@@ -18,7 +18,41 @@ class Barwidget extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<Barwidget> createState() => _BarwidgetState();
+}
+
+class _BarwidgetState extends ConsumerState<Barwidget> {
+  Future<void> _handleLanguageSwitch() async {
+    final newLocale = context.locale.languageCode == 'en'
+        ? const Locale('de')
+        : const Locale('en');
+
+    // ✅ WICHTIG: Erst Provider updaten (synchron, während Widget noch mounted ist)
+    ref.read(languageNotifierProvider.notifier).setLanguage(newLocale);
+
+    // ✅ Dann setLocale aufrufen (async - löst Rebuild aus)
+    await context.setLocale(newLocale);
+
+    // ✅ Prüfe ob Widget noch mounted ist
+    if (!mounted) return;
+
+    // ✅ Zeige SnackBar nur wenn noch mounted
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            newLocale.languageCode == 'de'
+                ? 'Sprache zu Deutsch gewechselt'
+                : 'Language switched to English',
+          ),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final currentBrightness = Theme.of(context).brightness;
     final isDarkMode = currentBrightness == Brightness.dark;
 
@@ -31,27 +65,7 @@ class Barwidget extends ConsumerWidget {
           tooltip: context.locale.languageCode == 'en'
               ? 'Switch to German'
               : 'Zu Englisch wechseln',
-          onPressed: () async {
-            final newLocale = context.locale.languageCode == 'en'
-                ? const Locale('de')
-                : const Locale('en');
-
-            await context.setLocale(newLocale);
-            ref.read(languageNotifierProvider.notifier).setLanguage(newLocale);
-
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    newLocale.languageCode == 'de'
-                        ? 'Sprache zu Deutsch gewechselt'
-                        : 'Language switched to English',
-                  ),
-                  duration: const Duration(seconds: 1),
-                ),
-              );
-            }
-          },
+          onPressed: _handleLanguageSwitch,
         ),
         // 🌓 Dark Mode Button
         IconButton(
@@ -60,13 +74,13 @@ class Barwidget extends ConsumerWidget {
               : const Icon(Icons.dark_mode),
           onPressed: () {
             final newMode = !isDarkMode;
-            onThemeChanged(newMode);
+            widget.onThemeChanged(newMode);
             ref.read(darkModeProvider.notifier).toggleDarkMode(newMode);
           },
         ),
       ],
       title: Row(
-        mainAxisAlignment: titleFlow,
+        mainAxisAlignment: widget.titleFlow,
         children: [
           ClipRRect(
             child: Image.asset(
@@ -78,7 +92,7 @@ class Barwidget extends ConsumerWidget {
           SizedBox(
             width: MediaQuery.of(context).size.width * widthSizedBoxAppBar,
           ),
-          Text(title),
+          Text(widget.title),
         ],
       ),
     );
