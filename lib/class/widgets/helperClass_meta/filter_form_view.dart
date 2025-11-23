@@ -1,9 +1,9 @@
 // filter_form_view.dart - FINAL AUFGERÄUMT
 
 import 'package:flutter/material.dart';
-import 'package:tcg_app/class/widgets/helperClass%20meta.dart/filter_dropdown.dart';
-import 'package:tcg_app/class/widgets/helperClass%20meta.dart/operator_dropdown.dart';
-import 'package:tcg_app/class/widgets/helperClass%20meta.dart/operator_text_input.dart';
+import 'package:tcg_app/class/widgets/helperClass_meta/filter_dropdown.dart';
+import 'package:tcg_app/class/widgets/helperClass_meta/operator_dropdown.dart';
+import 'package:tcg_app/class/widgets/helperClass_meta/operator_text_input.dart';
 
 class FilterFormView extends StatelessWidget {
   // Listen
