@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tcg_app/theme/sizing.dart';
 import 'package:tcg_app/providers/app_providers.dart';
-import 'package:easy_localization/easy_localization.dart';
-import 'package:tcg_app/providers/language_provider.dart';
 
 class Barwidget extends ConsumerWidget {
   final MainAxisAlignment titleFlow;
@@ -25,35 +23,6 @@ class Barwidget extends ConsumerWidget {
     return AppBar(
       centerTitle: false,
       actions: [
-        // 🌍 Language Switch Button
-        IconButton(
-          icon: const Icon(Icons.language),
-          tooltip: context.locale.languageCode == 'en'
-              ? 'Switch to German'
-              : 'Zu Englisch wechseln',
-          onPressed: () async {
-            final newLocale = context.locale.languageCode == 'en'
-                ? const Locale('de')
-                : const Locale('en');
-
-            await context.setLocale(newLocale);
-            ref.read(languageNotifierProvider.notifier).setLanguage(newLocale);
-
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    newLocale.languageCode == 'de'
-                        ? 'Sprache zu Deutsch gewechselt'
-                        : 'Language switched to English',
-                  ),
-                  duration: const Duration(seconds: 1),
-                ),
-              );
-            }
-          },
-        ),
-        // 🌓 Dark Mode Button
         IconButton(
           icon: isDarkMode
               ? const Icon(Icons.light_mode)
@@ -61,6 +30,7 @@ class Barwidget extends ConsumerWidget {
           onPressed: () {
             final newMode = !isDarkMode;
             onThemeChanged(newMode);
+            // Update über Provider
             ref.read(darkModeProvider.notifier).toggleDarkMode(newMode);
           },
         ),
