@@ -85,9 +85,9 @@ class _DeckViewerState extends ConsumerState<DeckViewer> {
           type.contains('monster')) {
         categorized['Monster']!.add(card);
       } else if (frameType.contains('spell') || type.contains('spell')) {
-        categorized['Zauber']!.add(card);
+        categorized['Spell']!.add(card);
       } else if (frameType.contains('trap') || type.contains('trap')) {
-        categorized['Falle']!.add(card);
+        categorized['Trap']!.add(card);
       } else {
         categorized['Andere']!.add(card);
       }
@@ -289,7 +289,7 @@ class _DeckViewerState extends ConsumerState<DeckViewer> {
                     return ListTile(
                       leading: _CardImageWidget(card: card, cardData: cardData),
                       title: Text(card['name'] ?? 'unknown card'),
-                      subtitle: Text(card['type'] ?? ''),
+
                       trailing: Text('x$count'),
                       onTap: () {
                         ref.read(selectedCardInDeckProvider.notifier).state =
