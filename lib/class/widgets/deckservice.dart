@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:tcg_app/class/widgets/ydkexportService.dart';
 
 import 'package:uuid/uuid.dart';
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
@@ -21,7 +22,7 @@ class DeckService {
     final docSnapshot = await _firestore.collection('decks').doc(deckId).get();
 
     if (!docSnapshot.exists) {
-      throw Exception('Deck mit ID $deckId nicht gefunden.');
+      throw Exception('Deck with ID $deckId not found .');
     }
 
     return docSnapshot.data()!;
@@ -338,6 +339,10 @@ class DeckCreationScreen extends StatefulWidget {
 class DeckCreationScreenState extends State<DeckCreationScreen> {
   bool get isShowingCardDetail => _selectedCardForDetail != null;
 
+  // Hinzugefügter Getter, um zu prüfen, ob alle Decks leer sind
+  bool get isDeckEmpty =>
+      _mainDeck.isEmpty && _extraDeck.isEmpty && _sideDeck.isEmpty;
+
   final _deckNameController = TextEditingController();
   final _descriptionController = TextEditingController();
 
@@ -347,6 +352,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
 
   final DeckService _deckService = DeckService();
   final CardData _cardData = CardData();
+  final YdkImportService _ydkImportService = YdkImportService();
 
   bool _isLoading = true;
   bool _isSaving = false;
@@ -368,6 +374,193 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
     _descriptionController.dispose();
     super.dispose();
   }
+
+  /// Importiert ein YDK-Deck
+  Future<void> _handleYdkImport() async {
+    // Zusätzliche Prüfung, um sicherzustellen, dass das Deck leer ist, bevor importiert wird
+    if (!isDeckEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('first delelte the deck'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    try {
+      final result = await _ydkImportService.importYdkFile();
+
+      if (result == null) {
+        // Benutzer hat Abbruch gedrückt
+        return;
+      }
+
+      // Bestätigungsdialog anzeigen
+      final shouldImport = await showDialog<bool>(
+        context: context,
+        builder: (BuildContext context) {
+          // NEUER STIL: Berechnung der Kartenanzahl
+          final mainCount = result.mainDeck.fold(
+            0,
+            (sum, card) => sum + (card['count'] as int? ?? 0),
+          );
+          final extraCount = result.extraDeck.fold(
+            0,
+            (sum, card) => sum + (card['count'] as int? ?? 0),
+          );
+          final sideCount = result.sideDeck.fold(
+            0,
+            (sum, card) => sum + (card['count'] as int? ?? 0),
+          );
+
+          return AlertDialog(
+            title: const Text('import Deck??'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Deck: ${result.deckName}'),
+                const SizedBox(height: 8),
+                Text('Main Deck: $mainCount cards'),
+                Text('Extra Deck: $extraCount cards'),
+                Text('Side Deck: $sideCount cards'),
+                const SizedBox(height: 16),
+                const Text(
+                  'it will overwrite existing deck.',
+                  style: TextStyle(color: Colors.orange),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: TextButton.styleFrom(foregroundColor: Colors.green),
+                child: const Text('import'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (shouldImport == true) {
+        setState(() {
+          _deckNameController.text = result.deckName;
+          _mainDeck = result.mainDeck;
+          _extraDeck = result.extraDeck;
+          _sideDeck = result.sideDeck;
+          _currentDeckId =
+              null; // WICHTIG: Neues importiertes Deck hat noch keine DB ID
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${result.totalCards} Cards imported!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error on Imput: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Exportiert das aktuelle Deck
+  Future<void> _handleYdkExport() async {
+    // Validiere dass ein Deck vorhanden ist
+    if (_mainDeck.isEmpty && _extraDeck.isEmpty && _sideDeck.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Deck is empty pls add a card first'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Validiere den Decknamen
+    final deckName = _deckNameController.text.trim();
+    if (deckName.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pls write a Deckname first'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    try {
+      // WICHTIG: Die Logik zur Umwandlung in Bytes muss im YdkImportService sein!
+      await _ydkImportService.exportYdkFile(
+        deckName: deckName,
+        mainDeck: _mainDeck,
+        extraDeck: _extraDeck,
+        sideDeck: _sideDeck,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('YDK-File sucessfully saved!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error on Export: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildExportButton() {
+    // 🚨 STEUERUNG DER SICHTBARKEIT: Nur anzeigen, wenn das Deck bereits gespeichert wurde
+    if (_currentDeckId == null) {
+      return const SizedBox.shrink();
+    }
+    return IconButton(
+      icon: const Icon(Icons.file_download, size: 20),
+      tooltip: 'YDK export',
+      onPressed: _handleYdkExport,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+    );
+  }
+
+  Widget _buildImportButton() {
+    // 🚨 STEUERUNG DER SICHTBARKEIT: Nur anzeigen, wenn das Deck leer ist
+    if (!isDeckEmpty) {
+      return const SizedBox.shrink();
+    }
+    return IconButton(
+      icon: const Icon(Icons.file_upload, size: 20),
+      tooltip: 'YDK export',
+      onPressed: _handleYdkImport,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+    );
+  }
+
+  // Im AppBar Row (nach dem Save-Button):
 
   Future<void> _loadDeckData() async {
     if (_currentDeckId == null) {
@@ -582,7 +775,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        card['name'] ?? 'Unbekannt',
+                        card['name'] ?? 'unknown',
 
                         maxLines: 2,
                         textAlign: TextAlign.center,
@@ -934,8 +1127,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                 onPressed: () => _showCardSearchDialog(isSideDeck: false),
                 tooltip: 'Add card',
               ),
-              if (currentType != DeckType.side &&
-                  currentType != DeckType.comments)
+              if (currentType != DeckType.comments)
                 IconButton(
                   icon: const Icon(Icons.swap_horiz),
                   color: Colors.orange,
@@ -1168,6 +1360,10 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                     minHeight: 32,
                   ),
                 ),
+
+                // 🚨 SICHTBARKEITSLOGIK FÜR IMPORTE/EXPORTE
+                _buildImportButton(),
+                _buildExportButton(),
               ],
             ),
           ),

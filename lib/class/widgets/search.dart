@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tcg_app/class/common/buildCards.dart';
 import 'package:tcg_app/class/widgets/DeckSearchView.dart';
-import 'package:tcg_app/class/widgets/helperClass%20allgemein/search_results_view.dart';
+import 'package:tcg_app/class/widgets/helperClass allgemein/search_results_view.dart';
 import 'package:tcg_app/class/widgets/deck_viewer.dart';
 import 'package:tcg_app/providers/app_providers.dart';
 
@@ -453,19 +453,22 @@ class _MetaState extends ConsumerState<Search>
             textStyle: TextStyle(
               color: filterState.selectedArchetype != null ? activeColor : null,
             ),
-            initialSelection: filterState.selectedArchetype ?? 'Archetyp',
+            initialSelection:
+                filterState.selectedArchetype ??
+                'All archetypes', // <--- GEÄNDERT
             expandedInsets: EdgeInsets.zero,
             dropdownMenuEntries: [
               const DropdownMenuEntry<String>(
-                value: 'Archetyp',
-                label: 'Archetyp',
+                value: 'All archetypes', // <--- GEÄNDERT
+                label: 'All archetypes', // <--- GEÄNDERT
               ),
               ...archetypes.map((item) {
                 return DropdownMenuEntry<String>(value: item, label: item);
               }),
             ],
             onSelected: (value) {
-              if (value == 'Archetyp') {
+              if (value == 'All archetypes') {
+                // <--- GEÄNDERT
                 ref.read(filterProvider.notifier).updateArchetype(null);
               } else {
                 ref.read(filterProvider.notifier).updateArchetype(value);
