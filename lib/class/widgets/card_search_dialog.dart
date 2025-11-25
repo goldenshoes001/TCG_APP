@@ -1,4 +1,4 @@
-// card_search_dialog.dart - Updated to DropdownMenu
+// card_search_dialog.dart - UPDATED WITH SAME FILTERS AS SEARCH.DART
 import 'package:flutter/material.dart';
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 
@@ -21,13 +21,16 @@ class CardSearchDialog extends StatefulWidget {
 class _CardSearchDialogState extends State<CardSearchDialog> {
   final CardData _cardData = CardData();
   final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _atkController = TextEditingController();
+  final TextEditingController _defController = TextEditingController();
+
   Future<List<Map<String, dynamic>>>? _searchFuture;
   int dropdownResetkey = 0;
 
   bool _showFilters = false;
   bool _filtersLoading = true;
 
-  // Filter-Werte
+  // Filter-Werte (wie in search.dart)
   String? _selectedType;
   String? _selectedRace;
   String? _selectedAttribute;
@@ -35,6 +38,8 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
   String? _selectedLevel;
   String? _selectedScale;
   String? _selectedLinkRating;
+  String? _selectedBanlistTCG;
+  String? _selectedBanlistOCG;
 
   // Listen für Filter
   List<String> _types = [];
@@ -42,7 +47,9 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
   List<String> _attributes = [];
   List<String> _archetypes = [];
 
-  // Operatoren
+  // Operatoren (wie in search.dart)
+  String _atkOperator = '=';
+  String _defOperator = '=';
   String _levelOperator = '=';
   String _scaleOperator = '=';
   String _linkRatingOperator = '=';
@@ -52,12 +59,22 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
   void initState() {
     super.initState();
     _loadFilterData();
+    _atkController.addListener(_onTextFieldChanged);
+    _defController.addListener(_onTextFieldChanged);
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _atkController.removeListener(_onTextFieldChanged);
+    _defController.removeListener(_onTextFieldChanged);
+    _atkController.dispose();
+    _defController.dispose();
     super.dispose();
+  }
+
+  void _onTextFieldChanged() {
+    setState(() {});
   }
 
   Future<void> _loadFilterData() async {
@@ -110,23 +127,30 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
   }
 
   void _performFilterSearch() {
-    // VALIDIERUNG: Mindestens ein Filter muss ausgewählt sein
-    if (_selectedType == null &&
-        _selectedRace == null &&
-        _selectedAttribute == null &&
-        _selectedArchetype == null &&
-        _selectedLevel == null &&
-        _selectedScale == null &&
-        _selectedLinkRating == null) {
-      ScaffoldMessenger.of(Overlay.of(context).context).showSnackBar(
+    final hasQuery = _searchController.text.trim().isNotEmpty;
+
+    final hasFilters =
+        _selectedType != null ||
+        _selectedRace != null ||
+        _selectedAttribute != null ||
+        _selectedArchetype != null ||
+        _selectedLevel != null ||
+        _atkController.text.trim().isNotEmpty ||
+        _defController.text.trim().isNotEmpty ||
+        _selectedScale != null ||
+        _selectedLinkRating != null ||
+        _selectedBanlistTCG != null ||
+        _selectedBanlistOCG != null;
+
+    if (!hasQuery && !hasFilters) {
+      ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Pls choose at least one Filter.'),
+          content: Text('Please choose at least one filter.'),
           backgroundColor: Colors.red,
           duration: Duration(seconds: 2),
         ),
       );
-
-      return; // Abbrechen, wenn keine Filter gesetzt sind
+      return;
     }
 
     int? levelValue;
@@ -135,6 +159,8 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
     String? scaleOperatorValue;
     int? linkRatingValue;
     String? linkRatingOperatorValue;
+    String? atkFilter;
+    String? defFilter;
 
     if (_selectedLevel != null) {
       levelValue = int.tryParse(_selectedLevel!);
@@ -148,10 +174,27 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
       linkRatingValue = int.tryParse(_selectedLinkRating!);
       linkRatingOperatorValue = _linkRatingOperator;
     }
+    if (_atkController.text.trim().isNotEmpty) {
+      final atkOp = _atkOperator == 'min'
+          ? '>='
+          : _atkOperator == 'max'
+          ? '<='
+          : '=';
+      atkFilter = '$atkOp${_atkController.text.trim()}';
+    }
+    if (_defController.text.trim().isNotEmpty) {
+      final defOp = _defOperator == 'min'
+          ? '>='
+          : _defOperator == 'max'
+          ? '<='
+          : '=';
+      defFilter = '$defOp${_defController.text.trim()}';
+    }
 
     setState(() {
       _searchFuture = _cardData
-          .searchWithFilters(
+          .searchWithQueryAndFilters(
+            query: hasQuery ? _searchController.text.trim() : null,
             type: _selectedType,
             race: _selectedRace,
             attribute: _selectedAttribute,
@@ -162,6 +205,10 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
             linkRatingOperator: linkRatingOperatorValue,
             scale: scaleValue,
             scaleOperator: scaleOperatorValue,
+            atk: atkFilter,
+            def: defFilter,
+            banlistTCG: _selectedBanlistTCG,
+            banlistOCG: _selectedBanlistOCG,
           )
           .then((list) async {
             final cards = list.cast<Map<String, dynamic>>();
@@ -179,7 +226,6 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
 
   void _resetFilters() {
     setState(() {
-      // Alle Filter auf Standardwerte zurücksetzen
       _selectedType = null;
       _selectedRace = null;
       _selectedAttribute = null;
@@ -187,18 +233,25 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
       _selectedLevel = null;
       _selectedScale = null;
       _selectedLinkRating = null;
+      _selectedBanlistTCG = null;
+      _selectedBanlistOCG = null;
 
-      // Operatoren auf Standardwert zurücksetzen
+      _atkOperator = '=';
+      _defOperator = '=';
       _levelOperator = '=';
       _scaleOperator = '=';
       _linkRatingOperator = '=';
+
+      _atkController.clear();
+      _defController.clear();
+      _searchController.clear();
+
       dropdownResetkey++;
     });
 
-    // Erfolgsmeldung anzeigen
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Filter reseted'),
+        content: Text('Filters reset'),
         backgroundColor: Colors.green,
         duration: Duration(seconds: 1),
       ),
@@ -224,9 +277,7 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
     if (maxCount == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            '${card['name']} ist verboten und kann nicht hinzugefügt werden.',
-          ),
+          content: Text('${card['name']} is forbidden and cannot be added.'),
         ),
       );
       return;
@@ -236,23 +287,23 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('how often adding?'),
+          title: const Text('How many copies to add?'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(card['name'] ?? 'unknown Card'),
+              Text(card['name'] ?? 'Unknown Card'),
               const SizedBox(height: 16),
               if (maxCount < 3)
                 Text(
-                  'Diese Karte ist ${maxCount == 1 ? 'limitiert' : 'semi-limitiert'}',
+                  'This card is ${maxCount == 1 ? 'limited' : 'semi-limited'}',
                 ),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('cancel'),
+              child: const Text('Cancel'),
             ),
             ...List.generate(maxCount, (index) {
               final count = index + 1;
@@ -270,30 +321,291 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
     );
   }
 
-  Widget _buildDropdown({
-    required String label,
-    required String? value,
-    required List<String> items,
-    required void Function(String?) onChanged,
-  }) {
-    return DropdownMenu<String>(
-      label: Text(label),
-      initialSelection: value,
-      expandedInsets: EdgeInsets.zero,
-      dropdownMenuEntries: items.map((item) {
-        return DropdownMenuEntry<String>(value: item, label: item);
-      }).toList(),
-      onSelected: onChanged,
+  Widget _buildFilterForm() {
+    if (_filtersLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    const double spacing = 12.0;
+    const activeColor = Colors.lightBlue;
+    final List<String> banlistStatuses = [
+      'Forbidden',
+      'Limited',
+      'Semi-Limited',
+    ];
+
+    return SingleChildScrollView(
+      child: Column(
+        key: ValueKey(dropdownResetkey),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Type Dropdown
+          DropdownMenu<String>(
+            label: null,
+            textStyle: TextStyle(
+              color: _selectedType != null ? activeColor : null,
+            ),
+            initialSelection: _selectedType ?? 'Type',
+            expandedInsets: EdgeInsets.zero,
+            dropdownMenuEntries: [
+              const DropdownMenuEntry<String>(value: 'Type', label: 'Type'),
+              ..._types.map(
+                (item) => DropdownMenuEntry<String>(value: item, label: item),
+              ),
+            ],
+            onSelected: (value) {
+              setState(() => _selectedType = value == 'Type' ? null : value);
+            },
+          ),
+          const SizedBox(height: spacing),
+
+          // Race & Attribute Row
+          Row(
+            children: [
+              Expanded(
+                child: DropdownMenu<String>(
+                  label: null,
+                  textStyle: TextStyle(
+                    color: _selectedRace != null ? activeColor : null,
+                  ),
+                  initialSelection: _selectedRace ?? 'Race',
+                  expandedInsets: EdgeInsets.zero,
+                  dropdownMenuEntries: [
+                    const DropdownMenuEntry<String>(
+                      value: 'Race',
+                      label: 'Race',
+                    ),
+                    ..._races.map(
+                      (item) =>
+                          DropdownMenuEntry<String>(value: item, label: item),
+                    ),
+                  ],
+                  onSelected: (value) {
+                    setState(
+                      () => _selectedRace = value == 'Race' ? null : value,
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(width: spacing),
+              Expanded(
+                child: DropdownMenu<String>(
+                  label: null,
+                  textStyle: TextStyle(
+                    color: _selectedAttribute != null ? activeColor : null,
+                  ),
+                  initialSelection: _selectedAttribute ?? 'Attribut',
+                  expandedInsets: EdgeInsets.zero,
+                  dropdownMenuEntries: [
+                    const DropdownMenuEntry<String>(
+                      value: 'Attribut',
+                      label: 'Attribut',
+                    ),
+                    ..._attributes.map(
+                      (item) =>
+                          DropdownMenuEntry<String>(value: item, label: item),
+                    ),
+                  ],
+                  onSelected: (value) {
+                    setState(
+                      () => _selectedAttribute = value == 'Attribut'
+                          ? null
+                          : value,
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: spacing),
+
+          // Archetype
+          DropdownMenu<String>(
+            label: null,
+            textStyle: TextStyle(
+              color: _selectedArchetype != null ? activeColor : null,
+            ),
+            initialSelection: _selectedArchetype ?? 'All archetypes',
+            expandedInsets: EdgeInsets.zero,
+            dropdownMenuEntries: [
+              const DropdownMenuEntry<String>(
+                value: 'All archetypes',
+                label: 'All archetypes',
+              ),
+              ..._archetypes.map(
+                (item) => DropdownMenuEntry<String>(value: item, label: item),
+              ),
+            ],
+            onSelected: (value) {
+              setState(
+                () => _selectedArchetype = value == 'All archetypes'
+                    ? null
+                    : value,
+              );
+            },
+          ),
+          const SizedBox(height: spacing),
+
+          // Level with Operator
+          _buildOperatorDropdown(
+            label: 'Level',
+            value: _selectedLevel,
+            items: List.generate(14, (index) => index.toString()),
+            operator: _levelOperator,
+            onChanged: (value) => setState(
+              () => _selectedLevel = value == 'Level' ? null : value,
+            ),
+            onOperatorChanged: (value) =>
+                setState(() => _levelOperator = value!),
+            activeColor: activeColor,
+          ),
+          const SizedBox(height: spacing),
+
+          // Scale with Operator
+          _buildOperatorDropdown(
+            label: 'Scale',
+            value: _selectedScale,
+            items: List.generate(14, (index) => index.toString()),
+            operator: _scaleOperator,
+            onChanged: (value) => setState(
+              () => _selectedScale = value == 'Scale' ? null : value,
+            ),
+            onOperatorChanged: (value) =>
+                setState(() => _scaleOperator = value!),
+            activeColor: activeColor,
+          ),
+          const SizedBox(height: spacing),
+
+          // Link Rating with Operator
+          _buildOperatorDropdown(
+            label: 'Link Rating',
+            value: _selectedLinkRating,
+            items: List.generate(6, (index) => (index + 1).toString()),
+            operator: _linkRatingOperator,
+            onChanged: (value) => setState(
+              () => _selectedLinkRating = value == 'Link Rating' ? null : value,
+            ),
+            onOperatorChanged: (value) =>
+                setState(() => _linkRatingOperator = value!),
+            activeColor: activeColor,
+          ),
+          const SizedBox(height: spacing),
+
+          // ATK with Operator
+          _buildOperatorTextInput(
+            label: 'ATK',
+            controller: _atkController,
+            operator: _atkOperator,
+            onOperatorChanged: (value) => setState(() => _atkOperator = value!),
+            activeColor: activeColor,
+          ),
+          const SizedBox(height: spacing),
+
+          // DEF with Operator
+          _buildOperatorTextInput(
+            label: 'DEF',
+            controller: _defController,
+            operator: _defOperator,
+            onOperatorChanged: (value) => setState(() => _defOperator = value!),
+            activeColor: activeColor,
+          ),
+          const SizedBox(height: spacing),
+
+          // Bannlist Row
+          Row(
+            children: [
+              Expanded(
+                child: DropdownMenu<String>(
+                  label: null,
+                  textStyle: TextStyle(
+                    color: _selectedBanlistTCG != null ? activeColor : null,
+                  ),
+                  initialSelection: _selectedBanlistTCG ?? 'TCG Bannliste',
+                  expandedInsets: EdgeInsets.zero,
+                  dropdownMenuEntries: [
+                    const DropdownMenuEntry<String>(
+                      value: 'TCG Bannliste',
+                      label: 'TCG Bannliste',
+                    ),
+                    ...banlistStatuses.map(
+                      (item) =>
+                          DropdownMenuEntry<String>(value: item, label: item),
+                    ),
+                  ],
+                  onSelected: (value) {
+                    setState(
+                      () => _selectedBanlistTCG = value == 'TCG Bannliste'
+                          ? null
+                          : value,
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(width: spacing),
+              Expanded(
+                child: DropdownMenu<String>(
+                  label: null,
+                  textStyle: TextStyle(
+                    color: _selectedBanlistOCG != null ? activeColor : null,
+                  ),
+                  initialSelection: _selectedBanlistOCG ?? 'OCG Bannliste',
+                  expandedInsets: EdgeInsets.zero,
+                  dropdownMenuEntries: [
+                    const DropdownMenuEntry<String>(
+                      value: 'OCG Bannliste',
+                      label: 'OCG Bannliste',
+                    ),
+                    ...banlistStatuses.map(
+                      (item) =>
+                          DropdownMenuEntry<String>(value: item, label: item),
+                    ),
+                  ],
+                  onSelected: (value) {
+                    setState(
+                      () => _selectedBanlistOCG = value == 'OCG Bannliste'
+                          ? null
+                          : value,
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: spacing),
+
+          // Search & Reset Buttons
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _performFilterSearch,
+                  icon: const Icon(Icons.search),
+                  label: const Text('Search'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _resetFilters,
+                  icon: const Icon(Icons.clear),
+                  label: const Text('Reset'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildDropdownWithOperator({
+  Widget _buildOperatorDropdown({
     required String label,
     required String? value,
     required List<String> items,
     required String operator,
     required void Function(String?) onChanged,
     required void Function(String?) onOperatorChanged,
+    required Color activeColor,
   }) {
     return Row(
       children: [
@@ -312,12 +624,16 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
         Expanded(
           flex: 2,
           child: DropdownMenu<String>(
-            label: Text(label),
-            initialSelection: value,
+            label: null,
+            textStyle: TextStyle(color: value != null ? activeColor : null),
+            initialSelection: value ?? label,
             expandedInsets: EdgeInsets.zero,
-            dropdownMenuEntries: items.map((item) {
-              return DropdownMenuEntry<String>(value: item, label: item);
-            }).toList(),
+            dropdownMenuEntries: [
+              DropdownMenuEntry<String>(value: label, label: label),
+              ...items.map(
+                (item) => DropdownMenuEntry<String>(value: item, label: item),
+              ),
+            ],
             onSelected: onChanged,
           ),
         ),
@@ -325,106 +641,45 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
     );
   }
 
-  Widget _buildFilterSection() {
-    if (_filtersLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    const double spacing = 12.0;
-
-    return SingleChildScrollView(
-      child: Column(
-        key: ValueKey(dropdownResetkey),
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _buildDropdown(
-            label: 'Type',
-            value: _selectedType,
-            items: _types,
-            onChanged: (value) => setState(() => _selectedType = value),
+  Widget _buildOperatorTextInput({
+    required String label,
+    required TextEditingController controller,
+    required String operator,
+    required void Function(String?) onOperatorChanged,
+    required Color activeColor,
+  }) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 80,
+          child: DropdownMenu<String>(
+            initialSelection: operator,
+            expandedInsets: EdgeInsets.zero,
+            dropdownMenuEntries: _operators.map((op) {
+              return DropdownMenuEntry<String>(value: op, label: op);
+            }).toList(),
+            onSelected: onOperatorChanged,
           ),
-          const SizedBox(height: spacing),
-          Row(
-            children: [
-              Expanded(
-                child: _buildDropdown(
-                  label: 'Race',
-                  value: _selectedRace,
-                  items: _races,
-                  onChanged: (value) => setState(() => _selectedRace = value),
-                ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: TextField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            style: TextStyle(
+              color: controller.text.isNotEmpty ? activeColor : null,
+            ),
+            decoration: InputDecoration(
+              hintText: label,
+              border: const OutlineInputBorder(),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 8,
               ),
-              const SizedBox(width: spacing),
-              Expanded(
-                child: _buildDropdown(
-                  label: 'Attribut',
-                  value: _selectedAttribute,
-                  items: _attributes,
-                  onChanged: (value) =>
-                      setState(() => _selectedAttribute = value),
-                ),
-              ),
-            ],
+            ),
           ),
-          const SizedBox(height: spacing),
-          _buildDropdown(
-            label: 'Archetyp',
-            value: _selectedArchetype,
-            items: _archetypes,
-            onChanged: (value) => setState(() => _selectedArchetype = value),
-          ),
-          const SizedBox(height: spacing),
-          _buildDropdownWithOperator(
-            label: 'Level',
-            value: _selectedLevel,
-            items: List.generate(14, (index) => index.toString()),
-            operator: _levelOperator,
-            onChanged: (value) => setState(() => _selectedLevel = value),
-            onOperatorChanged: (value) =>
-                setState(() => _levelOperator = value!),
-          ),
-          const SizedBox(height: spacing),
-          _buildDropdownWithOperator(
-            label: 'Scale',
-            value: _selectedScale,
-            items: List.generate(14, (index) => index.toString()),
-            operator: _scaleOperator,
-            onChanged: (value) => setState(() => _selectedScale = value),
-            onOperatorChanged: (value) =>
-                setState(() => _scaleOperator = value!),
-          ),
-          const SizedBox(height: spacing),
-          _buildDropdownWithOperator(
-            label: 'Link Rating',
-            value: _selectedLinkRating,
-            items: List.generate(6, (index) => (index + 1).toString()),
-            operator: _linkRatingOperator,
-            onChanged: (value) => setState(() => _selectedLinkRating = value),
-            onOperatorChanged: (value) =>
-                setState(() => _linkRatingOperator = value!),
-          ),
-          const SizedBox(height: spacing),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _performFilterSearch,
-                  icon: const Icon(Icons.search),
-                  label: const Text('Search'),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _resetFilters,
-                  icon: const Icon(Icons.clear),
-                  label: const Text('reset'),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -445,7 +700,7 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
                 children: [
                   Row(
                     children: [
-                      Text('Filter Search'),
+                      Text('Card Search'),
                       const Spacer(),
                       IconButton(
                         icon: Icon(
@@ -469,7 +724,7 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
                     TextField(
                       controller: _searchController,
                       decoration: const InputDecoration(
-                        hintText: "Cardname...",
+                        hintText: "Card name...",
                         prefixIcon: Icon(Icons.search),
                         border: OutlineInputBorder(),
                       ),
@@ -480,11 +735,11 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
 
                   Expanded(
                     child: _showFilters
-                        ? _buildFilterSection()
+                        ? _buildFilterForm()
                         : _searchFuture == null
                         ? Center(
                             child: Text(
-                              'Write a Cardname or use the filters',
+                              'Enter a card name or use the filters',
                               textAlign: TextAlign.center,
                             ),
                           )
@@ -508,7 +763,7 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
 
                               if (cards.isEmpty) {
                                 return const Center(
-                                  child: Text('No Cards found'),
+                                  child: Text('No cards found'),
                                 );
                               }
 
@@ -523,8 +778,7 @@ class _CardSearchDialogState extends State<CardSearchDialog> {
                                         card: card,
                                         cardData: _cardData,
                                       ),
-                                      title: Text(card['name'] ?? 'unknown'),
-
+                                      title: Text(card['name'] ?? 'Unknown'),
                                       onTap: () => _showCardCountDialog(card),
                                     ),
                                   );

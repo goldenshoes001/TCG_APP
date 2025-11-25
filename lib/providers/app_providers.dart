@@ -1,4 +1,4 @@
-// TODO Implement this library.
+// app_providers.dart - UPDATED WITH DECK SEARCH FIX
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -9,7 +9,7 @@ import 'package:tcg_app/class/widgets/deckservice.dart';
 import 'package:tcg_app/class/widgets/deck_search_service.dart';
 import 'package:tcg_app/class/sharedPreference.dart';
 
-// Füge diesen Provider hinzu:
+// Combined search results provider
 final combinedSearchResultsProvider =
     FutureProvider<List<Map<String, dynamic>>>((ref) async {
       final query = ref.watch(cardSearchQueryProvider);
@@ -20,7 +20,6 @@ final combinedSearchResultsProvider =
       print('   Query: "$query"');
       print('   Filter: $filterState');
 
-      // Prüfe ob überhaupt eine Suche aktiv ist
       final hasQuery = query.isNotEmpty;
       final hasFilters =
           filterState.selectedType != null ||
@@ -35,12 +34,10 @@ final combinedSearchResultsProvider =
           filterState.selectedBanlistTCG != null ||
           filterState.selectedBanlistOCG != null;
 
-      // Wenn weder Suchwort noch Filter gesetzt sind, leere Liste zurückgeben
       if (!hasQuery && !hasFilters) {
         return [];
       }
 
-      // Verwende die kombinierte Suchmethode
       int? levelValue;
       String? levelOperatorValue;
       int? scaleValue;
@@ -100,73 +97,96 @@ final combinedSearchResultsProvider =
       await cardData.preloadCardImages(results);
       return results;
     });
+
 // ============================================================================
-// SINGLETON PROVIDERS (werden nur einmal erstellt)
+// DECK SEARCH PROVIDERS
 // ============================================================================
+
 final deckSearchQueryProvider = StateProvider<String>((ref) => '');
 final selectedArchetypeProvider = StateProvider<String?>((ref) => null);
-final deckSearchTriggerProvider = StateProvider<int>(
-  (ref) => 0,
-); // ✅ DIESEN PROVIDER HINZUFÜGEN
+final deckSearchTriggerProvider = StateProvider<int>((ref) => 0);
 
 final deckSearchResultsProvider = FutureProvider<List<Map<String, dynamic>>>((
   ref,
 ) async {
   final searchQuery = ref.watch(deckSearchQueryProvider);
   final selectedArchetype = ref.watch(selectedArchetypeProvider);
-  final searchTrigger = ref.watch(
-    deckSearchTriggerProvider,
-  ); // ✅ Trigger verwenden
+  final searchTrigger = ref.watch(deckSearchTriggerProvider);
   final deckSearchService = ref.watch(deckSearchServiceProvider);
 
-  // WICHTIG: Nur suchen wenn entweder Suchbegriff ODER Archetype ausgewählt ist
-  final hasSearchQuery = searchQuery.isNotEmpty;
-  final hasSelectedArchetype =
-      selectedArchetype != null && selectedArchetype.isNotEmpty;
+  print('🔍 Deck Search Provider triggered:');
+  print('   searchQuery: "$searchQuery"');
+  print('   selectedArchetype: "$selectedArchetype"');
+  print('   searchTrigger: $searchTrigger');
 
-  // Wenn keine Suche aktiv, zeige leere Liste
-  if (!hasSearchQuery && !hasSelectedArchetype) {
+  final hasSearchQuery = searchQuery.isNotEmpty;
+
+  // ✅ KORRIGIERT: "All archetypes" als Spezialfall behandeln
+  final searchAllArchetypes = selectedArchetype == 'All archetypes';
+
+  final hasSelectedArchetype =
+      selectedArchetype != null &&
+      selectedArchetype.isNotEmpty &&
+      !searchAllArchetypes;
+
+  print('   hasSearchQuery: $hasSearchQuery');
+  print('   searchAllArchetypes: $searchAllArchetypes');
+  print('   hasSelectedArchetype: $hasSelectedArchetype');
+
+  // Wenn keine Suche aktiv UND nicht "All archetypes" ausgewählt, zeige leere Liste
+  if (!hasSearchQuery && !hasSelectedArchetype && !searchAllArchetypes) {
+    print('   ❌ Keine Suche aktiv - leere Liste');
     return [];
   }
 
-  if (hasSelectedArchetype) {
-    return deckSearchService.searchDecksByArchetype(selectedArchetype!);
+  if (searchAllArchetypes) {
+    // ✅ Zeige alle Decks wenn "All archetypes" ausgewählt ist
+    print('   ✅ Lade ALLE Decks...');
+    final result = await deckSearchService.getAllDecks();
+    print('   📊 Gefunden: ${result.length} Decks');
+    return result;
+  } else if (hasSelectedArchetype) {
+    print('   ✅ Suche nach Archetype: $selectedArchetype');
+    final result = await deckSearchService.searchDecksByArchetype(
+      selectedArchetype!,
+    );
+    print('   📊 Gefunden: ${result.length} Decks');
+    return result;
   } else if (hasSearchQuery) {
-    return deckSearchService.searchDecks(searchQuery);
+    print('   ✅ Suche nach Query: $searchQuery');
+    final result = await deckSearchService.searchDecks(searchQuery);
+    print('   📊 Gefunden: ${result.length} Decks');
+    return result;
   } else {
+    print('   ❌ Fallback - leere Liste');
     return [];
   }
 });
-// In app_providers.dart - KORRIGIERTE VERSION
 
-// In app_providers.dart - KORRIGIERTE VERSION
+// ============================================================================
+// SINGLETON PROVIDERS
+// ============================================================================
 
-/// Provider für CardData Service
 final cardDataProvider = Provider<CardData>((ref) {
   return CardData();
 });
 
-/// Provider für FirebaseAuthRepository
 final authRepositoryProvider = Provider<FirebaseAuthRepository>((ref) {
   return FirebaseAuthRepository();
 });
 
-/// Provider für Userdata Service
 final userdataProvider = Provider<Userdata>((ref) {
   return Userdata();
 });
 
-/// Provider für DeckService
 final deckServiceProvider = Provider<DeckService>((ref) {
   return DeckService();
 });
 
-/// Provider für DeckSearchService
 final deckSearchServiceProvider = Provider<DeckSearchService>((ref) {
   return DeckSearchService();
 });
 
-/// Provider für SaveData (SharedPreferences)
 final saveDataProvider = Provider<SaveData>((ref) {
   return SaveData();
 });
@@ -175,13 +195,11 @@ final saveDataProvider = Provider<SaveData>((ref) {
 // AUTH STATE PROVIDER
 // ============================================================================
 
-/// Stream Provider für den aktuellen Auth-Status
 final authStateProvider = StreamProvider<User?>((ref) {
   final authRepo = ref.watch(authRepositoryProvider);
   return authRepo.authStateChanges();
 });
 
-/// Provider für den aktuellen User
 final currentUserProvider = Provider<User?>((ref) {
   final authState = ref.watch(authStateProvider);
   return authState.when(
@@ -195,7 +213,6 @@ final currentUserProvider = Provider<User?>((ref) {
 // THEME PROVIDER
 // ============================================================================
 
-/// StateNotifier für Dark Mode
 class DarkModeNotifier extends StateNotifier<bool?> {
   final SaveData _saveData;
 
@@ -223,14 +240,12 @@ final darkModeProvider = StateNotifierProvider<DarkModeNotifier, bool?>((ref) {
 // NAVIGATION PROVIDER
 // ============================================================================
 
-/// StateProvider für den ausgewählten Navigation Index
 final selectedIndexProvider = StateProvider<int>((ref) => 0);
 
 // ============================================================================
 // PRELOAD DATA PROVIDERS
 // ============================================================================
 
-/// FutureProvider für TCG Bannlist
 final tcgBannlistProvider = FutureProvider<Map<String, List<dynamic>>>((
   ref,
 ) async {
@@ -238,7 +253,6 @@ final tcgBannlistProvider = FutureProvider<Map<String, List<dynamic>>>((
   return await cardData.sortTCGBannCards();
 });
 
-/// FutureProvider für OCG Bannlist
 final ocgBannlistProvider = FutureProvider<Map<String, List<dynamic>>>((
   ref,
 ) async {
@@ -246,25 +260,21 @@ final ocgBannlistProvider = FutureProvider<Map<String, List<dynamic>>>((
   return await cardData.sortOCGBannCards();
 });
 
-/// FutureProvider für Types
 final typesProvider = FutureProvider<List<String>>((ref) async {
   final cardData = ref.watch(cardDataProvider);
   return await cardData.getFacetValues('type');
 });
 
-/// FutureProvider für Races
 final racesProvider = FutureProvider<List<String>>((ref) async {
   final cardData = ref.watch(cardDataProvider);
   return await cardData.getFacetValues('race');
 });
 
-/// FutureProvider für Attributes
 final attributesProvider = FutureProvider<List<String>>((ref) async {
   final cardData = ref.watch(cardDataProvider);
   return await cardData.getFacetValues('attribute');
 });
 
-/// FutureProvider für Archetypes
 final archetypesProvider = FutureProvider<List<String>>((ref) async {
   final cardData = ref.watch(cardDataProvider);
   return await cardData.getFacetValues('archetype');
@@ -274,7 +284,6 @@ final archetypesProvider = FutureProvider<List<String>>((ref) async {
 // USER DATA PROVIDER
 // ============================================================================
 
-/// FutureProvider für User-Daten
 final userDataProvider = FutureProvider.family<Map<String, dynamic>, String>((
   ref,
   userId,
@@ -287,10 +296,8 @@ final userDataProvider = FutureProvider.family<Map<String, dynamic>, String>((
 // CARD SEARCH PROVIDERS
 // ============================================================================
 
-/// StateProvider für Card Search Query
 final cardSearchQueryProvider = StateProvider<String>((ref) => '');
 
-/// FutureProvider für Card Search Results
 final cardSearchResultsProvider = FutureProvider<List<Map<String, dynamic>>>((
   ref,
 ) async {
@@ -304,27 +311,19 @@ final cardSearchResultsProvider = FutureProvider<List<Map<String, dynamic>>>((
 });
 
 // ============================================================================
-// DECK SEARCH PROVIDERS
-// ============================================================================
-
-/// StateProvider für Deck Search Query
-
-// ============================================================================
 // SELECTED CARD/DECK PROVIDERS
 // ============================================================================
 
-/// StateProvider für ausgewählte Karte
 final selectedCardProvider = StateProvider<Map<String, dynamic>?>(
   (ref) => null,
 );
 
-/// StateProvider für ausgewähltes Deck
 final selectedDeckProvider = StateProvider<Map<String, dynamic>?>(
   (ref) => null,
 );
 
 // ============================================================================
-// FILTER PROVIDERS (für Meta Screen)
+// FILTER PROVIDERS
 // ============================================================================
 
 class FilterState {
@@ -475,20 +474,16 @@ final filterProvider = StateNotifierProvider<FilterNotifier, FilterState>((
   return FilterNotifier();
 });
 
-/// StateProvider für Filter Search Trigger
 final filterSearchTriggerProvider = StateProvider<int>((ref) => 0);
 
-/// FutureProvider für Filter Search Results
 final filterSearchResultsProvider = FutureProvider<List<Map<String, dynamic>>>((
   ref,
 ) async {
-  // Watch trigger to force reload
   ref.watch(filterSearchTriggerProvider);
 
   final filterState = ref.watch(filterProvider);
   final cardData = ref.watch(cardDataProvider);
 
-  // Prüfe ob mindestens ein Filter gesetzt ist
   if (filterState.selectedType == null &&
       filterState.selectedRace == null &&
       filterState.selectedAttribute == null &&
@@ -567,6 +562,7 @@ final filterSearchResultsProvider = FutureProvider<List<Map<String, dynamic>>>((
 // ============================================================================
 
 final showFiltersProvider = StateProvider<bool>((ref) => true);
+
 final usernameProvider = FutureProvider.family<String, String>((
   ref,
   userId,

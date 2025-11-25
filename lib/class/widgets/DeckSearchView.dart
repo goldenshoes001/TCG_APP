@@ -55,11 +55,19 @@ class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
 
   void _performSearch() {
     final searchTerm = _searchController.text.trim();
-    ref.read(deckSearchQueryProvider.notifier).state = searchTerm;
-    // Archetype zurücksetzen wenn Text-Suche durchgeführt wird
+    final selectedArchetype = ref.read(selectedArchetypeProvider);
+
+    // ✅ KORRIGIERT: Setze Query nur wenn Text vorhanden
     if (searchTerm.isNotEmpty) {
+      ref.read(deckSearchQueryProvider.notifier).state = searchTerm;
+      // Reset archetype wenn Text-Suche durchgeführt wird
       ref.read(selectedArchetypeProvider.notifier).state = null;
+    } else if (selectedArchetype != null) {
+      // ✅ WICHTIG: Auch bei "All archetypes" die Suche triggern
+      ref.read(deckSearchQueryProvider.notifier).state = '';
+      // Archetype bleibt gesetzt
     }
+
     // Trigger die Suche
     _triggerSearch();
   }
@@ -71,8 +79,8 @@ class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
       ref.read(deckSearchQueryProvider.notifier).state = '';
       _searchController.clear();
     }
-    // Trigger die Suche
-    _triggerSearch();
+    // ✅ NICHT automatisch triggern beim Dropdown-Auswahl
+    // Der User muss explizit auf "Search" klicken
   }
 
   void _triggerSearch() {
@@ -87,6 +95,8 @@ class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
     setState(() {
       _searchController.clear();
     });
+    // ✅ Trigger search um leere Liste anzuzeigen
+    _triggerSearch();
   }
 
   Widget _buildDeckCoverImage(Map<String, dynamic> deck) {
@@ -185,7 +195,6 @@ class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
               IconButton(
                 onPressed: _performSearch,
                 icon: const Icon(Icons.search),
-
                 tooltip: 'Search',
               ),
 
@@ -222,6 +231,10 @@ class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
               dropdownMenuEntries: [
                 const DropdownMenuEntry<String?>(
                   value: null,
+                  label: 'Select archetype',
+                ),
+                const DropdownMenuEntry<String>(
+                  value: 'All archetypes',
                   label: 'All archetypes',
                 ),
                 ..._availableArchetypes.map(
@@ -246,6 +259,7 @@ class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
                       label: Text('Name: $searchQuery'),
                       onDeleted: () {
                         ref.read(deckSearchQueryProvider.notifier).state = '';
+                        _searchController.clear();
                         _triggerSearch();
                       },
                     ),
@@ -253,7 +267,11 @@ class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
                   ],
                   if (selectedArchetype != null) ...[
                     Chip(
-                      label: Text('Archetype: $selectedArchetype'),
+                      label: Text(
+                        selectedArchetype == 'All archetypes'
+                            ? 'Showing: All archetypes'
+                            : 'Archetype: $selectedArchetype',
+                      ),
                       onDeleted: () {
                         ref.read(selectedArchetypeProvider.notifier).state =
                             null;
@@ -317,7 +335,7 @@ class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Enter a deck name or select an archetype',
+              'Enter a deck name or select an archetype, then click Search',
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
@@ -346,6 +364,8 @@ class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
             Text(
               searchQuery.isNotEmpty
                   ? 'No decks found for "$searchQuery"'
+                  : selectedArchetype == 'All archetypes'
+                  ? 'No decks available'
                   : 'No decks found for archetype "$selectedArchetype"',
               style: Theme.of(
                 context,

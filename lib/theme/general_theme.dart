@@ -11,10 +11,11 @@ ThemeData generalTheme(BuildContext context) {
       elevation: 0,
     ),
     tabBarTheme: TabBarThemeData(
-      // Dies entfernt die visuelle Linie des Indicators
-      indicator: BoxDecoration(),
-      // ... (andere Eigenschaften bleiben)
+      // ✅ KORRIGIERT: Entfernt den Unterstrich komplett
+      indicator: const BoxDecoration(color: Colors.transparent),
+      dividerColor: Colors.transparent, // ✅ NEU: Entfernt die Trennlinie
       labelColor: Colors.lightBlue,
+      unselectedLabelColor: Colors.grey,
     ),
 
     textTheme: TextTheme(

@@ -80,10 +80,11 @@ class DeckSearchService {
 
   /// Sucht nach Decks eines bestimmten Archetyps - KORRIGIERTE VERSION
   Future<List<Map<String, dynamic>>> searchDecksByArchetype(
-    String archetype,
+    String? archetype,
   ) async {
-    if (archetype.trim().isEmpty) {
-      return [];
+    // ✅ NEU: Wenn archetype null oder leer ist, zeige alle Decks
+    if (archetype == null || archetype.trim().isEmpty) {
+      return getAllDecks();
     }
 
     final normalizedArchetype = archetype.trim().toLowerCase();
@@ -157,6 +158,24 @@ class DeckSearchService {
       return results;
     } catch (e) {
       print('❌ Fehler bei Archetyp-Suche: $e');
+      return [];
+    }
+  }
+
+  /// ✅ NEU: Lädt alle Decks (für "All archetypes")
+  Future<List<Map<String, dynamic>>> getAllDecks() async {
+    try {
+      final QuerySnapshot snapshot = await _firestore
+          .collection('decks')
+          .orderBy('updatedAt', descending: true)
+          .limit(100)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => doc.data() as Map<String, dynamic>)
+          .toList();
+    } catch (e) {
+      print('Fehler beim Laden aller Decks: $e');
       return [];
     }
   }
