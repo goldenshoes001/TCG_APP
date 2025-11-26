@@ -9,6 +9,46 @@ import 'package:tcg_app/class/widgets/deckservice.dart';
 import 'package:tcg_app/class/widgets/deck_search_service.dart';
 import 'package:tcg_app/class/sharedPreference.dart';
 
+final preloadedDeckArchetypesProvider = StateProvider<List<String>>(
+  (ref) => [],
+);
+
+final preloadedTypesProvider = StateProvider<List<String>?>((ref) => null);
+final preloadedRacesProvider = StateProvider<List<String>?>((ref) => null);
+final preloadedAttributesProvider = StateProvider<List<String>?>((ref) => null);
+final preloadedArchetypesProvider = StateProvider<List<String>?>((ref) => null);
+final combinedTypesProvider = Provider<List<String>>((ref) {
+  final preloaded = ref.watch(preloadedTypesProvider);
+  if (preloaded != null) return preloaded;
+
+  // Fallback zu async loading falls nicht vorab geladen
+  final asyncTypes = ref.watch(typesProvider);
+  return asyncTypes.valueOrNull ?? [];
+});
+
+final combinedRacesProvider = Provider<List<String>>((ref) {
+  final preloaded = ref.watch(preloadedRacesProvider);
+  if (preloaded != null) return preloaded;
+
+  final asyncRaces = ref.watch(racesProvider);
+  return asyncRaces.valueOrNull ?? [];
+});
+
+final combinedAttributesProvider = Provider<List<String>>((ref) {
+  final preloaded = ref.watch(preloadedAttributesProvider);
+  if (preloaded != null) return preloaded;
+
+  final asyncAttributes = ref.watch(attributesProvider);
+  return asyncAttributes.valueOrNull ?? [];
+});
+
+final combinedArchetypesProvider = Provider<List<String>>((ref) {
+  final preloaded = ref.watch(preloadedArchetypesProvider);
+  if (preloaded != null) return preloaded;
+
+  final asyncArchetypes = ref.watch(archetypesProvider);
+  return asyncArchetypes.valueOrNull ?? [];
+});
 // Combined search results provider
 final combinedSearchResultsProvider =
     FutureProvider<List<Map<String, dynamic>>>((ref) async {

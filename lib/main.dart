@@ -9,6 +9,7 @@ import 'package:tcg_app/class/sharedPreference.dart';
 import 'package:tcg_app/class/widgets/home.dart';
 import 'package:tcg_app/class/widgets/calculator.dart';
 import 'package:tcg_app/class/widgets/search.dart';
+import 'package:tcg_app/providers/app_providers.dart';
 import 'package:tcg_app/theme/light_theme.dart';
 import 'package:tcg_app/theme/dark_theme.dart';
 import 'package:tcg_app/theme/sizing.dart';
@@ -114,6 +115,19 @@ class _MainAppState extends State<MainApp> {
           _isPreloading = false;
         });
       }
+
+      final cardData = CardData();
+      final types = await cardData.getFacetValues('type');
+      final races = await cardData.getFacetValues('race');
+      final attributes = await cardData.getFacetValues('attribute');
+      final archetypes = await cardData.getFacetValues('archetype');
+
+      // Setze die Daten in die Provider
+      final container = ProviderScope.containerOf(context);
+      container.read(preloadedTypesProvider.notifier).state = types;
+      container.read(preloadedRacesProvider.notifier).state = races;
+      container.read(preloadedAttributesProvider.notifier).state = attributes;
+      container.read(preloadedArchetypesProvider.notifier).state = archetypes;
     } catch (e) {
       print('Fehler beim Preloading: $e');
       if (mounted) {
@@ -124,22 +138,50 @@ class _MainAppState extends State<MainApp> {
     }
   }
 
-  // ✅ NEU: Lädt alle Decks beim App-Start
   Future<void> _preloadAllDecks() async {
     try {
+      setState(() {
+        _loadingMessage = 'Loading all decks...';
+      });
+
       final QuerySnapshot snapshot = await FirebaseFirestore.instance
           .collection('decks')
           .orderBy('updatedAt', descending: true)
-          .limit(200) // Limitiere auf 200 neueste Decks
+          .limit(200)
           .get();
 
       _allDecks = snapshot.docs
           .map((doc) => doc.data() as Map<String, dynamic>)
           .toList();
 
-      print('✅ ${_allDecks?.length ?? 0} Decks vorgeladen');
+      print('✅ ${_allDecks?.length ?? 0} decks preloaded');
+
+      // ✅ ARCHEYTYPES AUS VORAB GELADENEN DECKS EXTRAHIEREN
+      if (_allDecks != null && _allDecks!.isNotEmpty) {
+        final Set<String> archetypes = {};
+        for (var deck in _allDecks!) {
+          final archetype = deck['archetype'] as String? ?? '';
+          if (archetype.isNotEmpty) {
+            final archetypeList = archetype
+                .split(',')
+                .map((a) => a.trim())
+                .where((a) => a.isNotEmpty);
+            archetypes.addAll(archetypeList);
+          }
+        }
+
+        final sortedArchetypes = archetypes.toList()
+          ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+
+        // Setze Archetypen in Provider für sofortigen Zugriff
+        final container = ProviderScope.containerOf(context);
+        container.read(preloadedDeckArchetypesProvider.notifier).state =
+            sortedArchetypes;
+
+        print('✅ ${sortedArchetypes.length} archetypes preloaded');
+      }
     } catch (e) {
-      print('❌ Fehler beim Laden der Decks: $e');
+      print('❌ Error loading decks: $e');
       _allDecks = [];
     }
   }

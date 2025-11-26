@@ -148,10 +148,10 @@ class _MetaState extends ConsumerState<Search>
     final cardSearchQuery = ref.watch(cardSearchQueryProvider);
     final filterState = ref.watch(filterProvider);
 
-    final typesAsync = ref.watch(typesProvider);
-    final racesAsync = ref.watch(racesProvider);
-    final attributesAsync = ref.watch(attributesProvider);
-    final archetypesAsync = ref.watch(archetypesProvider);
+    final types = ref.watch(combinedTypesProvider);
+    final races = ref.watch(combinedRacesProvider);
+    final attributes = ref.watch(combinedAttributesProvider);
+    final archetypes = ref.watch(combinedArchetypesProvider);
 
     if (selectedCard != null) {
       return CardDetailView(
@@ -170,16 +170,6 @@ class _MetaState extends ConsumerState<Search>
           ref.read(selectedDeckProvider.notifier).state = null;
         },
       );
-    }
-
-    final isLoadingFilters =
-        typesAsync.isLoading ||
-        racesAsync.isLoading ||
-        attributesAsync.isLoading ||
-        archetypesAsync.isLoading;
-
-    if (isLoadingFilters && _tabController.index == 0) {
-      return const Center(child: Text('Filter get loaded...'));
     }
 
     return Column(
@@ -258,14 +248,7 @@ class _MetaState extends ConsumerState<Search>
                   child: TabBarView(
                     controller: _tabController,
                     children: [
-                      _showFilters
-                          ? _buildFilterView(
-                              typesAsync,
-                              racesAsync,
-                              attributesAsync,
-                              archetypesAsync,
-                            )
-                          : _buildSearchResults(),
+                      _showFilters ? _buildFilterView() : _buildSearchResults(),
 
                       // ✅ KORRIGIERT: preloadedDecks übergeben
                       DeckSearchView(
@@ -300,30 +283,13 @@ class _MetaState extends ConsumerState<Search>
     );
   }
 
-  Widget _buildFilterView(
-    AsyncValue<List<String>> typesAsync,
-    AsyncValue<List<String>> racesAsync,
-    AsyncValue<List<String>> attributesAsync,
-    AsyncValue<List<String>> archetypesAsync,
-  ) {
-    return typesAsync.when(
-      data: (types) => racesAsync.when(
-        data: (races) => attributesAsync.when(
-          data: (attributes) => archetypesAsync.when(
-            data: (archetypes) =>
-                _buildFilterForm(types, races, attributes, archetypes),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, s) => Center(child: Text('Error loading archetypes')),
-          ),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, s) => Center(child: Text('Error loading attributes')),
-        ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) => Center(child: Text('Error loading races')),
-      ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, s) => Center(child: Text('Error loading types')),
-    );
+  Widget _buildFilterView() {
+    final types = ref.watch(combinedTypesProvider);
+    final races = ref.watch(combinedRacesProvider);
+    final attributes = ref.watch(combinedAttributesProvider);
+    final archetypes = ref.watch(combinedArchetypesProvider);
+
+    return _buildFilterForm(types, races, attributes, archetypes);
   }
 
   Widget _buildFilterForm(

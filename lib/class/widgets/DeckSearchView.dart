@@ -31,7 +31,20 @@ class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
   @override
   void initState() {
     super.initState();
-    _loadArchetypes();
+    final preloadedArchetypes = ref.read(preloadedDeckArchetypesProvider);
+    if (preloadedArchetypes.isNotEmpty) {
+      setState(() {
+        _availableArchetypes = preloadedArchetypes;
+        _isLoadingArchetypes = false;
+      });
+    } else {
+      // Fallback: Lade Archetypen normal
+      _loadArchetypes();
+    }
+
+    if (widget.preloadedDecks != null) {
+      _filteredDecks = widget.preloadedDecks!;
+    }
 
     // ✅ Zeige initial alle vorgeladenen Decks
     if (widget.preloadedDecks != null) {
@@ -230,8 +243,6 @@ class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
   Widget build(BuildContext context) {
     final selectedArchetype = ref.watch(selectedArchetypeProvider);
     final searchQuery = ref.watch(cardSearchQueryProvider);
-
-    // ✅ Verwende lokale Suche wenn Decks vorgeladen sind
     final bool useLocalSearch = widget.preloadedDecks != null;
 
     return Padding(
@@ -374,7 +385,7 @@ class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
               ),
             ),
 
-          // ✅ Ergebnisse (lokal oder server)
+          // Ergebnisse (lokal oder server)
           Expanded(
             child: useLocalSearch
                 ? _buildLocalResults(
