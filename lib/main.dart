@@ -13,6 +13,7 @@ import 'package:tcg_app/theme/light_theme.dart';
 import 'package:tcg_app/theme/dark_theme.dart';
 import 'package:tcg_app/theme/sizing.dart';
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:firebase_core/firebase_core.dart';
 import '../firebase_options.dart';
@@ -22,12 +23,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await SaveData.initPreferences();
-  runApp(
-    const ProviderScope(
-      // <-- MUSS da sein!
-      child: MainApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: MainApp()));
 }
 
 class MainApp extends StatefulWidget {
@@ -51,10 +47,7 @@ class _MainAppState extends State<MainApp> {
   // Preloaded Data
   Map<String, List<dynamic>>? _tcgBannlist;
   Map<String, List<dynamic>>? _ocgBannlist;
-  List<String>? _types;
-  List<String>? _races;
-  List<String>? _attributes;
-  List<String>? _archetypes;
+  List<Map<String, dynamic>>? _allDecks; // ✅ NEU: Alle Decks
 
   @override
   void initState() {
@@ -101,22 +94,19 @@ class _MainAppState extends State<MainApp> {
       });
       await _preloadBannlistImages();
 
-      // 3. Lade Filter-Daten
+      // 3. Lade Filter-Daten (werden von Riverpod Providern geladen)
       setState(() {
         _loadingMessage = 'loading Filteroptions..';
       });
 
-      final results = await Future.wait([
-        _cardData.getFacetValues('type'),
-        _cardData.getFacetValues('race'),
-        _cardData.getFacetValues('attribute'),
-        _cardData.getFacetValues('archetype'),
-      ]);
+      // Filter werden jetzt über Provider geladen, kein direktes Speichern mehr nötig
+      await Future.delayed(const Duration(milliseconds: 500));
 
-      _types = results[0];
-      _races = results[1];
-      _attributes = results[2];
-      _archetypes = results[3];
+      // ✅ 4. LADE ALLE DECKS
+      setState(() {
+        _loadingMessage = 'loading all Decks...';
+      });
+      await _preloadAllDecks();
 
       // Fertig!
       if (mounted) {
@@ -126,12 +116,31 @@ class _MainAppState extends State<MainApp> {
       }
     } catch (e) {
       print('Fehler beim Preloading: $e');
-      // Bei Fehler trotzdem fortfahren
       if (mounted) {
         setState(() {
           _isPreloading = false;
         });
       }
+    }
+  }
+
+  // ✅ NEU: Lädt alle Decks beim App-Start
+  Future<void> _preloadAllDecks() async {
+    try {
+      final QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('decks')
+          .orderBy('updatedAt', descending: true)
+          .limit(200) // Limitiere auf 200 neueste Decks
+          .get();
+
+      _allDecks = snapshot.docs
+          .map((doc) => doc.data() as Map<String, dynamic>)
+          .toList();
+
+      print('✅ ${_allDecks?.length ?? 0} Decks vorgeladen');
+    } catch (e) {
+      print('❌ Fehler beim Laden der Decks: $e');
+      _allDecks = [];
     }
   }
 
@@ -145,7 +154,6 @@ class _MainAppState extends State<MainApp> {
       ...(_ocgBannlist?['semiLimited'] ?? []),
     ];
 
-    // Optimiertes Batch-Preloading (erste 100 Bilder)
     try {
       await _cardData.preloadCardImages(
         allCards.cast<Map<String, dynamic>>(),
@@ -177,7 +185,9 @@ class _MainAppState extends State<MainApp> {
           preloadedOCGBannlist: _ocgBannlist,
         );
       case 1:
-        return const Search();
+        return Search(
+          preloadedDecks: _allDecks,
+        ); // ✅ Übergebe vorgeladene Decks
       case 2:
         if (_currentUser != null) {
           return UserProfileScreen(
@@ -204,7 +214,6 @@ class _MainAppState extends State<MainApp> {
 
   @override
   Widget build(BuildContext context) {
-    // Zeige Ladebildschirm während Preloading
     if (_isPreloading) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -234,7 +243,6 @@ class _MainAppState extends State<MainApp> {
       );
     }
 
-    // Normale App nach Preloading
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: lightTheme(context),

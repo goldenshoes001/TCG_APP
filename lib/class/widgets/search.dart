@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tcg_app/class/common/buildCards.dart';
 import 'package:tcg_app/class/widgets/DeckSearchView.dart';
 import 'package:tcg_app/class/widgets/helperClass allgemein/search_results_view.dart';
-import 'package:tcg_app/class/widgets/deck_viewer.dart';
+import 'package:tcg_app/class/widgets/deck_viewer.dart'; // ✅ IMPORTIERT
 import 'package:tcg_app/providers/app_providers.dart';
 
 class Search extends ConsumerStatefulWidget {
-  const Search({super.key});
+  final List<Map<String, dynamic>>? preloadedDecks; // ✅ PARAMETER HINZUGEFÜGT
+
+  const Search({super.key, this.preloadedDecks});
 
   @override
   ConsumerState<Search> createState() => _MetaState();
@@ -31,7 +33,6 @@ class _MetaState extends ConsumerState<Search>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
 
-    // Hinzufügen von Listenern für Textfelder, um die Farbe beim Tippen zu aktualisieren
     _atkController.addListener(_onTextFieldChanged);
     _defController.addListener(_onTextFieldChanged);
   }
@@ -40,18 +41,15 @@ class _MetaState extends ConsumerState<Search>
   void dispose() {
     _tabController.dispose();
     _suchfeld.dispose();
-    _atkController.removeListener(_onTextFieldChanged); // Listener entfernen
-    _defController.removeListener(_onTextFieldChanged); // Listener entfernen
+    _atkController.removeListener(_onTextFieldChanged);
+    _defController.removeListener(_onTextFieldChanged);
     _atkController.dispose();
     _defController.dispose();
     super.dispose();
   }
 
-  // Führt setState aus, wenn sich der Text in ATK/DEF ändert, um die Farbe zu aktualisieren
   void _onTextFieldChanged() {
-    setState(() {
-      // Leerer Aufruf, da die Änderung in den Controllern selbst liegt
-    });
+    setState(() {});
   }
 
   void _performTextSearch(String value) {
@@ -164,6 +162,7 @@ class _MetaState extends ConsumerState<Search>
       );
     }
 
+    // ✅ KORRIGIERT: DeckViewer statt DeckViewer()
     if (selectedDeck != null) {
       return DeckViewer(
         deckData: selectedDeck,
@@ -267,7 +266,10 @@ class _MetaState extends ConsumerState<Search>
                               archetypesAsync,
                             )
                           : _buildSearchResults(),
+
+                      // ✅ KORRIGIERT: preloadedDecks übergeben
                       DeckSearchView(
+                        preloadedDecks: widget.preloadedDecks,
                         onDeckSelected: (deck) {
                           ref.read(selectedDeckProvider.notifier).state = deck;
                         },
@@ -338,7 +340,6 @@ class _MetaState extends ConsumerState<Search>
       'Semi-Limited',
     ];
 
-    // DEFINIERT DIE FARBE FÜR AKTIVE FILTER
     const activeColor = Colors.lightBlue;
 
     return SingleChildScrollView(
@@ -351,7 +352,6 @@ class _MetaState extends ConsumerState<Search>
             padding: const EdgeInsets.only(top: 5.0),
             child: DropdownMenu<String>(
               label: null,
-              // BEDINGTER TEXTSTIL
               textStyle: TextStyle(
                 color: filterState.selectedType != null ? activeColor : null,
               ),
@@ -380,7 +380,6 @@ class _MetaState extends ConsumerState<Search>
               Expanded(
                 child: DropdownMenu<String>(
                   label: null,
-                  // BEDINGTER TEXTSTIL
                   textStyle: TextStyle(
                     color: filterState.selectedRace != null
                         ? activeColor
@@ -413,7 +412,6 @@ class _MetaState extends ConsumerState<Search>
               Expanded(
                 child: DropdownMenu<String>(
                   label: null,
-                  // BEDINGTER TEXTSTIL
                   textStyle: TextStyle(
                     color: filterState.selectedAttribute != null
                         ? activeColor
@@ -449,18 +447,15 @@ class _MetaState extends ConsumerState<Search>
           // Archetype
           DropdownMenu<String>(
             label: null,
-            // BEDINGTER TEXTSTIL
             textStyle: TextStyle(
               color: filterState.selectedArchetype != null ? activeColor : null,
             ),
-            initialSelection:
-                filterState.selectedArchetype ??
-                'All archetypes', // <--- GEÄNDERT
+            initialSelection: filterState.selectedArchetype ?? 'All archetypes',
             expandedInsets: EdgeInsets.zero,
             dropdownMenuEntries: [
               const DropdownMenuEntry<String>(
-                value: 'All archetypes', // <--- GEÄNDERT
-                label: 'All archetypes', // <--- GEÄNDERT
+                value: 'All archetypes',
+                label: 'All archetypes',
               ),
               ...archetypes.map((item) {
                 return DropdownMenuEntry<String>(value: item, label: item);
@@ -468,7 +463,6 @@ class _MetaState extends ConsumerState<Search>
             ],
             onSelected: (value) {
               if (value == 'All archetypes') {
-                // <--- GEÄNDERT
                 ref.read(filterProvider.notifier).updateArchetype(null);
               } else {
                 ref.read(filterProvider.notifier).updateArchetype(value);
@@ -477,7 +471,7 @@ class _MetaState extends ConsumerState<Search>
           ),
           const SizedBox(height: spacing),
 
-          // Level with Operator (Combined)
+          // Level with Operator
           _buildOperatorDropdown(
             label: 'Level',
             value: filterState.selectedLevel,
@@ -497,7 +491,7 @@ class _MetaState extends ConsumerState<Search>
           ),
           const SizedBox(height: spacing),
 
-          // Scale with Operator (Combined)
+          // Scale with Operator
           _buildOperatorDropdown(
             label: 'Scale',
             value: filterState.selectedScale,
@@ -517,7 +511,7 @@ class _MetaState extends ConsumerState<Search>
           ),
           const SizedBox(height: spacing),
 
-          // Link Rating with Operator (Combined)
+          // Link Rating with Operator
           _buildOperatorDropdown(
             label: 'Link Rating',
             value: filterState.selectedLinkRating,
@@ -539,7 +533,7 @@ class _MetaState extends ConsumerState<Search>
           ),
           const SizedBox(height: spacing),
 
-          // ATK with Operator (Combined)
+          // ATK with Operator
           _buildOperatorTextInput(
             label: 'ATK',
             controller: _atkController,
@@ -551,7 +545,7 @@ class _MetaState extends ConsumerState<Search>
           ),
           const SizedBox(height: spacing),
 
-          // DEF with Operator (Combined)
+          // DEF with Operator
           _buildOperatorTextInput(
             label: 'DEF',
             controller: _defController,
@@ -569,7 +563,6 @@ class _MetaState extends ConsumerState<Search>
               Expanded(
                 child: DropdownMenu<String>(
                   label: null,
-                  // BEDINGTER TEXTSTIL
                   textStyle: TextStyle(
                     color: filterState.selectedBanlistTCG != null
                         ? activeColor
@@ -603,7 +596,6 @@ class _MetaState extends ConsumerState<Search>
               Expanded(
                 child: DropdownMenu<String>(
                   label: null,
-                  // BEDINGTER TEXTSTIL
                   textStyle: TextStyle(
                     color: filterState.selectedBanlistOCG != null
                         ? activeColor
@@ -670,13 +662,12 @@ class _MetaState extends ConsumerState<Search>
     required String operator,
     required void Function(String?) onChanged,
     required void Function(String?) onOperatorChanged,
-    required Color activeColor, // Neue erforderliche Eigenschaft
+    required Color activeColor,
   }) {
     final List<String> operators = ['min', '=', 'max'];
 
     return Row(
       children: [
-        // Operator Dropdown
         Expanded(
           flex: 1,
           child: DropdownMenu<String>(
@@ -689,12 +680,10 @@ class _MetaState extends ConsumerState<Search>
           ),
         ),
         const SizedBox(width: 8),
-        // Value Dropdown mit Default-Wert
         Expanded(
           flex: 2,
           child: DropdownMenu<String>(
-            label: null, // Label entfernt
-            // BEDINGTER TEXTSTIL
+            label: null,
             textStyle: TextStyle(color: value != null ? activeColor : null),
             initialSelection: value ?? label,
             expandedInsets: EdgeInsets.zero,
@@ -723,7 +712,7 @@ class _MetaState extends ConsumerState<Search>
     required TextEditingController controller,
     required String operator,
     required void Function(String?) onOperatorChanged,
-    required Color activeColor, // Neue erforderliche Eigenschaft
+    required Color activeColor,
   }) {
     final List<String> operators = ['min', '=', 'max'];
 
@@ -745,7 +734,6 @@ class _MetaState extends ConsumerState<Search>
           child: TextField(
             controller: controller,
             keyboardType: TextInputType.number,
-            // BEDINGTER TEXTSTIL für das Textfeld
             style: TextStyle(
               color: controller.text.isNotEmpty ? activeColor : null,
             ),
