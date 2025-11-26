@@ -375,7 +375,6 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
     super.dispose();
   }
 
-
   /// ✅ NEU: Multi-YDK Import Handler
   Future<void> _handleMultiYdkImport() async {
     try {
@@ -390,13 +389,13 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: Text('${results.length} Deck(s) importieren?'),
+            title: Text('import ${results.length} Deck(s)?'),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Es wurden ${results.length} YDK-Datei(en) gefunden:'),
+                  Text('${results.length} YDK-Datei(en) found:'),
                   const SizedBox(height: 12),
                   ...results.take(5).map((deck) {
                     final mainCount = deck.mainDeck.fold(
@@ -452,7 +451,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                         SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Alle Decks werden gegen die TCG Bannlist validiert. Verbotene Karten werden entfernt, überzählige Kopien reduziert.',
+                            "all decks will be validate with the TCG Banlist.",
                             style: TextStyle(fontSize: 12),
                           ),
                         ),
@@ -465,12 +464,12 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Abbrechen'),
+                child: const Text('cancel'),
               ),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(true),
                 style: TextButton.styleFrom(foregroundColor: Colors.green),
-                child: Text('${results.length} Deck(s) importieren'),
+                child: Text('import ${results.length} Deck(s)'),
               ),
             ],
           );
@@ -489,7 +488,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
               children: [
                 CircularProgressIndicator(),
                 SizedBox(width: 20),
-                Text('Importiere Decks...'),
+                Text('importing Decks...'),
               ],
             ),
           );
@@ -513,7 +512,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
           );
           successCount++;
         } catch (e) {
-          print('❌ Fehler beim Speichern von ${ydkResult.deckName}: $e');
+          print('❌ Error on saving from ${ydkResult.deckName}: $e');
           failCount++;
           failedDecks.add(ydkResult.deckName);
         }
@@ -528,7 +527,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
           context: context,
           builder: (BuildContext context) {
             return AlertDialog(
-              title: const Text('Import abgeschlossen'),
+              title: const Text('Import finished'),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -537,7 +536,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                     children: [
                       const Icon(Icons.check_circle, color: Colors.green),
                       const SizedBox(width: 8),
-                      Text('$successCount Deck(s) erfolgreich importiert'),
+                      Text('$successCount Deck(s) has been imported'),
                     ],
                   ),
                   if (failCount > 0) ...[
@@ -546,12 +545,12 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                       children: [
                         const Icon(Icons.error, color: Colors.red),
                         const SizedBox(width: 8),
-                        Text('$failCount Deck(s) fehlgeschlagen'),
+                        Text('$failCount Deck(s) failed'),
                       ],
                     ),
                     if (failedDecks.isNotEmpty) ...[
                       const SizedBox(height: 8),
-                      const Text('Fehlgeschlagene Decks:'),
+                      const Text('failed Decks:'),
                       ...failedDecks.map((name) => Text('  • $name')),
                     ],
                   ],
@@ -564,7 +563,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                     // Schließe Deck Creation und kehre zur Übersicht zurück
                     widget.onCancel?.call();
                   },
-                  child: const Text('Fertig'),
+                  child: const Text('finished'),
                 ),
               ],
             );
@@ -575,7 +574,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Fehler beim Import: $e'),
+            content: Text('Error on Import: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -588,7 +587,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
     if (_mainDeck.isEmpty && _extraDeck.isEmpty && _sideDeck.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Deck ist leer, bitte zuerst Karten hinzufügen'),
+          content: Text('Deck is empty pls add first add a card,'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -599,7 +598,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
     if (deckName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Bitte zuerst einen Decknamen eingeben'),
+          content: Text('Pls write a deckname first'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -617,7 +616,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('TXT-Datei erfolgreich gespeichert!'),
+            content: Text('TXT-file sucessfull saved!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -626,14 +625,13 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Fehler beim Export: $e'),
+            content: Text('Error on Export: $e'),
             backgroundColor: Colors.red,
           ),
         );
       }
     }
   }
-
 
   /// Importiert ein YDK-Deck
   Future<void> _handleYdkImport() async {
@@ -1507,9 +1505,8 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-   
-        // ✅ NEUER KOMPAKTER HEADER
-      return Column(
+    // ✅ NEUER KOMPAKTER HEADER
+    return Column(
       children: [
         // ✅ AKTUALISIERTER HEADER
         Card(
@@ -1668,8 +1665,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
           ),
         ),
 
-                // 🚨 SICHTBARKEITSLOGIK FÜR IMPORTE/EXPORTE
-               
+        // 🚨 SICHTBARKEITSLOGIK FÜR IMPORTE/EXPORTE
 
         // ✅ KOMPAKTE DECK STATS
         Padding(

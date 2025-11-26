@@ -254,7 +254,13 @@ class _MetaState extends ConsumerState<Search>
                       DeckSearchView(
                         preloadedDecks: widget.preloadedDecks,
                         onDeckSelected: (deck) {
+                          // ✅ STATE EXPLIZIT SETZEN UND REBUILD TRIGGERN
                           ref.read(selectedDeckProvider.notifier).state = deck;
+
+                          // ✅ WICHTIG: Kurze Verzögerung für Rebuild
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            setState(() {});
+                          });
                         },
                       ),
                     ],
