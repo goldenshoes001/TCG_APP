@@ -375,6 +375,266 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
     super.dispose();
   }
 
+
+  /// ✅ NEU: Multi-YDK Import Handler
+  Future<void> _handleMultiYdkImport() async {
+    try {
+      final results = await _ydkImportService.importMultipleYdkFiles();
+
+      if (results == null || results.isEmpty) {
+        return; // User hat abgebrochen
+      }
+
+      // Zeige Bestätigungsdialog
+      final shouldImport = await showDialog<bool>(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('${results.length} Deck(s) importieren?'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Es wurden ${results.length} YDK-Datei(en) gefunden:'),
+                  const SizedBox(height: 12),
+                  ...results.take(5).map((deck) {
+                    final mainCount = deck.mainDeck.fold(
+                      0,
+                      (sum, card) => sum + (card['count'] as int? ?? 0),
+                    );
+                    final extraCount = deck.extraDeck.fold(
+                      0,
+                      (sum, card) => sum + (card['count'] as int? ?? 0),
+                    );
+                    final sideCount = deck.sideDeck.fold(
+                      0,
+                      (sum, card) => sum + (card['count'] as int? ?? 0),
+                    );
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '• ${deck.deckName}',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            '  Main: $mainCount | Extra: $extraCount | Side: $sideCount',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                  if (results.length > 5)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text('... und ${results.length - 5} weitere'),
+                    ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          color: Colors.orange,
+                          size: 20,
+                        ),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Alle Decks werden gegen die TCG Bannlist validiert. Verbotene Karten werden entfernt, überzählige Kopien reduziert.',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Abbrechen'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: TextButton.styleFrom(foregroundColor: Colors.green),
+                child: Text('${results.length} Deck(s) importieren'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (shouldImport != true) return;
+
+      // Zeige Progress Dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return const AlertDialog(
+            content: Row(
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(width: 20),
+                Text('Importiere Decks...'),
+              ],
+            ),
+          );
+        },
+      );
+
+      // Importiere alle Decks nacheinander
+      int successCount = 0;
+      int failCount = 0;
+      List<String> failedDecks = [];
+
+      for (var ydkResult in results) {
+        try {
+          await _deckService.createDeck(
+            deckName: ydkResult.deckName,
+            description:
+                'Imported from YDK on ${DateTime.now().toString().split('.')[0]}',
+            mainDeck: ydkResult.mainDeck,
+            extraDeck: ydkResult.extraDeck,
+            sideDeck: ydkResult.sideDeck,
+          );
+          successCount++;
+        } catch (e) {
+          print('❌ Fehler beim Speichern von ${ydkResult.deckName}: $e');
+          failCount++;
+          failedDecks.add(ydkResult.deckName);
+        }
+      }
+
+      // Schließe Progress Dialog
+      if (mounted) Navigator.of(context).pop();
+
+      // Zeige Ergebnis
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('Import abgeschlossen'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.check_circle, color: Colors.green),
+                      const SizedBox(width: 8),
+                      Text('$successCount Deck(s) erfolgreich importiert'),
+                    ],
+                  ),
+                  if (failCount > 0) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.error, color: Colors.red),
+                        const SizedBox(width: 8),
+                        Text('$failCount Deck(s) fehlgeschlagen'),
+                      ],
+                    ),
+                    if (failedDecks.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      const Text('Fehlgeschlagene Decks:'),
+                      ...failedDecks.map((name) => Text('  • $name')),
+                    ],
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    // Schließe Deck Creation und kehre zur Übersicht zurück
+                    widget.onCancel?.call();
+                  },
+                  child: const Text('Fertig'),
+                ),
+              ],
+            );
+          },
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Fehler beim Import: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// ✅ NEU: TXT Export Handler
+  Future<void> _handleTxtExport() async {
+    if (_mainDeck.isEmpty && _extraDeck.isEmpty && _sideDeck.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Deck ist leer, bitte zuerst Karten hinzufügen'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final deckName = _deckNameController.text.trim();
+    if (deckName.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Bitte zuerst einen Decknamen eingeben'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    try {
+      await _ydkImportService.exportDeckAsTxt(
+        deckName: deckName,
+        mainDeck: _mainDeck,
+        extraDeck: _extraDeck,
+        sideDeck: _sideDeck,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('TXT-Datei erfolgreich gespeichert!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Fehler beim Export: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+
   /// Importiert ein YDK-Deck
   Future<void> _handleYdkImport() async {
     // Zusätzliche Prüfung, um sicherzustellen, dass das Deck leer ist, bevor importiert wird
@@ -1247,9 +1507,11 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    return Column(
-      children: [
+   
         // ✅ NEUER KOMPAKTER HEADER
+      return Column(
+      children: [
+        // ✅ AKTUALISIERTER HEADER
         Card(
           margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
           child: Padding(
@@ -1326,7 +1588,6 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                     decoration: const InputDecoration(
                       hintText: "deckname...",
                       border: InputBorder.none,
-
                       contentPadding: EdgeInsets.symmetric(
                         horizontal: 8,
                         vertical: 0,
@@ -1335,7 +1596,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                   ),
                 ),
 
-                // Cancel Button
+                // ✅ Cancel Button
                 IconButton(
                   icon: const Icon(Icons.close, size: 20),
                   color: Colors.red,
@@ -1348,7 +1609,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                   ),
                 ),
 
-                // Save Button
+                // ✅ Save Button
                 IconButton(
                   icon: const Icon(Icons.save, size: 20),
                   color: Colors.green,
@@ -1361,13 +1622,54 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                   ),
                 ),
 
-                // 🚨 SICHTBARKEITSLOGIK FÜR IMPORTE/EXPORTE
-                _buildImportButton(),
-                _buildExportButton(),
+                // ✅ Multi-Import Button (nur wenn Deck leer UND noch nicht gespeichert)
+                if (isDeckEmpty && _currentDeckId == null)
+                  IconButton(
+                    icon: const Icon(Icons.upload_file, size: 20),
+                    color: Colors.blue,
+                    tooltip: 'YDK Multi-Import',
+                    onPressed: _handleMultiYdkImport,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 32,
+                      minHeight: 32,
+                    ),
+                  ),
+
+                // ✅ YDK Export (nur wenn Deck gespeichert)
+                if (_currentDeckId != null)
+                  IconButton(
+                    icon: const Icon(Icons.file_download, size: 20),
+                    color: Colors.purple,
+                    tooltip: 'YDK Export',
+                    onPressed: _handleYdkExport,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 32,
+                      minHeight: 32,
+                    ),
+                  ),
+
+                // ✅ TXT Export (nur wenn Deck gespeichert)
+                if (_currentDeckId != null)
+                  IconButton(
+                    icon: const Icon(Icons.description, size: 20),
+                    color: Colors.orange,
+                    tooltip: 'TXT Export',
+                    onPressed: _handleTxtExport,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 32,
+                      minHeight: 32,
+                    ),
+                  ),
               ],
             ),
           ),
         ),
+
+                // 🚨 SICHTBARKEITSLOGIK FÜR IMPORTE/EXPORTE
+               
 
         // ✅ KOMPAKTE DECK STATS
         Padding(
