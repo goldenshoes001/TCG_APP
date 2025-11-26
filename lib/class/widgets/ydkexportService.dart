@@ -11,6 +11,9 @@ import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 class YdkImportService {
   final CardData _cardData = CardData();
 
+  // ✅ OPTIMIZATION 1: Global Cache for card details to prevent multiple Algolia fetches for the same card.
+  final Map<String, Map<String, dynamic>> _globalCardCache = {};
+
   /// ✅ NEW: Export Deck as TXT
   Future<void> exportDeckAsTxt({
     required String deckName,
@@ -49,39 +52,48 @@ class YdkImportService {
     }
   }
 
-  /// ✅ NEU: Multi-YDK Import
+  /// ✅ OPTIMIZATION 2: Multi-YDK Import (Validation/Parsing now runs PARALLEL)
   Future<List<YdkImportResult>?> importMultipleYdkFiles() async {
-    // Erlaube mehrere Dateien
+    // Allow multiple files
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['ydk'],
       withData: false,
-      allowMultiple: true, // ✅ WICHTIG
+      allowMultiple: true, // ✅ IMPORTANT
     );
 
     if (result == null || result.files.isEmpty) {
       return null;
     }
 
-    final List<YdkImportResult> importedDecks = [];
+    // 1. ✅ PARALLELIZATION: Create a list of Futures for each import operation.
+    // Each Future represents the parsing, Algolia fetching, and Banlist validation.
+    final List<Future<YdkImportResult?>> importFutures = result.files.map((
+      file,
+    ) {
+      if (file.path == null) return Future.value(null);
 
-    for (var file in result.files) {
-      if (file.path == null) continue;
+      // Start _importSingleYdkFile parallel and catch errors
+      return _importSingleYdkFile(file.path!).catchError((e) {
+        print('❌ Error importing ${file.name}: $e');
+        return null;
+      });
+    }).toList();
 
-      try {
-        final ydkResult = await _importSingleYdkFile(file.path!);
-        if (ydkResult != null) {
-          importedDecks.add(ydkResult);
-        }
-      } catch (e) {
-        print('❌ Fehler beim Import von ${file.name}: $e');
-      }
-    }
+    // 2. ✅ Wait for all parallel import Futures to complete.
+    final List<YdkImportResult?> importedDecksWithNulls = await Future.wait(
+      importFutures,
+    );
+
+    // Filter successful results
+    final List<YdkImportResult> importedDecks = importedDecksWithNulls
+        .whereType<YdkImportResult>()
+        .toList();
 
     return importedDecks.isEmpty ? null : importedDecks;
   }
 
-  /// ✅ PRIVATE: Importiert eine einzelne YDK-Datei
+  /// ✅ PRIVATE: Imports a single YDK file
   Future<YdkImportResult?> _importSingleYdkFile(String filePath) async {
     final ydkContent = await File(filePath).readAsString();
     final lines = ydkContent.split('\n');
@@ -112,12 +124,12 @@ class YdkImportService {
       }
     }
 
-    // ✅ Aggregiere und validiere gegen Bannlist
+    // ✅ Aggregate and validate against Banlist
     final aggregatedDecks = await _aggregateAndFetchCards(
       mainIds: mainIds,
       extraIds: extraIds,
       sideIds: sideIds,
-      validateBannlist: true, // ✅ Bannlist-Check aktivieren
+      validateBannlist: true, // ✅ Enable Banlist check
     );
 
     return YdkImportResult(
@@ -128,7 +140,7 @@ class YdkImportService {
     );
   }
 
-  /// ✅ ALTE METHODE: Single Import (backward compatibility)
+  /// ✅ OLD METHOD: Single Import (backward compatibility)
   Future<YdkImportResult?> importYdkFile() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -144,27 +156,56 @@ class YdkImportService {
     return await _importSingleYdkFile(result.files.single.path!);
   }
 
-  /// ✅ UPDATED: Fetches card data + Bannlist Validation
+  /// ✅ OPTIMIZATION 3: Fetches card data + Bannlist Validation (Internal card lookups are now PARALLEL)
+
   Future<Map<String, List<Map<String, dynamic>>>> _aggregateAndFetchCards({
     required List<String> mainIds,
     required List<String> extraIds,
     required List<String> sideIds,
     bool validateBannlist = false,
   }) async {
+    // Get all unique card IDs from the deck parts
     final allIds = {...mainIds, ...extraIds, ...sideIds}.toList();
-    final Map<String, Map<String, dynamic>> cardCache = {};
 
-    // Fetch card details
-    for (var id in allIds) {
-      final cardDetails = await _searchCardById(id);
-      if (cardDetails.isNotEmpty) {
-        cardCache[id] = cardDetails.first;
+    // NEU: Setzen Sie die maximale Parallelität (Batch-Größe) auf 8
+    // Dies löst die "Connection timed out"-Fehler durch Netzwerk-Überlastung.
+    const int maxConcurrency = 8;
+    final List<Map<String, dynamic>?> fetchedResults = [];
+
+    // NEU: Führen Sie die Suchen in kontrollierten Batches aus (Throttling)
+    for (int i = 0; i < allIds.length; i += maxConcurrency) {
+      // Erstellt einen Batch von IDs (maximal 8)
+      final currentBatchIds = allIds.sublist(
+        i,
+        i + maxConcurrency > allIds.length ? allIds.length : i + maxConcurrency,
+      );
+
+      // Erstellt die Futures für diesen Batch
+      final batchFutures = currentBatchIds
+          .map((id) => _searchCardById(id))
+          .toList();
+
+      // Wartet, bis dieser Batch von 8 Anfragen abgeschlossen ist
+      final results = await Future.wait(batchFutures);
+
+      // Fügt die Ergebnisse zur Gesamtergebnisliste hinzu
+      fetchedResults.addAll(results);
+    }
+
+    // Create a map of card details for easier aggregation
+    final Map<String, Map<String, dynamic>> cardDetailsForDeck = {};
+    for (int i = 0; i < allIds.length; i++) {
+      final id = allIds[i];
+      final details = fetchedResults[i];
+      // Check if details were successfully fetched and not null
+      if (details != null && details.isNotEmpty) {
+        cardDetailsForDeck[id] = details;
       } else {
-        print('Warning: Card ID $id not found in Algolia.');
+        print('Warning: Card ID $id not found in Algolia or cache. Skipping.');
       }
     }
 
-    // ✅ Aggregation mit Bannlist-Check
+    // ✅ Aggregation with Banlist Check
     List<Map<String, dynamic>> aggregate(List<String> ids) {
       final Map<String, int> countMap = {};
       for (var id in ids) {
@@ -173,23 +214,24 @@ class YdkImportService {
 
       final List<Map<String, dynamic>> deck = [];
       countMap.forEach((id, count) {
-        if (cardCache.containsKey(id)) {
-          final cardData = Map<String, dynamic>.from(cardCache[id]!);
+        if (cardDetailsForDeck.containsKey(id)) {
+          // Uses the quickly fetched map
+          final cardData = Map<String, dynamic>.from(cardDetailsForDeck[id]!);
 
           if (validateBannlist) {
-            // ✅ Prüfe TCG Bannlist
+            // ✅ Check TCG Banlist
             final maxAllowed = _getMaxAllowedCopies(cardData);
 
             if (maxAllowed == 0) {
               print(
-                '⚠️ Karte ${cardData['name']} ist verboten und wird übersprungen',
+                '⚠️ Card ${cardData['name']} is Forbidden and will be skipped',
               );
-              return; // Skip verbotene Karten
+              return; // Skip forbidden cards
             }
 
             if (count > maxAllowed) {
               print(
-                '⚠️ Karte ${cardData['name']}: $count Kopien → auf $maxAllowed reduziert',
+                '⚠️ Card ${cardData['name']}: $count copies → reduced to $maxAllowed',
               );
               count = maxAllowed;
             }
@@ -209,7 +251,7 @@ class YdkImportService {
     };
   }
 
-  /// ✅ NEU: Ermittelt erlaubte Anzahl basierend auf TCG Bannlist
+  /// ✅ NEW: Determines allowed copies based on TCG Banlist
   int _getMaxAllowedCopies(Map<String, dynamic> card) {
     final banlistInfo = card['banlist_info'];
     if (banlistInfo == null) return 3;
@@ -223,12 +265,22 @@ class YdkImportService {
     return 3;
   }
 
-  /// Searches for a card by its ID (Algolia)
-  Future<List<Map<String, dynamic>>> _searchCardById(String cardId) async {
+  /// ✅ OPTIMIZATION 4: Searches for a card by its ID (Algolia) - Now with global cache
+  Future<Map<String, dynamic>?> _searchCardById(String cardId) async {
+    // 1. ✅ Cache Check (Der größte Performance-Gewinn beim Import vieler Decks)
+    if (_globalCardCache.containsKey(cardId)) {
+      return _globalCardCache[cardId];
+    }
+    final clientOptions = algolia_lib.ClientOptions(
+      connectTimeout: const Duration(seconds: 120),
+    );
     try {
       final client = algolia_lib.SearchClient(
         appId: 'ZFFHWZ011E',
         apiKey: 'bbcc7bed24e11232cbfd76ce9017b629',
+        // ✅ FIX: Erhöhe das Timeout, um die UnreachableHostsException unter hoher Last zu vermeiden.
+        // Von standardmäßig 2 Sekunden auf 30 Sekunden erhöht.
+        options: clientOptions,
       );
 
       final response = await client.search(
@@ -245,21 +297,27 @@ class YdkImportService {
 
       final dynamic hitsData = (response.results.first as Map)['hits'];
 
-      if (hitsData == null || hitsData is! List) {
-        return [];
+      if (hitsData == null || hitsData is! List || hitsData.isEmpty) {
+        return null; // Nichts gefunden
       }
 
-      final List<dynamic> hits = hitsData;
-      return hits.map((hit) => Map<String, dynamic>.from(hit as Map)).toList();
+      final Map<String, dynamic> cardDetails = Map<String, dynamic>.from(
+        hitsData.first as Map,
+      );
+
+      // 2. ✅ Cache Write on success
+      _globalCardCache[cardId] = cardDetails; // Speichere im globalen Cache
+
+      return cardDetails;
     } catch (e) {
       print('❌ Error searching for card ID $cardId: $e');
-      return [];
+      return null;
     }
   }
 
-  /// ✅ NEU: TXT Export (Alternative zu YDK)
+  // --- TXT Export Methods (Unchanged) ---
 
-  /// ✅ NEU: Erstellt TXT-Inhalt
+  /// ✅ NEW: Creates TXT Content
   String _createTxtContent({
     required String deckName,
     required List<Map<String, dynamic>> mainDeck,
@@ -300,7 +358,9 @@ class YdkImportService {
     return deck.fold(0, (sum, card) => sum + (card['count'] as int? ?? 0));
   }
 
-  /// Exports a deck as a YDK file (UNCHANGED)
+  // --- YDK Export Methods (Unchanged) ---
+
+  /// Exports a deck as a YDK file
   Future<void> exportYdkFile({
     required String deckName,
     required List<Map<String, dynamic>> mainDeck,

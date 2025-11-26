@@ -376,6 +376,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
   }
 
   /// ✅ NEU: Multi-YDK Import Handler
+
   Future<void> _handleMultiYdkImport() async {
     try {
       final results = await _ydkImportService.importMultipleYdkFiles();
@@ -389,13 +390,13 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: Text('import ${results.length} Deck(s)?'),
+            title: Text('${results.length} Deck(s) importieren?'),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('${results.length} YDK-Datei(en) found:'),
+                  Text('Es wurden ${results.length} YDK-Datei(en) gefunden:'),
                   const SizedBox(height: 12),
                   ...results.take(5).map((deck) {
                     final mainCount = deck.mainDeck.fold(
@@ -451,7 +452,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                         SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            "all decks will be validate with the TCG Banlist.",
+                            'Alle Decks werden gegen die TCG Bannlist validiert. Verbotene Karten werden entfernt, überzählige Kopien reduziert.',
                             style: TextStyle(fontSize: 12),
                           ),
                         ),
@@ -464,12 +465,12 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('cancel'),
+                child: const Text('Abbrechen'),
               ),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(true),
                 style: TextButton.styleFrom(foregroundColor: Colors.green),
-                child: Text('import ${results.length} Deck(s)'),
+                child: Text('${results.length} Deck(s) importieren'),
               ),
             ],
           );
@@ -488,33 +489,49 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
               children: [
                 CircularProgressIndicator(),
                 SizedBox(width: 20),
-                Text('importing Decks...'),
+                Text('Importiere Decks parallel...'),
               ],
             ),
           );
         },
       );
 
-      // Importiere alle Decks nacheinander
+      // ✅ PARALLEL IMPORT: Alle Decks gleichzeitig speichern
+      final importFutures = results.map((ydkResult) {
+        return _deckService
+            .createDeck(
+              deckName: ydkResult.deckName,
+              description:
+                  'Imported from YDK on ${DateTime.now().toString().split('.')[0]}',
+              mainDeck: ydkResult.mainDeck,
+              extraDeck: ydkResult.extraDeck,
+              sideDeck: ydkResult.sideDeck,
+            )
+            .then((_) {
+              return {'success': true, 'name': ydkResult.deckName};
+            })
+            .catchError((error) {
+              print(
+                '❌ Fehler beim Speichern von ${ydkResult.deckName}: $error',
+              );
+              return {'success': false, 'name': ydkResult.deckName};
+            });
+      }).toList();
+
+      // Warte auf alle Imports gleichzeitig
+      final importResults = await Future.wait(importFutures);
+
+      // Zähle Erfolge und Fehler
       int successCount = 0;
       int failCount = 0;
       List<String> failedDecks = [];
 
-      for (var ydkResult in results) {
-        try {
-          await _deckService.createDeck(
-            deckName: ydkResult.deckName,
-            description:
-                'Imported from YDK on ${DateTime.now().toString().split('.')[0]}',
-            mainDeck: ydkResult.mainDeck,
-            extraDeck: ydkResult.extraDeck,
-            sideDeck: ydkResult.sideDeck,
-          );
+      for (var result in importResults) {
+        if (result['success'] == true) {
           successCount++;
-        } catch (e) {
-          print('❌ Error on saving from ${ydkResult.deckName}: $e');
+        } else {
           failCount++;
-          failedDecks.add(ydkResult.deckName);
+          failedDecks.add(result['name'] as String);
         }
       }
 
@@ -527,7 +544,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
           context: context,
           builder: (BuildContext context) {
             return AlertDialog(
-              title: const Text('Import finished'),
+              title: const Text('Import abgeschlossen'),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -536,7 +553,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                     children: [
                       const Icon(Icons.check_circle, color: Colors.green),
                       const SizedBox(width: 8),
-                      Text('$successCount Deck(s) has been imported'),
+                      Text('$successCount Deck(s) erfolgreich importiert'),
                     ],
                   ),
                   if (failCount > 0) ...[
@@ -545,12 +562,12 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                       children: [
                         const Icon(Icons.error, color: Colors.red),
                         const SizedBox(width: 8),
-                        Text('$failCount Deck(s) failed'),
+                        Text('$failCount Deck(s) fehlgeschlagen'),
                       ],
                     ),
                     if (failedDecks.isNotEmpty) ...[
                       const SizedBox(height: 8),
-                      const Text('failed Decks:'),
+                      const Text('Fehlgeschlagene Decks:'),
                       ...failedDecks.map((name) => Text('  • $name')),
                     ],
                   ],
@@ -563,7 +580,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
                     // Schließe Deck Creation und kehre zur Übersicht zurück
                     widget.onCancel?.call();
                   },
-                  child: const Text('finished'),
+                  child: const Text('Fertig'),
                 ),
               ],
             );
@@ -574,7 +591,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error on Import: $e'),
+            content: Text('Fehler beim Import: $e'),
             backgroundColor: Colors.red,
           ),
         );
