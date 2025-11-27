@@ -9,6 +9,9 @@ import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 import 'package:tcg_app/class/common/buildCards.dart';
 import 'card_search_dialog.dart';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:tcg_app/providers/app_providers.dart';
+
 // ============================================================================
 // DeckService
 // ============================================================================
@@ -17,6 +20,14 @@ class DeckService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final Uuid _uuid = const Uuid();
+
+  void _refreshDecks(WidgetRef? ref) {
+    if (ref != null) {
+      final currentTrigger = ref.read(deckRefreshTriggerProvider);
+      ref.read(deckRefreshTriggerProvider.notifier).state = currentTrigger + 1;
+      print('🔄 Deck refresh triggered');
+    }
+  }
 
   Future<Map<String, dynamic>> readDeck(String deckId) async {
     final docSnapshot = await _firestore.collection('decks').doc(deckId).get();
@@ -52,6 +63,7 @@ class DeckService {
     required List<Map<String, dynamic>> extraDeck,
     required List<Map<String, dynamic>> sideDeck,
     String? coverImageUrl,
+    WidgetRef? ref,
   }) async {
     final user = _auth.currentUser;
     if (user == null) {
@@ -85,6 +97,8 @@ class DeckService {
       'coverImageUrl': coverImageUrl,
       'updatedAt': FieldValue.serverTimestamp(),
     });
+
+    _refreshDecks(ref);
   }
 
   Future<bool> isDeckNameDuplicate({
@@ -124,6 +138,7 @@ class DeckService {
     required List<Map<String, dynamic>> extraDeck,
     required List<Map<String, dynamic>> sideDeck,
     String? coverImageUrl,
+    WidgetRef? ref,
   }) async {
     final user = _auth.currentUser;
     final deckNameLower = deckName.trim().toLowerCase();
@@ -175,6 +190,7 @@ class DeckService {
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
+    _refreshDecks(ref);
 
     return deckId;
   }
@@ -192,6 +208,7 @@ class DeckService {
   }
 
   Future<void> deleteDeck(String deckId) async {
+    WidgetRef? ref;
     // Lösche alle Kommentare
     final commentsRef = _firestore
         .collection('decks')
@@ -208,6 +225,8 @@ class DeckService {
 
     // Lösche das Deck
     await _firestore.collection('decks').doc(deckId).delete();
+
+    _refreshDecks(ref);
 
     print('✅ Deck $deckId has been deleted!');
   }
@@ -375,8 +394,8 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
     super.dispose();
   }
 
-
   /// ✅ NEU: Multi-YDK Import Handler
+
   Future<void> _handleMultiYdkImport() async {
     try {
       final results = await _ydkImportService.importMultipleYdkFiles();
@@ -489,33 +508,49 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
               children: [
                 CircularProgressIndicator(),
                 SizedBox(width: 20),
-                Text('Importiere Decks...'),
+                Text('Importiere Decks parallel...'),
               ],
             ),
           );
         },
       );
 
-      // Importiere alle Decks nacheinander
+      // ✅ PARALLEL IMPORT: Alle Decks gleichzeitig speichern
+      final importFutures = results.map((ydkResult) {
+        return _deckService
+            .createDeck(
+              deckName: ydkResult.deckName,
+              description:
+                  'Imported from YDK on ${DateTime.now().toString().split('.')[0]}',
+              mainDeck: ydkResult.mainDeck,
+              extraDeck: ydkResult.extraDeck,
+              sideDeck: ydkResult.sideDeck,
+            )
+            .then((_) {
+              return {'success': true, 'name': ydkResult.deckName};
+            })
+            .catchError((error) {
+              print(
+                '❌ Fehler beim Speichern von ${ydkResult.deckName}: $error',
+              );
+              return {'success': false, 'name': ydkResult.deckName};
+            });
+      }).toList();
+
+      // Warte auf alle Imports gleichzeitig
+      final importResults = await Future.wait(importFutures);
+
+      // Zähle Erfolge und Fehler
       int successCount = 0;
       int failCount = 0;
       List<String> failedDecks = [];
 
-      for (var ydkResult in results) {
-        try {
-          await _deckService.createDeck(
-            deckName: ydkResult.deckName,
-            description:
-                'Imported from YDK on ${DateTime.now().toString().split('.')[0]}',
-            mainDeck: ydkResult.mainDeck,
-            extraDeck: ydkResult.extraDeck,
-            sideDeck: ydkResult.sideDeck,
-          );
+      for (var result in importResults) {
+        if (result['success'] == true) {
           successCount++;
-        } catch (e) {
-          print('❌ Fehler beim Speichern von ${ydkResult.deckName}: $e');
+        } else {
           failCount++;
-          failedDecks.add(ydkResult.deckName);
+          failedDecks.add(result['name'] as String);
         }
       }
 
@@ -588,7 +623,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
     if (_mainDeck.isEmpty && _extraDeck.isEmpty && _sideDeck.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Deck ist leer, bitte zuerst Karten hinzufügen'),
+          content: Text('Deck is empty pls add first add a card,'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -599,7 +634,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
     if (deckName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Bitte zuerst einen Decknamen eingeben'),
+          content: Text('Pls write a deckname first'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -617,7 +652,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('TXT-Datei erfolgreich gespeichert!'),
+            content: Text('TXT-file sucessfull saved!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -626,14 +661,13 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Fehler beim Export: $e'),
+            content: Text('Error on Export: $e'),
             backgroundColor: Colors.red,
           ),
         );
       }
     }
   }
-
 
   /// Importiert ein YDK-Deck
   Future<void> _handleYdkImport() async {
@@ -1507,9 +1541,8 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-   
-        // ✅ NEUER KOMPAKTER HEADER
-      return Column(
+    // ✅ NEUER KOMPAKTER HEADER
+    return Column(
       children: [
         // ✅ AKTUALISIERTER HEADER
         Card(
@@ -1668,8 +1701,7 @@ class DeckCreationScreenState extends State<DeckCreationScreen> {
           ),
         ),
 
-                // 🚨 SICHTBARKEITSLOGIK FÜR IMPORTE/EXPORTE
-               
+        // 🚨 SICHTBARKEITSLOGIK FÜR IMPORTE/EXPORTE
 
         // ✅ KOMPAKTE DECK STATS
         Padding(

@@ -34,19 +34,21 @@ class DeckViewer extends ConsumerStatefulWidget {
 class _DeckViewerState extends ConsumerState<DeckViewer> {
   List<Map<String, dynamic>> get _mainDeck =>
       (widget.deckData['mainDeck'] as List<dynamic>?)
-          ?.map((item) => item as Map<String, dynamic>)
+          ?.whereType<
+            Map<String, dynamic>
+          >() // ✅ Filtriert null-Elemente und sorgt für den korrekten Typ
           .toList() ??
       [];
 
   List<Map<String, dynamic>> get _extraDeck =>
       (widget.deckData['extraDeck'] as List<dynamic>?)
-          ?.map((item) => item as Map<String, dynamic>)
+          ?.whereType<Map<String, dynamic>>() // ✅ Sicherer Filter
           .toList() ??
       [];
 
   List<Map<String, dynamic>> get _sideDeck =>
       (widget.deckData['sideDeck'] as List<dynamic>?)
-          ?.map((item) => item as Map<String, dynamic>)
+          ?.whereType<Map<String, dynamic>>() // ✅ Sicherer Filter
           .toList() ??
       [];
 
@@ -65,14 +67,16 @@ class _DeckViewerState extends ConsumerState<DeckViewer> {
       return {'Monster': sortedCards};
     }
 
+    // 🚀 KORREKTUR DER INITIALISIERUNG
     final Map<String, List<Map<String, dynamic>>> categorized = {
       'Monster': [],
-      'Zauber': [],
-      'Falle': [],
-      'Andere': [],
+      'Spell': [], // Nun 'Spell' statt 'Zauber'
+      'Trap': [], // Nun 'Trap' statt 'Falle'
+      'Other': [], // Verwenden wir 'Other' statt 'Andere' für Konsistenz
     };
 
     for (var card in cards) {
+      // Sicherheits-Castings beibehalten
       final frameType = (card['frameType'] as String? ?? '').toLowerCase();
       final type = (card['type'] as String? ?? '').toLowerCase();
 
@@ -85,11 +89,14 @@ class _DeckViewerState extends ConsumerState<DeckViewer> {
           type.contains('monster')) {
         categorized['Monster']!.add(card);
       } else if (frameType.contains('spell') || type.contains('spell')) {
+        // ✅ Verwende den neuen Schlüssel 'Spell'
         categorized['Spell']!.add(card);
       } else if (frameType.contains('trap') || type.contains('trap')) {
+        // ✅ Verwende den neuen Schlüssel 'Trap'
         categorized['Trap']!.add(card);
       } else {
-        categorized['Andere']!.add(card);
+        // ✅ Verwende den neuen Schlüssel 'Other'
+        categorized['Other']!.add(card);
       }
     }
 
@@ -100,8 +107,9 @@ class _DeckViewerState extends ConsumerState<DeckViewer> {
       );
     });
 
-    if (categorized['Andere']!.isEmpty) {
-      categorized.remove('Andere');
+    // 🚀 KORREKTUR: Prüfen auf den neuen Schlüssel 'Other'
+    if (categorized['Other']!.isEmpty) {
+      categorized.remove('Other');
     }
 
     return categorized;
@@ -286,15 +294,21 @@ class _DeckViewerState extends ConsumerState<DeckViewer> {
                 Column(
                   children: cards.map((card) {
                     final count = card['count'] ?? 1;
-                    return ListTile(
-                      leading: _CardImageWidget(card: card, cardData: cardData),
-                      title: Text(card['name'] ?? 'unknown card'),
+                    return Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: ListTile(
+                        leading: _CardImageWidget(
+                          card: card,
+                          cardData: cardData,
+                        ),
+                        title: Text(card['name'] ?? 'unknown card'),
 
-                      trailing: Text('x$count'),
-                      onTap: () {
-                        ref.read(selectedCardInDeckProvider.notifier).state =
-                            card;
-                      },
+                        trailing: Text('x$count'),
+                        onTap: () {
+                          ref.read(selectedCardInDeckProvider.notifier).state =
+                              card;
+                        },
+                      ),
                     );
                   }).toList(),
                 ),

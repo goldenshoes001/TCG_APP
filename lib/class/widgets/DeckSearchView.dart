@@ -1,4 +1,4 @@
-// DeckSearchView.dart - MIT PRELOADED DECKS
+// DeckSearchView.dart - MIT PROVIDER INTEGRATION
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tcg_app/class/widgets/deck_search_service.dart';
@@ -8,9 +8,11 @@ import 'package:tcg_app/providers/app_providers.dart';
 
 class DeckSearchView extends ConsumerStatefulWidget {
   final Function(Map<String, dynamic>)? onDeckSelected;
-  final List<Map<String, dynamic>>? preloadedDecks; // ✅ NEU
 
-  const DeckSearchView({super.key, this.onDeckSelected, this.preloadedDecks});
+  const DeckSearchView({
+    super.key,
+    this.onDeckSelected,
+  }); // ✅ preloadedDecks entfernt
 
   @override
   ConsumerState<DeckSearchView> createState() => _DeckSearchViewState();
@@ -31,12 +33,7 @@ class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
   @override
   void initState() {
     super.initState();
-    _loadArchetypes();
-
-    // ✅ Zeige initial alle vorgeladenen Decks
-    if (widget.preloadedDecks != null) {
-      _filteredDecks = widget.preloadedDecks!;
-    }
+    // Archetypen werden jetzt aus dem Provider geladen
   }
 
   @override
@@ -45,101 +42,83 @@ class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
     super.dispose();
   }
 
-  Future<void> _loadArchetypes() async {
-    setState(() => _isLoadingArchetypes = true);
-
-    try {
-      final archetypes = await _deckSearchService.getAllArchetypes();
-      if (mounted) {
-        setState(() {
-          _availableArchetypes = archetypes;
-          _isLoadingArchetypes = false;
-        });
-      }
-    } catch (e) {
-      debugPrint('Fehler beim Laden der Archetypen: $e');
-      if (mounted) {
-        setState(() => _isLoadingArchetypes = false);
-      }
-    }
-  }
-
-  /// ✅ NEU: Lokale Suche in vorgeladenen Decks
+  /// ✅ OPTIMIERT: Lokale Suche in Provider-Decks
   void _performLocalSearch() {
     final searchTerm = _searchController.text.trim().toLowerCase();
     final selectedArchetype = ref.read(selectedArchetypeProvider);
 
-    if (widget.preloadedDecks == null) {
-      _performServerSearch();
-      return;
-    }
+    // ✅ Lade Decks aus Provider
+    final decksAsync = ref.read(refreshableDecksProvider);
 
-    setState(() {
-      _isSearching = true;
-    });
+    decksAsync.when(
+      data: (allDecks) {
+        setState(() {
+          _isSearching = true;
+        });
 
-    List<Map<String, dynamic>> results = widget.preloadedDecks!;
+        List<Map<String, dynamic>> results = allDecks;
 
-    // Filter nach Suchbegriff
-    if (searchTerm.isNotEmpty) {
-      results = results.where((deck) {
-        final deckName = (deck['deckName'] as String? ?? '').toLowerCase();
-        final archetype = (deck['archetype'] as String? ?? '').toLowerCase();
-        final description = (deck['description'] as String? ?? '')
-            .toLowerCase();
+        // Filter nach Suchbegriff
+        if (searchTerm.isNotEmpty) {
+          results = results.where((deck) {
+            final deckName = (deck['deckName'] as String? ?? '').toLowerCase();
+            final archetype = (deck['archetype'] as String? ?? '')
+                .toLowerCase();
+            final description = (deck['description'] as String? ?? '')
+                .toLowerCase();
 
-        return deckName.contains(searchTerm) ||
-            archetype.contains(searchTerm) ||
-            description.contains(searchTerm);
-      }).toList();
-    }
+            return deckName.contains(searchTerm) ||
+                archetype.contains(searchTerm) ||
+                description.contains(searchTerm);
+          }).toList();
+        }
 
-    // Filter nach Archetyp
-    if (selectedArchetype != null && selectedArchetype != 'All archetypes') {
-      final archetypeLower = selectedArchetype.toLowerCase();
-      results = results.where((deck) {
-        final deckArchetype = (deck['archetype'] as String? ?? '')
-            .toLowerCase();
-        return deckArchetype.contains(archetypeLower);
-      }).toList();
-    }
+        // Filter nach Archetyp
+        if (selectedArchetype != null &&
+            selectedArchetype != 'All archetypes') {
+          final archetypeLower = selectedArchetype.toLowerCase();
+          results = results.where((deck) {
+            final deckArchetype = (deck['archetype'] as String? ?? '')
+                .toLowerCase();
+            return deckArchetype.contains(archetypeLower);
+          }).toList();
+        }
 
-    // Sortierung nach Relevanz
-    results.sort((a, b) {
-      final aName = (a['deckName'] as String? ?? '').toLowerCase();
-      final bName = (b['deckName'] as String? ?? '').toLowerCase();
+        // Sortierung nach Relevanz
+        results.sort((a, b) {
+          final aName = (a['deckName'] as String? ?? '').toLowerCase();
+          final bName = (b['deckName'] as String? ?? '').toLowerCase();
 
-      if (searchTerm.isNotEmpty) {
-        if (aName == searchTerm) return -1;
-        if (bName == searchTerm) return 1;
-        if (aName.startsWith(searchTerm) && !bName.startsWith(searchTerm))
-          return -1;
-        if (!aName.startsWith(searchTerm) && bName.startsWith(searchTerm))
-          return 1;
-      }
+          if (searchTerm.isNotEmpty) {
+            if (aName == searchTerm) return -1;
+            if (bName == searchTerm) return 1;
+            if (aName.startsWith(searchTerm) && !bName.startsWith(searchTerm))
+              return -1;
+            if (!aName.startsWith(searchTerm) && bName.startsWith(searchTerm))
+              return 1;
+          }
 
-      return aName.compareTo(bName);
-    });
+          return aName.compareTo(bName);
+        });
 
-    setState(() {
-      _filteredDecks = results;
-      _isSearching = false;
-    });
-  }
-
-  /// ✅ Fallback: Server-Suche
-  void _performServerSearch() {
-    final searchTerm = _searchController.text.trim();
-    final selectedArchetype = ref.read(selectedArchetypeProvider);
-
-    if (searchTerm.isNotEmpty) {
-      ref.read(deckSearchQueryProvider.notifier).state = searchTerm;
-      ref.read(selectedArchetypeProvider.notifier).state = null;
-    } else if (selectedArchetype != null) {
-      ref.read(deckSearchQueryProvider.notifier).state = '';
-    }
-
-    _triggerSearch();
+        setState(() {
+          _filteredDecks = results;
+          _isSearching = false;
+        });
+      },
+      loading: () {
+        setState(() {
+          _isSearching = true;
+        });
+      },
+      error: (error, stack) {
+        print('❌ Error loading decks: $error');
+        setState(() {
+          _filteredDecks = [];
+          _isSearching = false;
+        });
+      },
+    );
   }
 
   void _performArchetypeSearch(String? archetype) {
@@ -148,11 +127,7 @@ class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
       ref.read(deckSearchQueryProvider.notifier).state = '';
       _searchController.clear();
     }
-  }
-
-  void _triggerSearch() {
-    final currentTrigger = ref.read(deckSearchTriggerProvider);
-    ref.read(deckSearchTriggerProvider.notifier).state = currentTrigger + 1;
+    _performLocalSearch(); // ✅ Sofort lokale Suche durchführen
   }
 
   void _resetFilters() {
@@ -160,9 +135,8 @@ class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
     ref.read(selectedArchetypeProvider.notifier).state = null;
     setState(() {
       _searchController.clear();
-      _filteredDecks = widget.preloadedDecks ?? [];
+      _filteredDecks = [];
     });
-    _triggerSearch();
   }
 
   Widget _buildDeckCoverImage(Map<String, dynamic> deck) {
@@ -231,8 +205,11 @@ class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
     final selectedArchetype = ref.watch(selectedArchetypeProvider);
     final searchQuery = ref.watch(cardSearchQueryProvider);
 
-    // ✅ Verwende lokale Suche wenn Decks vorgeladen sind
-    final bool useLocalSearch = widget.preloadedDecks != null;
+    // ✅ Lade Archetypen aus Provider
+    final archetypes = ref.watch(preloadedDeckArchetypesProvider);
+
+    // ✅ Beobachte Decks aus Provider
+    final decksAsync = ref.watch(refreshableDecksProvider);
 
     return Padding(
       padding: const EdgeInsets.all(12.0),
@@ -254,32 +231,16 @@ class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
                     ),
                     isDense: true,
                   ),
-                  onSubmitted: (_) {
-                    if (useLocalSearch) {
-                      _performLocalSearch();
-                    } else {
-                      _performServerSearch();
-                    }
-                  },
+                  onSubmitted: (_) => _performLocalSearch(),
                 ),
               ),
-
               const SizedBox(width: 8),
-
               IconButton(
-                onPressed: () {
-                  if (useLocalSearch) {
-                    _performLocalSearch();
-                  } else {
-                    _performServerSearch();
-                  }
-                },
+                onPressed: _performLocalSearch,
                 icon: const Icon(Icons.search),
                 tooltip: 'Search',
               ),
-
               const SizedBox(width: 4),
-
               IconButton(
                 onPressed: _resetFilters,
                 icon: const Icon(Icons.clear),
@@ -295,12 +256,7 @@ class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
           const SizedBox(height: 8),
 
           // Archetype Dropdown
-          if (_isLoadingArchetypes)
-            const SizedBox(
-              height: 40,
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (_availableArchetypes.isNotEmpty)
+          if (archetypes.isNotEmpty)
             DropdownMenu<String?>(
               initialSelection: selectedArchetype,
               leadingIcon: const Icon(Icons.category, size: 18),
@@ -309,9 +265,6 @@ class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
               menuHeight: 300,
               onSelected: (value) {
                 _performArchetypeSearch(value);
-                if (useLocalSearch) {
-                  _performLocalSearch();
-                }
               },
               dropdownMenuEntries: [
                 const DropdownMenuEntry<String?>(
@@ -322,7 +275,7 @@ class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
                   value: 'All archetypes',
                   label: 'All archetypes',
                 ),
-                ..._availableArchetypes.map(
+                ...archetypes.map(
                   (archetype) => DropdownMenuEntry<String>(
                     value: archetype,
                     label: archetype,
@@ -345,10 +298,7 @@ class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
                       onDeleted: () {
                         ref.read(deckSearchQueryProvider.notifier).state = '';
                         _searchController.clear();
-                        if (useLocalSearch)
-                          _performLocalSearch();
-                        else
-                          _triggerSearch();
+                        _performLocalSearch();
                       },
                     ),
                     const SizedBox(width: 8),
@@ -363,10 +313,7 @@ class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
                       onDeleted: () {
                         ref.read(selectedArchetypeProvider.notifier).state =
                             null;
-                        if (useLocalSearch)
-                          _performLocalSearch();
-                        else
-                          _triggerSearch();
+                        _performLocalSearch();
                       },
                     ),
                   ],
@@ -374,24 +321,48 @@ class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
               ),
             ),
 
-          // ✅ Ergebnisse (lokal oder server)
+          // ✅ Ergebnisse aus Provider
           Expanded(
-            child: useLocalSearch
-                ? _buildLocalResults(
-                    _filteredDecks,
-                    searchQuery,
-                    selectedArchetype,
-                  )
-                : _buildServerResults(),
+            child: decksAsync.when(
+              data: (allDecks) {
+                // Wenn Filter aktiv sind, zeige gefilterte Liste
+                final displayDecks =
+                    _searchController.text.isNotEmpty ||
+                        selectedArchetype != null
+                    ? _filteredDecks
+                    : [];
+
+                return _buildDeckResults(
+                  displayDecks,
+                  searchQuery,
+                  selectedArchetype,
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(height: 16),
+                    Text('Error loading decks: $error'),
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  /// ✅ Lokale Ergebnisse
-  Widget _buildLocalResults(
-    List<Map<String, dynamic>> decks,
+  /// ✅ Deck Ergebnisse anzeigen
+  Widget _buildDeckResults(
+    List<dynamic> decks,
     String searchQuery,
     String? selectedArchetype,
   ) {
@@ -474,21 +445,6 @@ class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
           ),
         );
       },
-    );
-  }
-
-  /// ✅ Server-basierte Ergebnisse (Fallback)
-  Widget _buildServerResults() {
-    final deckSearchResults = ref.watch(deckSearchResultsProvider);
-
-    return deckSearchResults.when(
-      data: (results) => _buildLocalResults(
-        results,
-        ref.watch(deckSearchQueryProvider),
-        ref.watch(selectedArchetypeProvider),
-      ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(child: Text('Error: $error')),
     );
   }
 }

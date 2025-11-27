@@ -3,13 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tcg_app/class/common/buildCards.dart';
 import 'package:tcg_app/class/widgets/DeckSearchView.dart';
 import 'package:tcg_app/class/widgets/helperClass allgemein/search_results_view.dart';
-import 'package:tcg_app/class/widgets/deck_viewer.dart'; // ✅ IMPORTIERT
+import 'package:tcg_app/class/widgets/deck_viewer.dart';
 import 'package:tcg_app/providers/app_providers.dart';
 
 class Search extends ConsumerStatefulWidget {
-  final List<Map<String, dynamic>>? preloadedDecks; // ✅ PARAMETER HINZUGEFÜGT
-
-  const Search({super.key, this.preloadedDecks});
+  const Search({super.key}); // ✅ PARAMETER ENTFERNT
 
   @override
   ConsumerState<Search> createState() => _MetaState();
@@ -148,10 +146,10 @@ class _MetaState extends ConsumerState<Search>
     final cardSearchQuery = ref.watch(cardSearchQueryProvider);
     final filterState = ref.watch(filterProvider);
 
-    final typesAsync = ref.watch(typesProvider);
-    final racesAsync = ref.watch(racesProvider);
-    final attributesAsync = ref.watch(attributesProvider);
-    final archetypesAsync = ref.watch(archetypesProvider);
+    final types = ref.watch(combinedTypesProvider);
+    final races = ref.watch(combinedRacesProvider);
+    final attributes = ref.watch(combinedAttributesProvider);
+    final archetypes = ref.watch(combinedArchetypesProvider);
 
     if (selectedCard != null) {
       return CardDetailView(
@@ -162,7 +160,6 @@ class _MetaState extends ConsumerState<Search>
       );
     }
 
-    // ✅ KORRIGIERT: DeckViewer statt DeckViewer()
     if (selectedDeck != null) {
       return DeckViewer(
         deckData: selectedDeck,
@@ -170,16 +167,6 @@ class _MetaState extends ConsumerState<Search>
           ref.read(selectedDeckProvider.notifier).state = null;
         },
       );
-    }
-
-    final isLoadingFilters =
-        typesAsync.isLoading ||
-        racesAsync.isLoading ||
-        attributesAsync.isLoading ||
-        archetypesAsync.isLoading;
-
-    if (isLoadingFilters && _tabController.index == 0) {
-      return const Center(child: Text('Filter get loaded...'));
     }
 
     return Column(
@@ -258,20 +245,14 @@ class _MetaState extends ConsumerState<Search>
                   child: TabBarView(
                     controller: _tabController,
                     children: [
-                      _showFilters
-                          ? _buildFilterView(
-                              typesAsync,
-                              racesAsync,
-                              attributesAsync,
-                              archetypesAsync,
-                            )
-                          : _buildSearchResults(),
-
-                      // ✅ KORRIGIERT: preloadedDecks übergeben
+                      _showFilters ? _buildFilterView() : _buildSearchResults(),
+                      // ✅ KEINE preloadedDecks Parameter mehr - verwendet Provider
                       DeckSearchView(
-                        preloadedDecks: widget.preloadedDecks,
                         onDeckSelected: (deck) {
                           ref.read(selectedDeckProvider.notifier).state = deck;
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            setState(() {});
+                          });
                         },
                       ),
                     ],
@@ -300,30 +281,13 @@ class _MetaState extends ConsumerState<Search>
     );
   }
 
-  Widget _buildFilterView(
-    AsyncValue<List<String>> typesAsync,
-    AsyncValue<List<String>> racesAsync,
-    AsyncValue<List<String>> attributesAsync,
-    AsyncValue<List<String>> archetypesAsync,
-  ) {
-    return typesAsync.when(
-      data: (types) => racesAsync.when(
-        data: (races) => attributesAsync.when(
-          data: (attributes) => archetypesAsync.when(
-            data: (archetypes) =>
-                _buildFilterForm(types, races, attributes, archetypes),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, s) => Center(child: Text('Error loading archetypes')),
-          ),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, s) => Center(child: Text('Error loading attributes')),
-        ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, s) => Center(child: Text('Error loading races')),
-      ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, s) => Center(child: Text('Error loading types')),
-    );
+  Widget _buildFilterView() {
+    final types = ref.watch(combinedTypesProvider);
+    final races = ref.watch(combinedRacesProvider);
+    final attributes = ref.watch(combinedAttributesProvider);
+    final archetypes = ref.watch(combinedArchetypesProvider);
+
+    return _buildFilterForm(types, races, attributes, archetypes);
   }
 
   Widget _buildFilterForm(
@@ -339,7 +303,6 @@ class _MetaState extends ConsumerState<Search>
       'Limited',
       'Semi-Limited',
     ];
-
     const activeColor = Colors.lightBlue;
 
     return SingleChildScrollView(
@@ -654,7 +617,6 @@ class _MetaState extends ConsumerState<Search>
     );
   }
 
-  // Kombiniertes Operator + Dropdown Widget
   Widget _buildOperatorDropdown({
     required String label,
     required String? value,
@@ -706,7 +668,6 @@ class _MetaState extends ConsumerState<Search>
     );
   }
 
-  // Kombiniertes Operator + TextField Widget
   Widget _buildOperatorTextInput({
     required String label,
     required TextEditingController controller,
