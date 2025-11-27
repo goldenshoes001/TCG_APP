@@ -14,7 +14,6 @@ import 'package:tcg_app/theme/light_theme.dart';
 import 'package:tcg_app/theme/dark_theme.dart';
 import 'package:tcg_app/theme/sizing.dart';
 import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:firebase_core/firebase_core.dart';
 import '../firebase_options.dart';
@@ -45,10 +44,9 @@ class _MainAppState extends State<MainApp> {
   bool _isPreloading = true;
   String _loadingMessage = 'loading App...';
 
-  // Preloaded Data
+  // Preloaded Data (Nur noch Bannlisten)
   Map<String, List<dynamic>>? _tcgBannlist;
   Map<String, List<dynamic>>? _ocgBannlist;
-  List<Map<String, dynamic>>? _allDecks; // ✅ NEU: Alle Decks
 
   @override
   void initState() {
@@ -95,26 +93,10 @@ class _MainAppState extends State<MainApp> {
       });
       await _preloadBannlistImages();
 
-      // 3. Lade Filter-Daten (werden von Riverpod Providern geladen)
+      // 3. Lade Filter-Daten und setze sie in Provider
       setState(() {
         _loadingMessage = 'loading Filteroptions..';
       });
-
-      // Filter werden jetzt über Provider geladen, kein direktes Speichern mehr nötig
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      // ✅ 4. LADE ALLE DECKS
-      setState(() {
-        _loadingMessage = 'loading all Decks...';
-      });
-      await _preloadAllDecks();
-
-      // Fertig!
-      if (mounted) {
-        setState(() {
-          _isPreloading = false;
-        });
-      }
 
       final cardData = CardData();
       final types = await cardData.getFacetValues('type');
@@ -128,6 +110,24 @@ class _MainAppState extends State<MainApp> {
       container.read(preloadedRacesProvider.notifier).state = races;
       container.read(preloadedAttributesProvider.notifier).state = attributes;
       container.read(preloadedArchetypesProvider.notifier).state = archetypes;
+
+      // ✅ 4. Triggere das Laden der Decks über den Provider
+      setState(() {
+        _loadingMessage = 'loading Decks...';
+      });
+
+      // ✅ NEU: Lade Decks über Provider - wird im Hintergrund gemacht
+      container.read(refreshableDecksProvider);
+
+      // Kleine Verzögerung damit der Provider Zeit hat zu starten
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Fertig!
+      if (mounted) {
+        setState(() {
+          _isPreloading = false;
+        });
+      }
     } catch (e) {
       print('Fehler beim Preloading: $e');
       if (mounted) {
@@ -135,54 +135,6 @@ class _MainAppState extends State<MainApp> {
           _isPreloading = false;
         });
       }
-    }
-  }
-
-  Future<void> _preloadAllDecks() async {
-    try {
-      setState(() {
-        _loadingMessage = 'Loading all decks...';
-      });
-
-      final QuerySnapshot snapshot = await FirebaseFirestore.instance
-          .collection('decks')
-          .orderBy('updatedAt', descending: true)
-          .limit(200)
-          .get();
-
-      _allDecks = snapshot.docs
-          .map((doc) => doc.data() as Map<String, dynamic>)
-          .toList();
-
-      print('✅ ${_allDecks?.length ?? 0} decks preloaded');
-
-      // ✅ ARCHEYTYPES AUS VORAB GELADENEN DECKS EXTRAHIEREN
-      if (_allDecks != null && _allDecks!.isNotEmpty) {
-        final Set<String> archetypes = {};
-        for (var deck in _allDecks!) {
-          final archetype = deck['archetype'] as String? ?? '';
-          if (archetype.isNotEmpty) {
-            final archetypeList = archetype
-                .split(',')
-                .map((a) => a.trim())
-                .where((a) => a.isNotEmpty);
-            archetypes.addAll(archetypeList);
-          }
-        }
-
-        final sortedArchetypes = archetypes.toList()
-          ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-
-        // Setze Archetypen in Provider für sofortigen Zugriff
-        final container = ProviderScope.containerOf(context);
-        container.read(preloadedDeckArchetypesProvider.notifier).state =
-            sortedArchetypes;
-
-        print('✅ ${sortedArchetypes.length} archetypes preloaded');
-      }
-    } catch (e) {
-      print('❌ Error loading decks: $e');
-      _allDecks = [];
     }
   }
 
@@ -227,9 +179,7 @@ class _MainAppState extends State<MainApp> {
           preloadedOCGBannlist: _ocgBannlist,
         );
       case 1:
-        return Search(
-          preloadedDecks: _allDecks,
-        ); // ✅ Übergebe vorgeladene Decks
+        return const Search(); // ✅ KEINE preloadedDecks mehr - verwendet Provider
       case 2:
         if (_currentUser != null) {
           return UserProfileScreen(
@@ -266,7 +216,7 @@ class _MainAppState extends State<MainApp> {
             : (isDarkMode! ? ThemeMode.dark : ThemeMode.light),
         home: Scaffold(
           body: Container(
-            color: Color(0xFF0d1421),
+            color: const Color(0xFF0d1421),
             child: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,

@@ -1,4 +1,4 @@
-// app_providers.dart - UPDATED WITH DECK SEARCH FIX
+// app_providers.dart - UPDATED WITH DECK PRELOAD PROVIDER
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -9,19 +9,103 @@ import 'package:tcg_app/class/widgets/deckservice.dart';
 import 'package:tcg_app/class/widgets/deck_search_service.dart';
 import 'package:tcg_app/class/sharedPreference.dart';
 
-final preloadedDeckArchetypesProvider = StateProvider<List<String>>(
-  (ref) => [],
-);
+// ============================================================================
+// ✅ NEU: PRELOADED DECKS PROVIDER (mit Refresh-Funktion)
+// ============================================================================
+
+final preloadedDecksProvider = FutureProvider<List<Map<String, dynamic>>>((
+  ref,
+) async {
+  try {
+    print('🔄 Loading preloaded decks...');
+    final QuerySnapshot snapshot = await FirebaseFirestore.instance
+        .collection('decks')
+        .orderBy('updatedAt', descending: true)
+        .limit(200)
+        .get();
+
+    final decks = snapshot.docs
+        .map((doc) => doc.data() as Map<String, dynamic>)
+        .toList();
+
+    print('✅ ${decks.length} decks preloaded');
+    return decks;
+  } catch (e) {
+    print('❌ Error loading preloaded decks: $e');
+    return [];
+  }
+});
+
+// ✅ NEU: Trigger zum manuellen Refresh der Decks
+final deckRefreshTriggerProvider = StateProvider<int>((ref) => 0);
+
+// ✅ NEU: Provider der auf Refresh-Trigger reagiert
+final refreshableDecksProvider = FutureProvider<List<Map<String, dynamic>>>((
+  ref,
+) async {
+  // Beobachte den Trigger
+  ref.watch(deckRefreshTriggerProvider);
+
+  try {
+    print('🔄 Refreshing decks...');
+    final QuerySnapshot snapshot = await FirebaseFirestore.instance
+        .collection('decks')
+        .orderBy('updatedAt', descending: true)
+        .limit(200)
+        .get();
+
+    final decks = snapshot.docs
+        .map((doc) => doc.data() as Map<String, dynamic>)
+        .toList();
+
+    print('✅ ${decks.length} decks loaded');
+    return decks;
+  } catch (e) {
+    print('❌ Error refreshing decks: $e');
+    return [];
+  }
+});
+
+// ============================================================================
+// ARCHETYPE PROVIDERS
+// ============================================================================
+
+final preloadedDeckArchetypesProvider = StateProvider<List<String>>((ref) {
+  // Extrahiere Archetypen aus den geladenen Decks
+  final decksAsync = ref.watch(refreshableDecksProvider);
+
+  return decksAsync.when(
+    data: (decks) {
+      final Set<String> archetypes = {};
+      for (var deck in decks) {
+        final archetype = deck['archetype'] as String? ?? '';
+        if (archetype.isNotEmpty) {
+          final archetypeList = archetype
+              .split(',')
+              .map((a) => a.trim())
+              .where((a) => a.isNotEmpty);
+          archetypes.addAll(archetypeList);
+        }
+      }
+
+      final sortedArchetypes = archetypes.toList()
+        ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+
+      return sortedArchetypes;
+    },
+    loading: () => [],
+    error: (_, __) => [],
+  );
+});
 
 final preloadedTypesProvider = StateProvider<List<String>?>((ref) => null);
 final preloadedRacesProvider = StateProvider<List<String>?>((ref) => null);
 final preloadedAttributesProvider = StateProvider<List<String>?>((ref) => null);
 final preloadedArchetypesProvider = StateProvider<List<String>?>((ref) => null);
+
 final combinedTypesProvider = Provider<List<String>>((ref) {
   final preloaded = ref.watch(preloadedTypesProvider);
   if (preloaded != null) return preloaded;
-
-  // Fallback zu async loading falls nicht vorab geladen
   final asyncTypes = ref.watch(typesProvider);
   return asyncTypes.valueOrNull ?? [];
 });
@@ -29,7 +113,6 @@ final combinedTypesProvider = Provider<List<String>>((ref) {
 final combinedRacesProvider = Provider<List<String>>((ref) {
   final preloaded = ref.watch(preloadedRacesProvider);
   if (preloaded != null) return preloaded;
-
   final asyncRaces = ref.watch(racesProvider);
   return asyncRaces.valueOrNull ?? [];
 });
@@ -37,7 +120,6 @@ final combinedRacesProvider = Provider<List<String>>((ref) {
 final combinedAttributesProvider = Provider<List<String>>((ref) {
   final preloaded = ref.watch(preloadedAttributesProvider);
   if (preloaded != null) return preloaded;
-
   final asyncAttributes = ref.watch(attributesProvider);
   return asyncAttributes.valueOrNull ?? [];
 });
@@ -45,11 +127,14 @@ final combinedAttributesProvider = Provider<List<String>>((ref) {
 final combinedArchetypesProvider = Provider<List<String>>((ref) {
   final preloaded = ref.watch(preloadedArchetypesProvider);
   if (preloaded != null) return preloaded;
-
   final asyncArchetypes = ref.watch(archetypesProvider);
   return asyncArchetypes.valueOrNull ?? [];
 });
-// Combined search results provider
+
+// ============================================================================
+// COMBINED SEARCH RESULTS PROVIDER
+// ============================================================================
+
 final combinedSearchResultsProvider =
     FutureProvider<List<Map<String, dynamic>>>((ref) async {
       final query = ref.watch(cardSearchQueryProvider);
@@ -160,10 +245,7 @@ final deckSearchResultsProvider = FutureProvider<List<Map<String, dynamic>>>((
   print('   searchTrigger: $searchTrigger');
 
   final hasSearchQuery = searchQuery.isNotEmpty;
-
-  // ✅ KORRIGIERT: "All archetypes" als Spezialfall behandeln
   final searchAllArchetypes = selectedArchetype == 'All archetypes';
-
   final hasSelectedArchetype =
       selectedArchetype != null &&
       selectedArchetype.isNotEmpty &&
@@ -173,14 +255,12 @@ final deckSearchResultsProvider = FutureProvider<List<Map<String, dynamic>>>((
   print('   searchAllArchetypes: $searchAllArchetypes');
   print('   hasSelectedArchetype: $hasSelectedArchetype');
 
-  // Wenn keine Suche aktiv UND nicht "All archetypes" ausgewählt, zeige leere Liste
   if (!hasSearchQuery && !hasSelectedArchetype && !searchAllArchetypes) {
     print('   ❌ Keine Suche aktiv - leere Liste');
     return [];
   }
 
   if (searchAllArchetypes) {
-    // ✅ Zeige alle Decks wenn "All archetypes" ausgewählt ist
     print('   ✅ Lade ALLE Decks...');
     final result = await deckSearchService.getAllDecks();
     print('   📊 Gefunden: ${result.length} Decks');
@@ -207,29 +287,16 @@ final deckSearchResultsProvider = FutureProvider<List<Map<String, dynamic>>>((
 // SINGLETON PROVIDERS
 // ============================================================================
 
-final cardDataProvider = Provider<CardData>((ref) {
-  return CardData();
-});
-
-final authRepositoryProvider = Provider<FirebaseAuthRepository>((ref) {
-  return FirebaseAuthRepository();
-});
-
-final userdataProvider = Provider<Userdata>((ref) {
-  return Userdata();
-});
-
-final deckServiceProvider = Provider<DeckService>((ref) {
-  return DeckService();
-});
-
-final deckSearchServiceProvider = Provider<DeckSearchService>((ref) {
-  return DeckSearchService();
-});
-
-final saveDataProvider = Provider<SaveData>((ref) {
-  return SaveData();
-});
+final cardDataProvider = Provider<CardData>((ref) => CardData());
+final authRepositoryProvider = Provider<FirebaseAuthRepository>(
+  (ref) => FirebaseAuthRepository(),
+);
+final userdataProvider = Provider<Userdata>((ref) => Userdata());
+final deckServiceProvider = Provider<DeckService>((ref) => DeckService());
+final deckSearchServiceProvider = Provider<DeckSearchService>(
+  (ref) => DeckSearchService(),
+);
+final saveDataProvider = Provider<SaveData>((ref) => SaveData());
 
 // ============================================================================
 // AUTH STATE PROVIDER
@@ -357,7 +424,6 @@ final cardSearchResultsProvider = FutureProvider<List<Map<String, dynamic>>>((
 final selectedCardProvider = StateProvider<Map<String, dynamic>?>(
   (ref) => null,
 );
-
 final selectedDeckProvider = StateProvider<Map<String, dynamic>?>(
   (ref) => null,
 );
@@ -508,12 +574,9 @@ class FilterNotifier extends StateNotifier<FilterState> {
   void reset() => state = FilterState();
 }
 
-final filterProvider = StateNotifierProvider<FilterNotifier, FilterState>((
-  ref,
-) {
-  return FilterNotifier();
-});
-
+final filterProvider = StateNotifierProvider<FilterNotifier, FilterState>(
+  (ref) => FilterNotifier(),
+);
 final filterSearchTriggerProvider = StateProvider<int>((ref) => 0);
 
 final filterSearchResultsProvider = FutureProvider<List<Map<String, dynamic>>>((

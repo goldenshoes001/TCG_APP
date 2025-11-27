@@ -9,6 +9,9 @@ import 'package:tcg_app/class/Firebase/YugiohCard/getCardData.dart';
 import 'package:tcg_app/class/common/buildCards.dart';
 import 'card_search_dialog.dart';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:tcg_app/providers/app_providers.dart';
+
 // ============================================================================
 // DeckService
 // ============================================================================
@@ -17,6 +20,14 @@ class DeckService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final Uuid _uuid = const Uuid();
+
+  void _refreshDecks(WidgetRef? ref) {
+    if (ref != null) {
+      final currentTrigger = ref.read(deckRefreshTriggerProvider);
+      ref.read(deckRefreshTriggerProvider.notifier).state = currentTrigger + 1;
+      print('🔄 Deck refresh triggered');
+    }
+  }
 
   Future<Map<String, dynamic>> readDeck(String deckId) async {
     final docSnapshot = await _firestore.collection('decks').doc(deckId).get();
@@ -52,6 +63,7 @@ class DeckService {
     required List<Map<String, dynamic>> extraDeck,
     required List<Map<String, dynamic>> sideDeck,
     String? coverImageUrl,
+    WidgetRef? ref,
   }) async {
     final user = _auth.currentUser;
     if (user == null) {
@@ -85,6 +97,8 @@ class DeckService {
       'coverImageUrl': coverImageUrl,
       'updatedAt': FieldValue.serverTimestamp(),
     });
+
+    _refreshDecks(ref);
   }
 
   Future<bool> isDeckNameDuplicate({
@@ -124,6 +138,7 @@ class DeckService {
     required List<Map<String, dynamic>> extraDeck,
     required List<Map<String, dynamic>> sideDeck,
     String? coverImageUrl,
+    WidgetRef? ref,
   }) async {
     final user = _auth.currentUser;
     final deckNameLower = deckName.trim().toLowerCase();
@@ -175,6 +190,7 @@ class DeckService {
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
+    _refreshDecks(ref);
 
     return deckId;
   }
@@ -192,6 +208,7 @@ class DeckService {
   }
 
   Future<void> deleteDeck(String deckId) async {
+    WidgetRef? ref;
     // Lösche alle Kommentare
     final commentsRef = _firestore
         .collection('decks')
@@ -208,6 +225,8 @@ class DeckService {
 
     // Lösche das Deck
     await _firestore.collection('decks').doc(deckId).delete();
+
+    _refreshDecks(ref);
 
     print('✅ Deck $deckId has been deleted!');
   }
