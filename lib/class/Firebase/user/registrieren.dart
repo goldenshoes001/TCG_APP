@@ -327,7 +327,7 @@ class _RegistrierenState extends ConsumerState<Registrieren> {
         ),
         child: Barwidget(
           title: "cardbase",
-          titleFlow: MainAxisAlignment.start,
+
           onThemeChanged: widget.onThemeChanged,
         ),
       ),

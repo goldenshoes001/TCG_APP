@@ -38,12 +38,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/images/Cyberse/
-    - assets/images/maliss/
-    - assets/images/handtraps/
-    - assets/images/staples/
-    - assets/images/ExtraDeck/Link/
-    - assets/icon/
+   - assets/icon/
 
 flutter_launcher_icons:
   android: true
@@ -52,7 +47,7 @@ flutter_launcher_icons:
 
 flutter_native_splash:
  color: "#000000"
- image: assets/splash/splash.png
+ image: assets/splash/appicon.svg
  android_12:
    image: assets/splash/splash.png
    color: "#000000"

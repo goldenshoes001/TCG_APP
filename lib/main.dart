@@ -250,7 +250,7 @@ class _MainAppState extends State<MainApp> {
             ),
             child: Barwidget(
               title: "Cardbase",
-              titleFlow: MainAxisAlignment.start,
+
               onThemeChanged: _toggleDarkMode,
             ),
           ),
