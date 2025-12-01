@@ -93,11 +93,10 @@ class _MainAppState extends State<MainApp> {
       });
       await _preloadBannlistImages();
 
-      // 3. Lade Filter-Daten und setze sie in Provider
+      // 3. Lade Filter-Daten
       setState(() {
         _loadingMessage = 'loading Filteroptions..';
       });
-
       final cardData = CardData();
       final types = await cardData.getFacetValues('type');
       final races = await cardData.getFacetValues('race');
@@ -111,16 +110,11 @@ class _MainAppState extends State<MainApp> {
       container.read(preloadedAttributesProvider.notifier).state = attributes;
       container.read(preloadedArchetypesProvider.notifier).state = archetypes;
 
-      // ✅ 4. Triggere das Laden der Decks über den Provider
+      // ✅ 4. Lade erste Seite der Decks
       setState(() {
         _loadingMessage = 'loading Decks...';
       });
-
-      // ✅ NEU: Lade Decks über Provider - wird im Hintergrund gemacht
-      container.read(refreshableDecksProvider);
-
-      // Kleine Verzögerung damit der Provider Zeit hat zu starten
-      await Future.delayed(const Duration(milliseconds: 500));
+      await container.read(decksPaginationProvider.notifier).loadFirstPage();
 
       // Fertig!
       if (mounted) {
@@ -249,9 +243,8 @@ class _MainAppState extends State<MainApp> {
               MediaQuery.of(context).size.height / appbarSize,
             ),
             child: Barwidget(
-              title: "Cardbase",
-
               onThemeChanged: _toggleDarkMode,
+              title: "Cardbase",
             ),
           ),
           body: _buildPage(),

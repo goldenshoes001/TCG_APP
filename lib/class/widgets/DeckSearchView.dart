@@ -1,4 +1,4 @@
-// DeckSearchView.dart - MIT PROVIDER INTEGRATION
+// DeckSearchView.dart - MIT STANDARD LEERER ANSICHT
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tcg_app/class/widgets/deck_search_service.dart';
@@ -9,10 +9,7 @@ import 'package:tcg_app/providers/app_providers.dart';
 class DeckSearchView extends ConsumerStatefulWidget {
   final Function(Map<String, dynamic>)? onDeckSelected;
 
-  const DeckSearchView({
-    super.key,
-    this.onDeckSelected,
-  }); // ✅ preloadedDecks entfernt
+  const DeckSearchView({super.key, this.onDeckSelected});
 
   @override
   ConsumerState<DeckSearchView> createState() => _DeckSearchViewState();
@@ -22,103 +19,114 @@ class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
   final DeckSearchService _deckSearchService = DeckSearchService();
   final CardData _cardData = CardData();
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   List<String> _availableArchetypes = [];
   bool _isLoadingArchetypes = true;
 
-  // ✅ Cache für gefilterte Decks
+  // Cache für gefilterte Decks
   List<Map<String, dynamic>> _filteredDecks = [];
   bool _isSearching = false;
+  bool _hasActiveSearch = false; // ✅ NEU: Ob eine aktive Suche läuft
 
   @override
   void initState() {
     super.initState();
-    // Archetypen werden jetzt aus dem Provider geladen
+    // Lade erste Seite beim Start (aber zeige sie nicht standardmäßig)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(decksPaginationProvider.notifier).loadFirstPage();
+    });
+
+    // Scroll Listener für Pagination
+    _scrollController.addListener(_onScroll);
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
-  /// ✅ OPTIMIERT: Lokale Suche in Provider-Decks
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      _loadMoreDecks();
+    }
+  }
+
+  void _loadMoreDecks() {
+    final paginationState = ref.read(decksPaginationProvider);
+    if (!paginationState.isLoading && paginationState.hasMore) {
+      ref.read(decksPaginationProvider.notifier).loadNextPage();
+    }
+  }
+
+  /// Lokale Suche in geladenen Decks
   void _performLocalSearch() {
     final searchTerm = _searchController.text.trim().toLowerCase();
     final selectedArchetype = ref.read(selectedArchetypeProvider);
 
-    // ✅ Lade Decks aus Provider
-    final decksAsync = ref.read(refreshableDecksProvider);
+    // ✅ NEU: Prüfe ob eine aktive Suche vorliegt
+    final hasActiveSearch =
+        searchTerm.isNotEmpty ||
+        (selectedArchetype != null && selectedArchetype != 'All archetypes');
 
-    decksAsync.when(
-      data: (allDecks) {
-        setState(() {
-          _isSearching = true;
-        });
+    setState(() {
+      _isSearching = true;
+      _hasActiveSearch = hasActiveSearch; // ✅ Setze den Status
+    });
 
-        List<Map<String, dynamic>> results = allDecks;
+    // Verwende die bereits geladenen Decks aus der Pagination
+    final allDecks = ref.read(refreshableDecksProvider);
 
-        // Filter nach Suchbegriff
-        if (searchTerm.isNotEmpty) {
-          results = results.where((deck) {
-            final deckName = (deck['deckName'] as String? ?? '').toLowerCase();
-            final archetype = (deck['archetype'] as String? ?? '')
-                .toLowerCase();
-            final description = (deck['description'] as String? ?? '')
-                .toLowerCase();
+    List<Map<String, dynamic>> results = allDecks;
 
-            return deckName.contains(searchTerm) ||
-                archetype.contains(searchTerm) ||
-                description.contains(searchTerm);
-          }).toList();
-        }
+    // Filter nach Suchbegriff
+    if (searchTerm.isNotEmpty) {
+      results = results.where((deck) {
+        final deckName = (deck['deckName'] as String? ?? '').toLowerCase();
+        final archetype = (deck['archetype'] as String? ?? '').toLowerCase();
+        final description = (deck['description'] as String? ?? '')
+            .toLowerCase();
 
-        // Filter nach Archetyp
-        if (selectedArchetype != null &&
-            selectedArchetype != 'All archetypes') {
-          final archetypeLower = selectedArchetype.toLowerCase();
-          results = results.where((deck) {
-            final deckArchetype = (deck['archetype'] as String? ?? '')
-                .toLowerCase();
-            return deckArchetype.contains(archetypeLower);
-          }).toList();
-        }
+        return deckName.contains(searchTerm) ||
+            archetype.contains(searchTerm) ||
+            description.contains(searchTerm);
+      }).toList();
+    }
 
-        // Sortierung nach Relevanz
-        results.sort((a, b) {
-          final aName = (a['deckName'] as String? ?? '').toLowerCase();
-          final bName = (b['deckName'] as String? ?? '').toLowerCase();
+    // Filter nach Archetyp
+    if (selectedArchetype != null && selectedArchetype != 'All archetypes') {
+      final archetypeLower = selectedArchetype.toLowerCase();
+      results = results.where((deck) {
+        final deckArchetype = (deck['archetype'] as String? ?? '')
+            .toLowerCase();
+        return deckArchetype.contains(archetypeLower);
+      }).toList();
+    }
 
-          if (searchTerm.isNotEmpty) {
-            if (aName == searchTerm) return -1;
-            if (bName == searchTerm) return 1;
-            if (aName.startsWith(searchTerm) && !bName.startsWith(searchTerm))
-              return -1;
-            if (!aName.startsWith(searchTerm) && bName.startsWith(searchTerm))
-              return 1;
-          }
+    // Sortierung nach Relevanz
+    results.sort((a, b) {
+      final aName = (a['deckName'] as String? ?? '').toLowerCase();
+      final bName = (b['deckName'] as String? ?? '').toLowerCase();
 
-          return aName.compareTo(bName);
-        });
+      if (searchTerm.isNotEmpty) {
+        if (aName == searchTerm) return -1;
+        if (bName == searchTerm) return 1;
+        if (aName.startsWith(searchTerm) && !bName.startsWith(searchTerm))
+          return -1;
+        if (!aName.startsWith(searchTerm) && bName.startsWith(searchTerm))
+          return 1;
+      }
 
-        setState(() {
-          _filteredDecks = results;
-          _isSearching = false;
-        });
-      },
-      loading: () {
-        setState(() {
-          _isSearching = true;
-        });
-      },
-      error: (error, stack) {
-        print('❌ Error loading decks: $error');
-        setState(() {
-          _filteredDecks = [];
-          _isSearching = false;
-        });
-      },
-    );
+      return aName.compareTo(bName);
+    });
+
+    setState(() {
+      _filteredDecks = results;
+      _isSearching = false;
+    });
   }
 
   void _performArchetypeSearch(String? archetype) {
@@ -127,7 +135,7 @@ class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
       ref.read(deckSearchQueryProvider.notifier).state = '';
       _searchController.clear();
     }
-    _performLocalSearch(); // ✅ Sofort lokale Suche durchführen
+    _performLocalSearch();
   }
 
   void _resetFilters() {
@@ -136,6 +144,15 @@ class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
     setState(() {
       _searchController.clear();
       _filteredDecks = [];
+      _hasActiveSearch = false; // ✅ Zurücksetzen auf keine aktive Suche
+    });
+  }
+
+  void _refreshDecks() {
+    ref.read(decksPaginationProvider.notifier).refresh();
+    setState(() {
+      _filteredDecks = [];
+      _hasActiveSearch = false; // ✅ Zurücksetzen auf keine aktive Suche
     });
   }
 
@@ -205,11 +222,12 @@ class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
     final selectedArchetype = ref.watch(selectedArchetypeProvider);
     final searchQuery = ref.watch(cardSearchQueryProvider);
 
-    // ✅ Lade Archetypen aus Provider
+    // Lade Archetypen aus Provider
     final archetypes = ref.watch(preloadedDeckArchetypesProvider);
 
-    // ✅ Beobachte Decks aus Provider
-    final decksAsync = ref.watch(refreshableDecksProvider);
+    // Beobachte Pagination State
+    final paginationState = ref.watch(decksPaginationProvider);
+    final allDecks = ref.watch(refreshableDecksProvider);
 
     return Padding(
       padding: const EdgeInsets.all(12.0),
@@ -239,6 +257,16 @@ class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
                 onPressed: _performLocalSearch,
                 icon: const Icon(Icons.search),
                 tooltip: 'Search',
+              ),
+              const SizedBox(width: 4),
+              IconButton(
+                onPressed: _refreshDecks,
+                icon: const Icon(Icons.refresh),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.blue[50],
+                  padding: const EdgeInsets.all(12),
+                ),
+                tooltip: 'Refresh',
               ),
               const SizedBox(width: 4),
               IconButton(
@@ -321,82 +349,89 @@ class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
               ),
             ),
 
-          // ✅ Ergebnisse aus Provider
-          Expanded(
-            child: decksAsync.when(
-              data: (allDecks) {
-                // Wenn Filter aktiv sind, zeige gefilterte Liste
-                final displayDecks =
-                    _searchController.text.isNotEmpty ||
-                        selectedArchetype != null
-                    ? _filteredDecks
-                    : [];
-
-                return _buildDeckResults(
-                  displayDecks,
-                  searchQuery,
-                  selectedArchetype,
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(
+          // ✅ NEUE LOGIK: Standardmäßig leere Ansicht anzeigen
+          if (!_hasActiveSearch &&
+              _searchController.text.isEmpty &&
+              selectedArchetype == null)
+            _buildEmptyState()
+          else if (paginationState.isLoading && paginationState.decks.isEmpty)
+            const Expanded(
+              child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(
-                      Icons.error_outline,
-                      size: 48,
-                      color: Colors.red,
-                    ),
-                    const SizedBox(height: 16),
-                    Text('Error loading decks: $error'),
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Loading decks...'),
                   ],
                 ),
               ),
+            )
+          else
+            // Deck Ergebnisse (nur bei aktiver Suche)
+            Expanded(
+              child: _buildDeckResults(
+                allDecks,
+                searchQuery,
+                selectedArchetype,
+                paginationState,
+              ),
             ),
-          ),
         ],
       ),
     );
   }
 
-  /// ✅ Deck Ergebnisse anzeigen
+  /// ✅ NEUE METHODE: Leere Ansicht wenn keine Suche aktiv
+  Widget _buildEmptyState() {
+    return Expanded(
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off, size: 80, color: Colors.grey[400]),
+            const SizedBox(height: 20),
+            Text(
+              'Search for Decks',
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32.0),
+              child: Text(
+                'Enter a deck name in the search field or select an archetype to find decks',
+                textAlign: TextAlign.center,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Deck Ergebnisse anzeigen
   Widget _buildDeckResults(
-    List<dynamic> decks,
+    List<dynamic> allDecks,
     String searchQuery,
     String? selectedArchetype,
+    DecksPaginationState paginationState,
   ) {
+    // Entscheide welche Decks angezeigt werden sollen
+    final displayDecks =
+        _searchController.text.isNotEmpty || selectedArchetype != null
+        ? _filteredDecks
+        : []; // ✅ WICHTIG: Keine Decks anzeigen ohne aktive Suche
+
     if (_isSearching) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (searchQuery.isEmpty && selectedArchetype == null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.search, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              'Search for decks',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Enter a deck name or select an archetype',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (decks.isEmpty) {
+    if (displayDecks.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -409,42 +444,97 @@ class _DeckSearchViewState extends ConsumerState<DeckSearchView> {
                 context,
               ).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
             ),
+            const SizedBox(height: 8),
+            Text(
+              'Try adjusting your search or filters',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _resetFilters,
+              icon: const Icon(Icons.clear),
+              label: const Text('Clear filters'),
+            ),
           ],
         ),
       );
     }
 
-    return ListView.builder(
-      itemCount: decks.length,
-      itemBuilder: (context, index) {
-        final deck = decks[index];
-        final deckName = deck['deckName'] as String? ?? 'Unknown';
-        final username = deck['username'] as String? ?? 'Unknown';
+    return _buildDeckListView(displayDecks, paginationState);
+  }
 
-        final mainDeck = deck['mainDeck'] as List<dynamic>? ?? [];
-        final mainCount = mainDeck.fold<int>(0, (sum, card) {
-          if (card is Map<String, dynamic>) {
-            return sum + (card['count'] as int? ?? 0);
-          }
-          return sum;
-        });
+  Widget _buildDeckListView(
+    List<dynamic> decks,
+    DecksPaginationState paginationState,
+  ) {
+    return Column(
+      children: [
+        // Deck Count Info
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: Text(
+            'Found ${decks.length} decks',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+          ),
+        ),
 
-        return Card(
-          margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 0),
-          child: ListTile(
-            leading: _buildDeckCoverImage(deck),
-            title: Text(
-              deckName,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Text('$mainCount cards • by $username'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () {
-              widget.onDeckSelected?.call(deck);
+        // Decks List
+        Expanded(
+          child: ListView.builder(
+            controller: _scrollController,
+            itemCount: decks.length + (paginationState.hasMore ? 1 : 0),
+            itemBuilder: (context, index) {
+              // Loading Indicator für Pagination
+              if (index == decks.length) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                  child: Center(
+                    child: paginationState.isLoading
+                        ? const CircularProgressIndicator()
+                        : TextButton(
+                            onPressed: _loadMoreDecks,
+                            child: const Text('Load more decks'),
+                          ),
+                  ),
+                );
+              }
+
+              final deck = decks[index];
+              final deckName = deck['deckName'] as String? ?? 'Unknown';
+              final username = deck['username'] as String? ?? 'Unknown';
+
+              final mainDeck = deck['mainDeck'] as List<dynamic>? ?? [];
+              final mainCount = mainDeck.fold<int>(0, (sum, card) {
+                if (card is Map<String, dynamic>) {
+                  return sum + (card['count'] as int? ?? 0);
+                }
+                return sum;
+              });
+
+              return Card(
+                margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 0),
+                child: ListTile(
+                  leading: _buildDeckCoverImage(deck),
+                  title: Text(
+                    deckName,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text('$mainCount cards • by $username'),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () {
+                    widget.onDeckSelected?.call(deck);
+                  },
+                ),
+              );
             },
           ),
-        );
-      },
+        ),
+      ],
     );
   }
 }

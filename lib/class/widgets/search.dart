@@ -181,7 +181,7 @@ class _MetaState extends ConsumerState<Search>
             ref.read(cardSearchQueryProvider.notifier).state = '';
             ref.read(deckSearchQueryProvider.notifier).state = '';
             ref.read(selectedArchetypeProvider.notifier).state = null;
-            ref.read(deckSearchTriggerProvider.notifier).state++;
+
             ref.read(selectedCardProvider.notifier).state = null;
             ref.read(selectedDeckProvider.notifier).state = null;
             setState(() {

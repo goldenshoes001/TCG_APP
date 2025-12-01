@@ -21,14 +21,6 @@ class DeckService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final Uuid _uuid = const Uuid();
 
-  void _refreshDecks(WidgetRef? ref) {
-    if (ref != null) {
-      final currentTrigger = ref.read(deckRefreshTriggerProvider);
-      ref.read(deckRefreshTriggerProvider.notifier).state = currentTrigger + 1;
-      print('🔄 Deck refresh triggered');
-    }
-  }
-
   Future<Map<String, dynamic>> readDeck(String deckId) async {
     final docSnapshot = await _firestore.collection('decks').doc(deckId).get();
 
@@ -63,7 +55,7 @@ class DeckService {
     required List<Map<String, dynamic>> extraDeck,
     required List<Map<String, dynamic>> sideDeck,
     String? coverImageUrl,
-    WidgetRef? ref,
+    WidgetRef? ref, // ✅ Optional für manuelle Updates
   }) async {
     final user = _auth.currentUser;
     if (user == null) {
@@ -84,7 +76,7 @@ class DeckService {
       description,
     );
 
-    await _firestore.collection('decks').doc(deckId).update({
+    final updatedData = {
       "username": username,
       'deckName': deckName,
       'archetype': archetypeString,
@@ -95,10 +87,16 @@ class DeckService {
       'searchIndex': searchIndex,
       'searchTokens': searchTokens,
       'coverImageUrl': coverImageUrl,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+      'updatedAt': FieldValue.serverTimestamp(), // ✅ Wichtig für Sortierung
+    };
 
-    _refreshDecks(ref);
+    await _firestore.collection('decks').doc(deckId).update(updatedData);
+
+    // ✅ OPTIONAL: Manuelles Update der Pagination
+    if (ref != null) {
+      final notifier = ref.read(decksPaginationProvider.notifier);
+      notifier.updateDeck(deckId, {...updatedData, 'deckId': deckId});
+    }
   }
 
   Future<bool> isDeckNameDuplicate({
@@ -138,7 +136,7 @@ class DeckService {
     required List<Map<String, dynamic>> extraDeck,
     required List<Map<String, dynamic>> sideDeck,
     String? coverImageUrl,
-    WidgetRef? ref,
+    WidgetRef? ref, // ✅ Optional für manuelle Updates
   }) async {
     final user = _auth.currentUser;
     final deckNameLower = deckName.trim().toLowerCase();
@@ -173,7 +171,7 @@ class DeckService {
       description,
     );
 
-    await _firestore.collection('decks').doc(deckId).set({
+    final deckData = {
       'deckId': deckId,
       'userId': user.uid,
       'username': username,
@@ -189,8 +187,15 @@ class DeckService {
       'coverImageUrl': coverImageUrl,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
-    });
-    _refreshDecks(ref);
+    };
+
+    await _firestore.collection('decks').doc(deckId).set(deckData);
+
+    // ✅ OPTIONAL: Manuelles Update der Pagination
+    if (ref != null) {
+      final notifier = ref.read(decksPaginationProvider.notifier);
+      notifier.addDeck(deckData);
+    }
 
     return deckId;
   }
@@ -207,8 +212,7 @@ class DeckService {
     return combined;
   }
 
-  Future<void> deleteDeck(String deckId) async {
-    WidgetRef? ref;
+  Future<void> deleteDeck(String deckId, {WidgetRef? ref}) async {
     // Lösche alle Kommentare
     final commentsRef = _firestore
         .collection('decks')
@@ -226,7 +230,11 @@ class DeckService {
     // Lösche das Deck
     await _firestore.collection('decks').doc(deckId).delete();
 
-    _refreshDecks(ref);
+    // ✅ OPTIONAL: Manuelles Update der Pagination
+    if (ref != null) {
+      final notifier = ref.read(decksPaginationProvider.notifier);
+      notifier.removeDeck(deckId);
+    }
 
     print('✅ Deck $deckId has been deleted!');
   }

@@ -1,4 +1,4 @@
-// app_providers.dart - UPDATED WITH DECK PRELOAD PROVIDER
+// app_providers.dart - KORRIGIERTE VERSION
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -10,60 +10,246 @@ import 'package:tcg_app/class/widgets/deck_search_service.dart';
 import 'package:tcg_app/class/sharedPreference.dart';
 
 // ============================================================================
-// ✅ NEU: PRELOADED DECKS PROVIDER (mit Refresh-Funktion)
+// ✅ PAGINATION STATE & NOTIFIER
 // ============================================================================
 
-final preloadedDecksProvider = FutureProvider<List<Map<String, dynamic>>>((
-  ref,
-) async {
-  try {
-    print('🔄 Loading preloaded decks...');
-    final QuerySnapshot snapshot = await FirebaseFirestore.instance
-        .collection('decks')
-        .orderBy('updatedAt', descending: true)
-        .limit(200)
-        .get();
+class DecksPaginationState {
+  final List<Map<String, dynamic>> decks;
+  final bool hasMore;
+  final bool isLoading;
+  final DocumentSnapshot? lastDocument;
 
-    final decks = snapshot.docs
-        .map((doc) => doc.data() as Map<String, dynamic>)
-        .toList();
+  DecksPaginationState({
+    required this.decks,
+    required this.hasMore,
+    required this.isLoading,
+    this.lastDocument,
+  });
 
-    print('✅ ${decks.length} decks preloaded');
-    return decks;
-  } catch (e) {
-    print('❌ Error loading preloaded decks: $e');
-    return [];
+  DecksPaginationState copyWith({
+    List<Map<String, dynamic>>? decks,
+    bool? hasMore,
+    bool? isLoading,
+    DocumentSnapshot? lastDocument,
+  }) {
+    return DecksPaginationState(
+      decks: decks ?? this.decks,
+      hasMore: hasMore ?? this.hasMore,
+      isLoading: isLoading ?? this.isLoading,
+      lastDocument: lastDocument ?? this.lastDocument,
+    );
   }
+}
+
+class DecksPaginationNotifier extends StateNotifier<DecksPaginationState> {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final int _pageSize = 50;
+
+  DecksPaginationNotifier()
+    : super(DecksPaginationState(decks: [], hasMore: true, isLoading: false));
+
+  Future<void> loadFirstPage() async {
+    if (state.isLoading) return;
+
+    state = state.copyWith(isLoading: true);
+
+    try {
+      final snapshot = await _firestore
+          .collection('decks')
+          .orderBy('updatedAt', descending: true)
+          .limit(_pageSize)
+          .get();
+
+      final decks = snapshot.docs
+          .map((doc) => doc.data() as Map<String, dynamic>)
+          .toList();
+
+      state = DecksPaginationState(
+        decks: decks,
+        hasMore: decks.length == _pageSize,
+        isLoading: false,
+        lastDocument: snapshot.docs.isNotEmpty ? snapshot.docs.last : null,
+      );
+    } catch (e) {
+      state = state.copyWith(isLoading: false);
+    }
+  }
+
+  Future<void> loadNextPage() async {
+    if (state.isLoading || !state.hasMore) return;
+
+    state = state.copyWith(isLoading: true);
+
+    try {
+      Query query = _firestore
+          .collection('decks')
+          .orderBy('updatedAt', descending: true)
+          .limit(_pageSize);
+
+      if (state.lastDocument != null) {
+        query = query.startAfterDocument(state.lastDocument!);
+      }
+
+      final snapshot = await query.get();
+
+      final newDecks = snapshot.docs
+          .map((doc) => doc.data() as Map<String, dynamic>)
+          .toList();
+
+      final allDecks = [...state.decks, ...newDecks];
+
+      state = DecksPaginationState(
+        decks: allDecks,
+        hasMore: newDecks.length == _pageSize,
+        isLoading: false,
+        lastDocument: snapshot.docs.isNotEmpty ? snapshot.docs.last : null,
+      );
+    } catch (e) {
+      state = state.copyWith(isLoading: false);
+    }
+  }
+
+  void handleExternalUpdate(List<Map<String, dynamic>> updatedDecks) {
+    if (updatedDecks.isEmpty) return;
+
+    final currentDecks = state.decks;
+
+    // Erstelle eine Map der updated Decks für schnellen Zugriff
+    final updatedDecksMap = {
+      for (var deck in updatedDecks) _getDeckId(deck): deck,
+    };
+
+    final List<Map<String, dynamic>> newDecksList = [];
+    final Set<String> processedDeckIds = {};
+
+    for (final updatedDeck in updatedDecks) {
+      final deckId = _getDeckId(updatedDeck);
+      processedDeckIds.add(deckId);
+      newDecksList.add(updatedDeck);
+    }
+
+    for (final currentDeck in currentDecks) {
+      final deckId = _getDeckId(currentDeck);
+      if (!processedDeckIds.contains(deckId)) {
+        if (updatedDecksMap.containsKey(deckId)) {
+          newDecksList.add(updatedDecksMap[deckId]!);
+        } else {
+          newDecksList.add(currentDeck);
+        }
+      }
+    }
+
+    newDecksList.sort((a, b) {
+      final aUpdated = a['updatedAt'] as Timestamp?;
+      final bUpdated = b['updatedAt'] as Timestamp?;
+
+      if (aUpdated != null && bUpdated != null) {
+        return bUpdated.compareTo(aUpdated);
+      }
+      return 0;
+    });
+
+    if (_hasDecksChanged(currentDecks, newDecksList)) {
+      state = state.copyWith(decks: newDecksList);
+    }
+  }
+
+  String _getDeckId(Map<String, dynamic> deck) {
+    return deck['deckId'] ?? deck['_documentId'] ?? '';
+  }
+
+  bool _hasDecksChanged(
+    List<Map<String, dynamic>> oldDecks,
+    List<Map<String, dynamic>> newDecks,
+  ) {
+    if (oldDecks.length != newDecks.length) return true;
+
+    for (int i = 0; i < oldDecks.length; i++) {
+      final oldDeck = oldDecks[i];
+      final newDeck = newDecks[i];
+
+      final oldId = _getDeckId(oldDeck);
+      final newId = _getDeckId(newDeck);
+
+      if (oldId != newId) return true;
+
+      if (oldDeck['updatedAt'] != newDeck['updatedAt']) return true;
+      if (oldDeck['deckName'] != newDeck['deckName']) return true;
+    }
+
+    return false;
+  }
+
+  Future<void> refresh() async {
+    state = DecksPaginationState(decks: [], hasMore: true, isLoading: false);
+    await loadFirstPage();
+  }
+
+  void addDeck(Map<String, dynamic> deck) {
+    final newDecks = [deck, ...state.decks];
+    state = state.copyWith(decks: newDecks);
+  }
+
+  void updateDeck(String deckId, Map<String, dynamic> updatedDeck) {
+    final newDecks = state.decks.map((deck) {
+      if (_getDeckId(deck) == deckId) {
+        return updatedDeck;
+      }
+      return deck;
+    }).toList();
+
+    state = state.copyWith(decks: newDecks);
+  }
+
+  void removeDeck(String deckId) {
+    final newDecks = state.decks.where((deck) {
+      return _getDeckId(deck) != deckId;
+    }).toList();
+
+    state = state.copyWith(decks: newDecks);
+  }
+}
+
+// ============================================================================
+// ✅ STREAM & PAGINATION PROVIDERS
+// ============================================================================
+
+final decksUpdatesStreamProvider = StreamProvider<List<Map<String, dynamic>>>((
+  ref,
+) {
+  return FirebaseFirestore.instance
+      .collection('decks')
+      .orderBy('updatedAt', descending: true)
+      .snapshots()
+      .map((snapshot) {
+        return snapshot.docs.map((doc) {
+          final data = doc.data();
+          return {...data, '_documentId': doc.id};
+        }).toList();
+      });
 });
 
-// ✅ NEU: Trigger zum manuellen Refresh der Decks
-final deckRefreshTriggerProvider = StateProvider<int>((ref) => 0);
+final decksPaginationProvider =
+    StateNotifierProvider<DecksPaginationNotifier, DecksPaginationState>((ref) {
+      final notifier = DecksPaginationNotifier();
 
-// ✅ NEU: Provider der auf Refresh-Trigger reagiert
-final refreshableDecksProvider = FutureProvider<List<Map<String, dynamic>>>((
-  ref,
-) async {
-  // Beobachte den Trigger
-  ref.watch(deckRefreshTriggerProvider);
+      // Korrigierte Stream-Listener Logik
+      final stream = ref.watch(decksUpdatesStreamProvider);
 
-  try {
-    print('🔄 Refreshing decks...');
-    final QuerySnapshot snapshot = await FirebaseFirestore.instance
-        .collection('decks')
-        .orderBy('updatedAt', descending: true)
-        .limit(200)
-        .get();
+      stream.when(
+        data: (updatedDecks) {
+          notifier.handleExternalUpdate(updatedDecks);
+        },
+        loading: () {},
+        error: (error, stack) {},
+      );
 
-    final decks = snapshot.docs
-        .map((doc) => doc.data() as Map<String, dynamic>)
-        .toList();
+      return notifier;
+    });
 
-    print('✅ ${decks.length} decks loaded');
-    return decks;
-  } catch (e) {
-    print('❌ Error refreshing decks: $e');
-    return [];
-  }
+final refreshableDecksProvider = Provider<List<Map<String, dynamic>>>((ref) {
+  final paginationState = ref.watch(decksPaginationProvider);
+  return paginationState.decks;
 });
 
 // ============================================================================
@@ -71,31 +257,24 @@ final refreshableDecksProvider = FutureProvider<List<Map<String, dynamic>>>((
 // ============================================================================
 
 final preloadedDeckArchetypesProvider = StateProvider<List<String>>((ref) {
-  // Extrahiere Archetypen aus den geladenen Decks
-  final decksAsync = ref.watch(refreshableDecksProvider);
+  final decks = ref.watch(refreshableDecksProvider);
 
-  return decksAsync.when(
-    data: (decks) {
-      final Set<String> archetypes = {};
-      for (var deck in decks) {
-        final archetype = deck['archetype'] as String? ?? '';
-        if (archetype.isNotEmpty) {
-          final archetypeList = archetype
-              .split(',')
-              .map((a) => a.trim())
-              .where((a) => a.isNotEmpty);
-          archetypes.addAll(archetypeList);
-        }
-      }
+  final Set<String> archetypes = {};
+  for (var deck in decks) {
+    final archetype = deck['archetype'] as String? ?? '';
+    if (archetype.isNotEmpty) {
+      final archetypeList = archetype
+          .split(',')
+          .map((a) => a.trim())
+          .where((a) => a.isNotEmpty);
+      archetypes.addAll(archetypeList);
+    }
+  }
 
-      final sortedArchetypes = archetypes.toList()
-        ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+  final sortedArchetypes = archetypes.toList()
+    ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
 
-      return sortedArchetypes;
-    },
-    loading: () => [],
-    error: (_, __) => [],
-  );
+  return sortedArchetypes;
 });
 
 final preloadedTypesProvider = StateProvider<List<String>?>((ref) => null);
@@ -140,10 +319,6 @@ final combinedSearchResultsProvider =
       final query = ref.watch(cardSearchQueryProvider);
       final filterState = ref.watch(filterProvider);
       final cardData = ref.watch(cardDataProvider);
-
-      print('🔄 Combined Search triggered:');
-      print('   Query: "$query"');
-      print('   Filter: $filterState');
 
       final hasQuery = query.isNotEmpty;
       final hasFilters =
@@ -229,59 +404,6 @@ final combinedSearchResultsProvider =
 
 final deckSearchQueryProvider = StateProvider<String>((ref) => '');
 final selectedArchetypeProvider = StateProvider<String?>((ref) => null);
-final deckSearchTriggerProvider = StateProvider<int>((ref) => 0);
-
-final deckSearchResultsProvider = FutureProvider<List<Map<String, dynamic>>>((
-  ref,
-) async {
-  final searchQuery = ref.watch(deckSearchQueryProvider);
-  final selectedArchetype = ref.watch(selectedArchetypeProvider);
-  final searchTrigger = ref.watch(deckSearchTriggerProvider);
-  final deckSearchService = ref.watch(deckSearchServiceProvider);
-
-  print('🔍 Deck Search Provider triggered:');
-  print('   searchQuery: "$searchQuery"');
-  print('   selectedArchetype: "$selectedArchetype"');
-  print('   searchTrigger: $searchTrigger');
-
-  final hasSearchQuery = searchQuery.isNotEmpty;
-  final searchAllArchetypes = selectedArchetype == 'All archetypes';
-  final hasSelectedArchetype =
-      selectedArchetype != null &&
-      selectedArchetype.isNotEmpty &&
-      !searchAllArchetypes;
-
-  print('   hasSearchQuery: $hasSearchQuery');
-  print('   searchAllArchetypes: $searchAllArchetypes');
-  print('   hasSelectedArchetype: $hasSelectedArchetype');
-
-  if (!hasSearchQuery && !hasSelectedArchetype && !searchAllArchetypes) {
-    print('   ❌ Keine Suche aktiv - leere Liste');
-    return [];
-  }
-
-  if (searchAllArchetypes) {
-    print('   ✅ Lade ALLE Decks...');
-    final result = await deckSearchService.getAllDecks();
-    print('   📊 Gefunden: ${result.length} Decks');
-    return result;
-  } else if (hasSelectedArchetype) {
-    print('   ✅ Suche nach Archetype: $selectedArchetype');
-    final result = await deckSearchService.searchDecksByArchetype(
-      selectedArchetype!,
-    );
-    print('   📊 Gefunden: ${result.length} Decks');
-    return result;
-  } else if (hasSearchQuery) {
-    print('   ✅ Suche nach Query: $searchQuery');
-    final result = await deckSearchService.searchDecks(searchQuery);
-    print('   📊 Gefunden: ${result.length} Decks');
-    return result;
-  } else {
-    print('   ❌ Fallback - leere Liste');
-    return [];
-  }
-});
 
 // ============================================================================
 // SINGLETON PROVIDERS
